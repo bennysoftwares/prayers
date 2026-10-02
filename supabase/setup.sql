@@ -1,5 +1,6 @@
 -- Prayer Tracker: reminders that arrive even when the app is closed.
 -- Run this whole file once in Supabase › SQL Editor (after creating the "reminders" Edge Function).
+-- Then also run fix-reminders.sql.
 -- Safe to run again.
 
 create extension if not exists pg_cron;

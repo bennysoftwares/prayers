@@ -2,27 +2,26 @@
 // Runs every minute (started by the Cron job in setup.sql). For every phone that turned on reminders,
 // it checks that person's prayer times in their own time zone and sends a push message when a prayer
 // is due and not yet marked as prayed. Nothing to fill in: keys are created and stored on the first run.
+// It reaches the database through the normal web API (functions in fix-reminders.sql), and every call
+// needs the secret code that the every-minute job sends.
 import webpush from 'npm:web-push@3.6.7';
-import postgres from 'npm:postgres@3.4.5';
 
-const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { prepare: false, max: 3 });
-const SUBJECT = Deno.env.get('SUPABASE_URL') || 'https://supabase.com';
+const API = Deno.env.get('SUPABASE_URL') || 'https://eoszbelrtxteaverzvus.supabase.co';
+const PUBLIC_KEY = 'sb_publishable_exkQgHMBU0091L715c3IoQ_tAox8a_N';   // the same public key the app uses
+async function rpc(name: string, args: Record<string, unknown>) {
+  const r = await fetch(`${API}/rest/v1/rpc/${name}`, {
+    method: 'POST', signal: AbortSignal.timeout(10000),
+    headers: { apikey: PUBLIC_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args),
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`${name}: ${r.status} ${text}`);
+  return text ? JSON.parse(text) : null;
+}
+const SUBJECT = 'https://eoszbelrtxteaverzvus.supabase.co';   // who sends the reminders (required by Apple)
 const WINDOW = 10;               // minutes after a prayer's time in which its reminder may still go out
 const SILENT_IDS = ['morning'];  // banner only
 
 type Prayer = { id: string; name: string; time: string; notify?: boolean };
-
-// ---------- Settings / keys ----------
-async function config() {
-  let [c] = await sql`select cron_secret, vapid_public, vapid_private from private.push_config where id = 1`;
-  if (c && !c.vapid_public) {                             // first run: create this server's own key pair
-    const k = webpush.generateVAPIDKeys();
-    await sql`update private.push_config set vapid_public = ${k.publicKey}, vapid_private = ${k.privateKey}
-              where id = 1 and vapid_public is null`;
-    [c] = await sql`select cron_secret, vapid_public, vapid_private from private.push_config where id = 1`;
-  }
-  return c;
-}
 
 // ---------- Time helpers (same maths as the app) ----------
 function validTz(tz?: string) {
@@ -78,49 +77,52 @@ export function dueReminders(data: any, date = new Date()) {
 }
 
 // ---------- Sending ----------
-async function send(row: any, payload: object) {
+async function send(secret: string, row: any, payload: object) {
   try {
     await webpush.sendNotification(row.sub, JSON.stringify(payload), { TTL: 1800, urgency: 'high' });
     return true;
   } catch (e: any) {
-    if (e?.statusCode === 404 || e?.statusCode === 410) await sql`delete from public.push_subs where endpoint = ${row.endpoint}`;  // phone unsubscribed
+    if (e?.statusCode === 404 || e?.statusCode === 410) await rpc('reminders_sub', { secret, endpoint: row.endpoint, action: 'drop' });  // phone unsubscribed
     else console.error('push failed', e?.statusCode, e?.body || e?.message);
     return false;
   }
 }
 
 Deno.serve(async (req) => {
-  const c = await config();
-  if (!c || req.headers.get('x-cron-secret') !== c.cron_secret) return new Response('Not allowed', { status: 401 });
-  webpush.setVapidDetails(SUBJECT, c.vapid_public, c.vapid_private);
+  const secret = req.headers.get('x-cron-secret') || '';
+  let all: any;
+  try { all = await rpc('reminders_fetch', { secret }); }
+  catch (e) { console.error(String(e)); return new Response('Not allowed', { status: 401 }); }
+  if (!all.vapid_public) {                                // first run: create this server's own key pair
+    const k = webpush.generateVAPIDKeys();
+    await rpc('reminders_set_keys', { secret, pub: k.publicKey, priv: k.privateKey });
+    all = await rpc('reminders_fetch', { secret });
+  }
+  webpush.setVapidDetails(SUBJECT, all.vapid_public, all.vapid_private);
 
-  const rows = await sql`select s.endpoint, s.sub, s.user_id, s.test_at, d.data
-    from public.push_subs s left join public.user_data d on d.user_id = s.user_id`;
   const byUser = new Map<string, any[]>();
-  for (const r of rows) byUser.set(r.user_id, [...(byUser.get(r.user_id) || []), r]);
+  for (const r of all.subs) byUser.set(r.user_id, [...(byUser.get(r.user_id) || []), r]);
 
   let sent = 0;
   const jobs: Promise<unknown>[] = [];
-  for (const [userId, subs] of byUser) {
-    // "Send a test" button in the app
+  for (const [uid, subs] of byUser) {
+    // "Send a test notification" button in the app
     for (const r of subs) if (r.test_at) jobs.push((async () => {
-      await sql`update public.push_subs set test_at = null where endpoint = ${r.endpoint}`;
-      if (Date.now() - new Date(r.test_at).getTime() < 15 * 60000 && await send(r, {
+      await rpc('reminders_sub', { secret, endpoint: r.endpoint, action: 'tested' });
+      if (Date.now() - new Date(r.test_at).getTime() < 15 * 60000 && await send(secret, r, {
         title: 'Reminders are working ✓', body: 'This came from your account, so prayer reminders arrive even when the app is closed.',
         tag: 'prayer-test',
       })) sent++;
     })());
     for (const d of dueReminders(subs[0].data)) jobs.push((async () => {
       // remember it first, so the same reminder is never sent twice
-      const claimed = await sql`insert into private.push_sent (user_id, day, prayer) values (${userId}, ${d.key}, ${d.id})
-                                on conflict do nothing returning 1`;
-      if (!claimed.length) return;
-      const ok = (await Promise.all(subs.map((r) => send(r, d.payload)))).filter(Boolean).length;
+      if (!await rpc('reminders_claim', { secret, uid, day: d.key, prayer: d.id })) return;
+      const ok = (await Promise.all(subs.map((r) => send(secret, r, d.payload)))).filter(Boolean).length;
       sent += ok;
-      if (!ok) await sql`delete from private.push_sent where user_id = ${userId} and day = ${d.key} and prayer = ${d.id}`; // try again next minute
+      if (!ok) await rpc('reminders_unclaim', { secret, uid, day: d.key, prayer: d.id });   // try again next minute
     })());
   }
-  await Promise.all(jobs);
-  await sql`delete from private.push_sent where sent_at < now() - interval '3 days'`;
-  return Response.json({ phones: rows.length, sent });
+  const results = await Promise.allSettled(jobs);
+  for (const x of results) if (x.status === 'rejected') console.error(String(x.reason));
+  return Response.json({ phones: all.subs.length, sent });
 });

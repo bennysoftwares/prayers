@@ -779,7 +779,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1511,6 +1511,10 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.8.1', date: '2026-10-02', items: [
+    'Fixed: the reminder server couldn’t reach the database, so phones couldn’t connect to it.',
+    'The test button now says when its test only came from this phone (not yet from your account).',
+  ] },
   { v: '1.8.0', date: '2026-10-02', items: [
     'New: reminders now come from your account, so they arrive on time even when the app is closed (needs an account and allowed notifications).',
     '“Send a test notification” now tests the real thing: the test comes from your account within a minute.',
@@ -1833,6 +1837,7 @@ $('#btn-test').onclick = async () => {
     catch (e) { toast(e.code === 'offline' ? 'No internet connection.' : 'Couldn’t send the test: ' + e.message); }
     return;
   }
+  if (Cloud.session) toast('Reminders aren’t connected to your account yet, so this test only came from this phone. Tap “Try connecting again”.');
   localTest();
 };
 const localTest = () => showNotification(Store.prayers().find((p) => p.id === currentPrayerId(nowInfo().min)) || Store.prayers()[0]);
