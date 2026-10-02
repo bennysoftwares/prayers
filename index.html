@@ -116,6 +116,22 @@
   body.scrolled .statusbar { opacity: .97; }
   .statusbar { position: absolute; }
 
+  /* ===== Pull to refresh =====
+     Pulling down slides the content and reveals a dark warm area that blends into the top
+     of the sunset photo, with a gold spinner. Release past the line to refresh. */
+  #ptr {
+    position: absolute; top: 0; left: 0; right: 0; height: calc(var(--safe-top) + 160px); z-index: 0;
+    background: linear-gradient(180deg, #0D0A07 0%, #17110E 60%, #211A17 100%);
+    pointer-events: none;
+  }
+  #ptr .spin { position: absolute; left: 50%; top: 0; margin-left: -17px; width: 34px; height: 34px; opacity: 0; transform: scale(.6); color: #F5BF4F;
+    filter: drop-shadow(0 0 6px rgba(245,191,79,.55)); }
+  #ptr .spin svg { width: 100%; height: 100%; }
+  #ptr.refreshing .spin svg { animation: ptrspin .8s linear infinite; }
+  @keyframes ptrspin { to { transform: rotate(360deg); } }
+  #scroller { z-index: 1; background: var(--bg); will-change: transform; }
+  #scroller.ptr-anim { transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+
   /* ===== Splash ===== */
   #splash { position: fixed; top: 0; left: 0; right: 0; height: calc(var(--app-h, 100vh) + 200px); margin-bottom: -200px;
     z-index: 100; background: #000; overflow: hidden; transition: opacity .9s ease; }
@@ -136,7 +152,7 @@
   .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% 50%; }
   .hero::after {
     content: ""; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,.38) 0%, rgba(0,0,0,.05) 32%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
+    background: linear-gradient(180deg, rgba(13,10,7,.62) 0%, rgba(0,0,0,.22) 14%, rgba(0,0,0,.05) 34%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
   }
   .hero-text { position: absolute; left: 20px; right: 20px; bottom: 42px; z-index: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
   .hero-text h1 { margin: 0; font-size: 36px; line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
@@ -355,6 +371,7 @@
   <div class="glow"></div>
 </div>
 
+<div id="ptr" aria-hidden="true"><div class="spin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9" /></svg></div></div>
 <div id="scroller">
 <header class="hero">
   <img src="header.jpg" alt="" onerror="this.remove()">
@@ -481,7 +498,7 @@
 /* =========================================================
    CONFIG
    ========================================================= */
-const APP_VERSION = '1.1.5';
+const APP_VERSION = '1.1.6';
 const TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
@@ -1032,6 +1049,69 @@ function renderAll() {
 /* =========================================================
    NO ZOOM (iOS ignores user-scalable=no in Safari, so block the gestures too)
    ========================================================= */
+/* =========================================================
+   PULL TO REFRESH (keeps you on the same screen)
+   ========================================================= */
+(function pullToRefresh() {
+  const sc = $('#scroller'), ptr = $('#ptr'), spin = ptr.querySelector('.spin');
+  // Distances are measured below the status bar (clock/battery), so the spinner is never hidden behind it.
+  let SAFE = 0, TRIGGER = 70, MAX = 120, HOLD = 62;
+  const measure = () => { SAFE = $('.statusbar').offsetHeight || 0; TRIGGER = SAFE + 64; MAX = SAFE + 120; HOLD = SAFE + 58; };
+  let startY = 0, pull = 0, tracking = false, busy = false;
+  const atTop = () => sc.scrollTop <= 0 && (!$('#prayer-list') || $('#prayer-list').scrollTop <= 0);
+  const set = (y) => {
+    pull = y; sc.style.transform = y ? `translateY(${y}px)` : '';
+    const k = Math.max(0, Math.min(1, (y - SAFE) / (TRIGGER - SAFE)));
+    spin.style.top = (SAFE + Math.max(0, (y - SAFE - 34) / 2)) + 'px';   // centred in the visible gap
+    spin.style.opacity = k; spin.style.transform = `scale(${0.6 + 0.4 * k}) rotate(${y * 3}deg)`;
+  };
+  sc.addEventListener('touchstart', (e) => {
+    if (busy || e.touches.length !== 1 || $('#splash')) { tracking = false; return; }
+    measure(); startY = e.touches[0].clientY; tracking = atTop(); sc.classList.remove('ptr-anim');
+  }, { passive: true });
+  sc.addEventListener('touchmove', (e) => {
+    if (!tracking) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { if (pull) set(0); if (!atTop()) tracking = false; return; }
+    if (!atTop()) { tracking = false; return; }
+    e.preventDefault();                                         // we handle the pull ourselves
+    set(Math.min(MAX, dy * 0.5));                               // resistance, like iOS
+  }, { passive: false });
+  const end = () => {
+    if (!tracking) return; tracking = false;
+    sc.classList.add('ptr-anim');
+    if (pull >= TRIGGER) refresh(); else set(0);
+  };
+  sc.addEventListener('touchend', end); sc.addEventListener('touchcancel', end);
+
+  async function refresh() {
+    busy = true; set(HOLD); ptr.classList.add('refreshing');
+    spin.style.transform = 'scale(1)'; spin.style.opacity = 1;
+    // remember exactly where you were, so the reloaded app opens on the same screen
+    try {
+      sessionStorage.setItem('ptr-state', JSON.stringify({
+        view: currentView, scroll: sc.scrollTop, cal: { mode: cal.mode, anchor: cal.anchor, sel: cal.sel } }));
+    } catch (_) {}
+    const wait = new Promise((r) => setTimeout(r, 900));          // let the spinner be seen
+    const upd = navigator.serviceWorker?.getRegistration?.().then((r) => r && r.update()).catch(() => {});
+    await Promise.all([wait, Promise.race([upd, new Promise((r) => setTimeout(r, 2500))])]);
+    location.reload();
+  }
+})();
+
+// After a pull-to-refresh: skip the splash and reopen the same tab, calendar view and scroll position
+function restoreAfterRefresh() {
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem('ptr-state')); sessionStorage.removeItem('ptr-state'); } catch (_) {}
+  if (!st) return false;
+  $('#splash')?.remove();
+  if (st.cal) { cal.mode = st.cal.mode || 'week'; }
+  show(st.view || 'prayers');
+  if (st.view === 'calendar' && st.cal) { cal.anchor = st.cal.anchor; cal.sel = st.cal.sel; renderCalendar(); }
+  requestAnimationFrame(() => { $('#scroller').scrollTop = st.scroll || 0; });
+  return true;
+}
+
 ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) =>
   document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
@@ -1084,7 +1164,7 @@ function runSplash() {
 $('#ico-palette').innerHTML = ICON.palette; $('#ico-clock').innerHTML = ICON.clock;
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
 Store.load(); Store.save(); applyTheme();
-runSplash();
+if (!restoreAfterRefresh()) runSplash();
 tick();
 setInterval(tick, 15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
