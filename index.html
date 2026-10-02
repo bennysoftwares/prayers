@@ -376,7 +376,7 @@
 
   /* ===== Toast ===== */
   #toast {
-    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 70;  /* above pop-ups, so Undo can be tapped */
+    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 95;  /* above pop-ups, so Undo can be tapped */
     background: var(--ink); color: var(--bg); padding: 12px 14px; font-size: 16px; border-radius: 12px;
     opacity: 0; transform: translateY(8px); transition: .25s ease; pointer-events: none; max-width: 528px; margin: 0 auto;
   }
@@ -400,7 +400,7 @@
   .jbtn svg { width: 24px; height: 24px; }
   .jbtn.has::after { content: ""; position: absolute; top: 5px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--card); }
   /* ===== Sheet (verse + journal) ===== */
-  #sheet { position: fixed; inset: 0; z-index: 60; display: none; }
+  #sheet { position: fixed; inset: 0; z-index: 90; display: none; }   /* above the welcome screen */
   #sheet.open { display: block; }
   #sheet .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); animation: fadein .2s ease; }
   #sheet .panel { position: absolute; left: 12px; right: 12px; top: calc(var(--safe-top) + 18px); max-width: 540px; margin: 0 auto;
@@ -515,6 +515,20 @@
   .wl-small { font-size: 14px; color: var(--ink-dim); margin: 10px 0 0; line-height: 1.4; }
   .wl-place { font-size: 18px; color: var(--ink-strong); margin: 8px 0 2px; min-height: 24px; }
 
+  /* ===== Account & sync ===== */
+  .acct-state { font-size: 16px; color: var(--ink); padding: 10px 0 4px; border-top: 1px solid var(--divider); line-height: 1.4; }
+  .acct-state b { color: var(--ink-strong); font-weight: 600; word-break: break-all; }
+  .acct-state small { display: block; color: var(--ink-dim); font-size: 14px; margin-top: 2px; }
+  .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--ink-faint); }
+  .sync-dot.ok { background: #5BB974; } .sync-dot.busy { background: var(--gold); animation: blink 1s infinite; } .sync-dot.err { background: var(--danger); }
+  @keyframes blink { 50% { opacity: .3; } }
+  .acct-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 8px; }
+  .acct-btns .sbtn { margin: 0; }
+  .auth-form label { display: block; font-size: 15px; color: var(--ink-dim); margin: 0 0 12px; }
+  .auth-form input { margin-top: 6px; }
+  .auth-err { color: var(--danger); font-size: 15px; min-height: 20px; margin: -4px 0 6px; }
+  .auth-alt { display: block; width: 100%; text-align: center; color: var(--gold-text); font-weight: 600; font-size: 15px; padding: 12px 0 2px; }
+
   /* ===== Year view ===== */
   .year-head { display: flex; align-items: center; justify-content: space-between; margin: -6px -8px 8px; }
   .year-head b { font-size: 18px; color: var(--ink-strong); font-weight: 600; }
@@ -614,6 +628,14 @@
   <!-- SETTINGS -->
   <section class="view" id="view-settings">
     <div class="card scard">
+      <div class="s-ico" id="ico-cloud"></div>
+      <div>
+        <div class="s-head"><div><h3>Account &amp; sync</h3><p>Keep your prayers safe and on every device</p></div></div>
+        <div id="settings-account"></div>
+      </div>
+    </div>
+
+    <div class="card scard">
       <div class="s-ico" id="ico-palette"></div>
       <div>
         <div class="s-head">
@@ -706,7 +728,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -740,6 +762,7 @@ const ICON = {
   bell: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2a6.3 6.3 0 0 0-6.3 6.3v4.3L3.6 16.6h16.8l-2.1-3.8V8.5A6.3 6.3 0 0 0 12 2.2zM9.3 18.3a2.7 2.7 0 0 0 5.4 0z"/></svg>',
   pin: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 1.8a7.4 7.4 0 0 0-7.4 7.4c0 5.4 7.4 13 7.4 13s7.4-7.6 7.4-13A7.4 7.4 0 0 0 12 1.8zm0 10.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M10.3 1.8h3.4l.5 2.6c.7.3 1.4.6 2 1.1l2.5-.9 1.7 2.9-2 1.7a8 8 0 0 1 0 2.4l2 1.7-1.7 2.9-2.5-.9c-.6.5-1.3.9-2 1.1l-.5 2.6h-3.4l-.5-2.6c-.7-.3-1.4-.6-2-1.1l-2.5.9-1.7-2.9 2-1.7a8 8 0 0 1 0-2.4l-2-1.7 1.7-2.9 2.5.9c.6-.5 1.3-.9 2-1.1zM12 15.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8z" transform="translate(0 1)"/></svg>',
+  cloud: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 19a5 5 0 0 1-.9-9.9A6.5 6.5 0 0 1 18.6 9 4.6 4.6 0 0 1 18 19z"/></svg>',
   book: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5a1 1 0 0 0 0 2H20v2H6.5A2.5 2.5 0 0 1 4 19.5zM11 5v2.5H8.5v2H11V15h2V9.5h2.5v-2H13V5z" fill-rule="evenodd"/></svg>',
   dove: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.5c-2.6.2-4.7 1.4-6.1 3.5-.6-1.9-2.1-3.6-4.4-4.5.4 2 .3 3.8-.4 5.3C8.3 8 6 7.6 3 8c2 1.3 3.3 2.9 3.8 4.6L2.5 15c2.2.8 4.4.9 6.4.3 1 1.9 2.8 3.4 5.2 4.2-.6-1.2-.8-2.4-.6-3.6 3.6-1.3 5.8-4.5 6.1-8.6l1.9-2.8z"/></svg>',
   calDays: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M7 2.5a1 1 0 0 1 1 1V5h8V3.5a1 1 0 1 1 2 0V5h1a2.5 2.5 0 0 1 2.5 2.5v11A2.5 2.5 0 0 1 19 21H5a2.5 2.5 0 0 1-2.5-2.5v-11A2.5 2.5 0 0 1 5 5h1V3.5a1 1 0 0 1 1-1zM4.5 10v8.5c0 .3.2.5.5.5h14c.3 0 .5-.2.5-.5V10zm11.7 1.8a1 1 0 0 1 0 1.4l-4.5 4.5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.8 3.8-3.8a1 1 0 0 1 1.4 0z"/></svg>',
@@ -797,9 +820,15 @@ const Store = {
     try { d = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (_) {}
     const fresh = !d || d.version !== 1;
     if (fresh) {
-      d = { version: 1, settings: { prayers: DEFAULT_PRAYERS, updatedAt: new Date().toISOString() },
+      // settings.updatedAt '' = "never changed", so an account's settings win when signing in on a new phone
+      d = { version: 1, settings: { prayers: DEFAULT_PRAYERS, updatedAt: '' },
             days: {}, meta: { firstDay: nowInfo().key, notified: {}, onboarded: false } };
     }
+    this.data = this.normalize(d);
+  },
+  // Fill in anything missing (older versions, or data coming from the account)
+  normalize(d) {
+    d.version = 1; d.settings = d.settings || { prayers: [] }; d.settings.prayers = d.settings.prayers || []; d.days = d.days || {};
     // make sure all five prayers exist (keeps old data valid if defaults change)
     d.settings.prayers = DEFAULT_PRAYERS.map((def) => ({ ...def, ...(d.settings.prayers.find((p) => p.id === def.id) || {}) }));
     d.settings.theme = d.settings.theme || 'system';
@@ -814,11 +843,14 @@ const Store = {
     d.settings.textSize = d.settings.textSize || 'normal';
     d.settings.customOn = !!d.settings.customOn;                   // "Customize prayers" (off = the normal five)
     d.settings.custom = d.settings.custom || null;
-    this.data = d;
+    d.deleted = d.deleted || {};        // { 'note:YYYY-MM-DD' | 'int:<id>': time deleted } so deletions sync too
+    return d;
   },
+  quiet: false,
   save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); }
     catch (e) { toast('Could not save — storage is full or blocked.'); }
+    if (!this.quiet && typeof scheduleSync === 'function') scheduleSync();   // send changes to the account
   },
   reset() {
     const { theme, location, textSize } = this.data.settings; // keep the chosen look, place and text size
@@ -1007,7 +1039,10 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-share]')
    The Journal tab holds everything; a small pop-up is used to write a note for another day. */
 function saveNote(key, text) {
   const t = text.trim();
-  if (t) Store.data.notes[key] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[key];
+  const now = new Date().toISOString();
+  if (t) { if (Store.data.notes[key]?.text === t) return; Store.data.notes[key] = { text: t, updatedAt: now }; }
+  else if (Store.data.notes[key]) { delete Store.data.notes[key]; Store.data.deleted['note:' + key] = now; }
+  else return;
   Store.save();
 }
 const intentItem = (x) => `<div class="intent${x.answered ? ' answered' : ''}" data-iid="${x.id}">
@@ -1096,8 +1131,8 @@ $('#view-journal').addEventListener('click', (e) => {
   if (act.dataset.act === 'answer') { x.answered = nowInfo().key; stamp(); toast('Praise God! Marked as answered', () => { x.answered = null; stamp(); }); }
   if (act.dataset.act === 'reopen') { x.answered = null; stamp(); }
   if (act.dataset.act === 'del') {
-    const i = list.indexOf(x); list.splice(i, 1); Store.save(); renderJournalPage(false);
-    toast('Intention deleted', () => { list.splice(i, 0, x); Store.save(); renderJournalPage(false); });
+    const i = list.indexOf(x); list.splice(i, 1); Store.data.deleted['int:' + x.id] = new Date().toISOString(); Store.save(); renderJournalPage(false);
+    toast('Intention deleted', () => { x.updatedAt = new Date().toISOString(); list.splice(i, 0, x); Store.save(); renderJournalPage(false); });
   }
 });
 
@@ -1511,7 +1546,7 @@ $('#settings-times').addEventListener('click', (e) => {
 // ----- Text size -----
 $('#size-seg').addEventListener('click', (e) => {
   const b = e.target.closest('[data-size]'); if (!b) return;
-  Store.data.settings.textSize = b.dataset.size; Store.save(); applyTextSize(); renderSettings(); relayout();
+  Store.data.settings.textSize = b.dataset.size; Store.data.settings.updatedAt = new Date().toISOString(); Store.save(); applyTextSize(); renderSettings(); relayout();
 });
 function applyTextSize() {
   const z = Store.data.settings.textSize;
@@ -1571,8 +1606,10 @@ $('#settings-notify').addEventListener('click', async (e) => {
   await toggleBell(sw.dataset.id);
 });
 $('#btn-reset').onclick = () => {
-  if (!confirm('Reset all data?\n\nThis deletes your whole prayer history, streaks and prayer times on this phone. It cannot be undone.')) return;
+  const inAccount = !!Cloud.session;
+  if (!confirm(`Reset all data?\n\nThis deletes your whole prayer history, streaks, notes and prayer times on this phone${inAccount ? ' and in your account' : ''}. It cannot be undone.`)) return;
   Store.reset(); cal.anchor = null; cal.sel = null; renderAll(); toast('All data has been reset');
+  if (inAccount) syncNow(true);
 };
 
 /* =========================================================
@@ -1722,7 +1759,7 @@ function show(view) {
   if (view === 'calendar') { cal.anchor = null; cal.edit = false; renderCalendar(); }
   if (view === 'stats') renderStats();
   if (view === 'journal') { pastLimit = 10; renderJournalPage(); }
-  if (view === 'settings') renderSettings();
+  if (view === 'settings') { renderSettings(); renderAccount(); }
   if (view === 'prayers') renderPrayers(true);
   setTitle();
   $('#scroller').scrollTop = 0;
@@ -1879,6 +1916,252 @@ function runSplash() {
 }
 
 /* =========================================================
+   ACCOUNT & SYNC (Supabase)
+   Talks to Supabase directly with fetch. The publishable key is meant to live in the app;
+   the database rules only let a signed-in person read and write their own row.
+   ========================================================= */
+const SUPABASE_URL = 'https://eoszbelrtxteaverzvus.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_exkQgHMBU0091L715c3IoQ_tAox8a_N';
+const SESSION_KEY = 'prayerTracker.session', LASTSYNC_KEY = 'prayerTracker.lastSync';
+
+class CloudError extends Error { constructor(msg, status, code) { super(msg); this.status = status; this.code = code; } }
+function friendlyAuthError(j, status) {
+  const code = j.error_code || j.code || j.error || '', text = (j.msg || j.message || j.error_description || '').toLowerCase();
+  if (code === 'invalid_credentials' || text.includes('invalid login')) return 'Wrong email or password.';
+  if (code === 'user_already_exists' || code === 'email_exists' || text.includes('already registered')) return 'There is already an account with this email. Sign in instead.';
+  if (code === 'weak_password' || text.includes('password should')) return 'The password must be at least 6 characters.';
+  if (code === 'email_not_confirmed') return 'Email confirmation is still turned on in Supabase (Authentication › Sign In / Providers › Email).';
+  if (code === 'validation_failed' || text.includes('valid email') || text.includes('invalid format')) return 'Please check the email address.';
+  if (code === 'over_request_rate_limit' || code === 'over_email_send_rate_limit' || status === 429) return 'Too many tries. Please wait a few minutes and try again.';
+  if (code === 'signup_disabled') return 'New sign-ups are turned off in Supabase.';
+  return j.msg || j.message || j.error_description || `Something went wrong (${status}).`;
+}
+const Cloud = {
+  session: null,
+  load() { try { this.session = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (_) { this.session = null; } },
+  setSession(s) {
+    this.session = s;
+    try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch (_) {}
+  },
+  fromAuth(j) { return { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Math.floor(Date.now() / 1000) + (j.expires_in || 3600), user: { id: j.user.id, email: j.user.email } }; },
+  async auth(path, body, token, method = 'POST') {
+    let r;
+    try {
+      r = await fetch(`${SUPABASE_URL}/auth/v1/${path}`, { method, headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    } catch (_) { throw new CloudError('No internet connection. Please try again.', 0, 'offline'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new CloudError(friendlyAuthError(j, r.status), r.status, j.error_code || j.error);
+    return j;
+  },
+  async signUp(email, password) {
+    const j = await this.auth('signup', { email, password });
+    if (!j.access_token) throw new CloudError(friendlyAuthError({ error_code: 'email_not_confirmed' }, 400), 400, 'email_not_confirmed');
+    this.setSession(this.fromAuth(j));
+  },
+  async signIn(email, password) { this.setSession(this.fromAuth(await this.auth('token?grant_type=password', { email, password }))); },
+  async token() {
+    const s = this.session; if (!s) throw new CloudError('Not signed in', 401, 'signed_out');
+    if (s.expires_at - 90 > Date.now() / 1000) return s.access_token;
+    try {
+      const j = await this.auth('token?grant_type=refresh_token', { refresh_token: s.refresh_token });
+      this.setSession(this.fromAuth(j)); return this.session.access_token;
+    } catch (e) {
+      if (e.status === 400 || e.status === 401 || e.status === 403) { this.setSession(null); renderAccount(); toast('Please sign in again to keep syncing.'); }
+      throw e;
+    }
+  },
+  async rest(method, query, body, prefer) {
+    const tok = await this.token();
+    let r;
+    try {
+      r = await fetch(`${SUPABASE_URL}/rest/v1/user_data${query || ''}`, { method, headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json', ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    } catch (_) { throw new CloudError('Offline', 0, 'offline'); }
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new CloudError(j.message || `Sync error (${r.status})`, r.status, j.code); }
+    return r.status === 204 ? null : r.json().catch(() => null);
+  },
+  async signOut() {
+    const s = this.session; this.setSession(null);
+    if (s) try { await this.auth('logout', null, s.access_token); } catch (_) {}
+  },
+};
+
+/* ----- Merging: each day, note and intention keeps its most recent version ----- */
+const newerOf = (a, b) => ((a && a.updatedAt) || '') >= ((b && b.updatedAt) || '') ? a : b;
+function mergeData(L, R) {
+  const out = JSON.parse(JSON.stringify(L)); R = R || {};
+  const dead = { ...(R.deleted || {}) };
+  for (const [k, t] of Object.entries(L.deleted || {})) if (!dead[k] || t > dead[k]) dead[k] = t;
+  out.deleted = dead;
+  out.days = {};
+  for (const k of new Set([...Object.keys(L.days || {}), ...Object.keys(R.days || {})]))
+    out.days[k] = !L.days?.[k] ? R.days[k] : !R.days?.[k] ? L.days[k] : newerOf(L.days[k], R.days[k]);
+  out.notes = {};
+  for (const k of new Set([...Object.keys(L.notes || {}), ...Object.keys(R.notes || {})])) {
+    const n = !L.notes?.[k] ? R.notes[k] : !R.notes?.[k] ? L.notes[k] : newerOf(L.notes[k], R.notes[k]);
+    if (!(dead['note:' + k] && dead['note:' + k] >= (n.updatedAt || ''))) out.notes[k] = n;
+  }
+  const ints = new Map();
+  for (const x of [...(R.intentions || []), ...(L.intentions || [])]) ints.set(x.id, ints.has(x.id) ? newerOf(x, ints.get(x.id)) : x);
+  out.intentions = [...ints.values()].filter((x) => !(dead['int:' + x.id] && dead['int:' + x.id] >= (x.updatedAt || '')))
+    .sort((a, b) => (a.created || '').localeCompare(b.created || ''));
+  if (R.settings && (R.settings.updatedAt || '') > (L.settings.updatedAt || '')) out.settings = R.settings;
+  out.meta = { ...L.meta,
+    firstDay: [L.meta?.firstDay, R.meta?.firstDay].filter(Boolean).sort()[0] || L.meta.firstDay,
+    onboarded: !!(L.meta?.onboarded || R.meta?.onboarded), notified: L.meta?.notified || {} };
+  return Store.normalize(out);
+}
+const syncable = (d) => { const c = JSON.parse(JSON.stringify(d)); if (c.meta) delete c.meta.notified; return c; };
+// Compare data regardless of key order (the database stores keys in its own order)
+const stable = (v) => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}' : JSON.stringify(v);
+
+/* ----- Syncing ----- */
+let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncError = '';
+function scheduleSync(delay = 2500) { if (!Cloud.session) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(), delay); }
+async function syncNow(force = false) {
+  if (!Cloud.session) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true; syncState = 'busy'; renderAccount();
+  try {
+    const rows = await Cloud.rest('GET', '?select=data,updated_at');
+    const remote = rows && rows[0] ? rows[0].data : null;
+    const before = stable(syncable(Store.data));
+    const merged = force || !remote ? Store.data : mergeData(Store.data, remote);
+    const after = stable(syncable(merged));
+    if (after !== before) {                         // something new came from the account
+      Store.data = merged; Store.quiet = true; Store.save(); Store.quiet = false;
+      setTZ(Store.data.settings.location.tz); applyTheme(); applyTextSize(); renderLocation(); lastSig = ''; renderAll();
+    }
+    if (force || !remote || after !== stable(syncable(Store.normalize(JSON.parse(JSON.stringify(remote)))))) {
+      await Cloud.rest('POST', '', { user_id: Cloud.session.user.id, data: syncable(Store.data), updated_at: new Date().toISOString() },
+        'resolution=merge-duplicates,return=minimal');
+    }
+    try { localStorage.setItem(LASTSYNC_KEY, new Date().toISOString()); } catch (_) {}
+    syncState = 'ok'; syncError = '';
+  } catch (e) {
+    syncState = Cloud.session ? 'err' : 'idle';
+    syncError = e.code === 'offline' ? 'Offline. Your changes are saved on this phone and will sync later.' : e.message;
+  } finally {
+    syncing = false; renderAccount();
+    if (syncAgain) { syncAgain = false; scheduleSync(500); }
+  }
+}
+addEventListener('online', () => scheduleSync(500));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleSync(300); });
+setInterval(() => { if (!document.hidden) scheduleSync(0); }, 5 * 60 * 1000);
+
+/* ----- Account card in Settings ----- */
+function ago(iso) {
+  if (!iso) return 'not yet'; const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : fmt(iso.slice(0, 10), { month: 'short', day: 'numeric' });
+}
+function renderAccount() {
+  const el = $('#settings-account'); if (!el) return;
+  const s = Cloud.session;
+  if (!s) {
+    el.innerHTML = `<div class="acct-state">Your prayers are only on this phone.<small>Create a free account to keep them safe and use them on any device.</small></div>
+      <div class="acct-btns"><button class="sbtn" data-acct="signup">Create account</button><button class="sbtn" data-acct="signin">Sign in</button></div>`;
+    return;
+  }
+  let last = null; try { last = localStorage.getItem(LASTSYNC_KEY); } catch (_) {}
+  const dot = syncState === 'busy' ? 'busy' : syncState === 'err' ? 'err' : last ? 'ok' : '';
+  const line = syncState === 'busy' ? 'Syncing…' : syncState === 'err' ? syncError : `Synced ${ago(last)}`;
+  el.innerHTML = `<div class="acct-state">Signed in as <b>${esc(s.user.email)}</b><small><span class="sync-dot ${dot}"></span>${esc(line)}</small></div>
+    <div class="acct-btns"><button class="sbtn" data-acct="sync">Sync now</button><button class="sbtn" data-acct="password">Change password</button></div>
+    <button class="srow btnrow" data-acct="signout"><span class="label">Sign out</span>${ICON.chev}</button>`;
+}
+$('#settings-account').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-acct]'); if (!b) return;
+  const a = b.dataset.acct;
+  if (a === 'signup' || a === 'signin') openAuth(a);
+  if (a === 'sync') syncNow();
+  if (a === 'password') openNewPassword();
+  if (a === 'signout') {
+    if (!confirm('Sign out?\n\nYour prayers stay on this phone and in your account. Sign in again any time to keep syncing.')) return;
+    await Cloud.signOut(); syncState = 'idle'; renderAccount(); toast('Signed out');
+  }
+});
+
+/* ----- Sign-in / create-account pop-up ----- */
+let authFromWelcome = false;
+function openAuth(mode, fromWelcome = false) {
+  authFromWelcome = fromWelcome;
+  const up = mode === 'signup';
+  openSheet(`${sheetHead(up ? 'Create account' : 'Sign in')}
+    <form class="auth-form" id="auth-form" data-mode="${mode}" novalidate>
+      <label>Email<input class="j-input" type="email" name="email" id="auth-email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
+      <label>Password<input class="j-input" type="password" name="password" id="auth-pass" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="6" required></label>
+      <div class="auth-err" id="auth-err"></div>
+      <button class="btn-main" type="submit" id="auth-go">${up ? 'Create account' : 'Sign in'}</button>
+    </form>
+    <button class="auth-alt" data-auth="${up ? 'signin' : 'signup'}">${up ? 'Already have an account? Sign in' : 'New here? Create an account'}</button>
+    ${up ? '' : '<button class="auth-alt" data-auth="forgot" style="font-weight:400">Forgot password?</button>'}
+    <p class="wl-small">${up ? 'Your iPhone can suggest a strong password and save it for you. ' : ''}Your prayers, notes and settings are kept in your account and synced to every device you sign in on.</p>`);
+}
+$('#sheet').addEventListener('submit', async (e) => {
+  if (e.target.id === 'auth-form') {
+    e.preventDefault();
+    const f = e.target, email = f.email.value.trim().toLowerCase(), pw = f.password.value, err = $('#auth-err'), go = $('#auth-go');
+    if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = 'Please enter your email address.'; return; }
+    if (pw.length < 6) { err.textContent = 'The password must be at least 6 characters.'; return; }
+    go.disabled = true; go.textContent = 'Please wait…'; err.textContent = '';
+    try {
+      f.dataset.mode === 'signup' ? await Cloud.signUp(email, pw) : await Cloud.signIn(email, pw);
+      closeSheet(); renderAccount();
+      toast(f.dataset.mode === 'signup' ? 'Account created. Your prayers are now saved to it.' : 'Signed in. Bringing your prayers over…');
+      await syncNow();
+      if (authFromWelcome) finishWelcome();
+    } catch (ex) { err.textContent = ex.message; go.disabled = false; go.textContent = f.dataset.mode === 'signup' ? 'Create account' : 'Sign in'; }
+  }
+  if (e.target.id === 'pw-form') {
+    e.preventDefault();
+    const f = e.target, pw = f.password.value, err = $('#auth-err'), go = $('#auth-go');
+    if (pw.length < 6) { err.textContent = 'The password must be at least 6 characters.'; return; }
+    go.disabled = true; go.textContent = 'Please wait…';
+    try {
+      const tok = f.dataset.recovery || await Cloud.token();
+      await Cloud.auth('user', { password: pw }, tok, 'PUT');
+      closeSheet();
+      if (f.dataset.recovery) openSheet(`${sheetHead('Password changed')}<p class="lead" style="font-size:17px;line-height:1.45">Your new password is saved. Open the Prayers app from your Home Screen and sign in with it.</p>`);
+      else toast('Password changed');
+    } catch (ex) { err.textContent = ex.message; go.disabled = false; go.textContent = 'Save new password'; }
+  }
+});
+$('#sheet').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-auth]'); if (!b) return;
+  if (b.dataset.auth === 'forgot') {
+    const email = ($('#auth-email')?.value || '').trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { $('#auth-err').textContent = 'Type your email above first, then tap “Forgot password?”.'; return; }
+    try {
+      await Cloud.auth(`recover?redirect_to=${encodeURIComponent(location.origin + location.pathname)}`, { email });
+      $('#auth-err').textContent = ''; toast('If there is an account for this email, a reset link is on its way.');
+    } catch (ex) { $('#auth-err').textContent = ex.message; }
+    return;
+  }
+  openAuth(b.dataset.auth, authFromWelcome);
+});
+function openNewPassword(recoveryToken) {
+  openSheet(`${sheetHead(recoveryToken ? 'Choose a new password' : 'Change password')}
+    <form class="auth-form" id="pw-form" ${recoveryToken ? `data-recovery="${esc(recoveryToken)}"` : ''} novalidate>
+      <input type="email" name="email" autocomplete="username" value="${esc(Cloud.session?.user.email || '')}" style="display:none">
+      <label>New password<input class="j-input" type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+      <div class="auth-err" id="auth-err"></div>
+      <button class="btn-main" type="submit" id="auth-go">Save new password</button>
+    </form>`);
+}
+// Opened from a "reset password" email: the link carries a one-time sign-in in the address
+function handleRecoveryLink() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('type') === 'recovery' && h.get('access_token')) {
+    history.replaceState(null, '', location.pathname);
+    $('#splash')?.remove(); $('#welcome').style.display = 'none';
+    openNewPassword(h.get('access_token'));
+    return true;
+  }
+  return false;
+}
+
+/* =========================================================
    FIRST-LAUNCH WELCOME (new users only)
    ========================================================= */
 let wlStep = 0;
@@ -1902,6 +2185,7 @@ function renderWelcome() {
       <li><span class="i">${ICON.book}</span>A verse a day, notes and prayer intentions</li>
     </ul>
     <button class="btn-main" data-wl="next">Get started</button>
+    <button class="btn-alt" data-wl="signin">I already have an account</button>
     <p class="wl-small">Everything you enter stays on this phone.</p>`;
   if (wlStep === 1) body.innerHTML = `${dots}<h2>Where are you?</h2>
     <p class="lead">Used for your local time, the real sunset time and the name at the top.</p>
@@ -1937,9 +2221,10 @@ $('#welcome').addEventListener('click', async (e) => {
   if (a === 'next') { if (wlStep >= 3) finishWelcome(); else { wlStep++; renderWelcome(); } }
   if (a === 'back') { wlStep = Math.max(0, wlStep - 1); renderWelcome(); }
   if (a === 'skip') finishWelcome();
+  if (a === 'signin') openAuth('signin', true);
   if (a === 'gps') useMyLocation(renderWelcome);
   if (a === 'type') { const v = prompt('Place name (for example "Västerås, Sverige")', Store.data.settings.location.name || ''); if (v !== null) { saveLocation({ name: v.trim() }); renderWelcome(); } }
-  if (a === 'sunset') { const S = Store.data.settings; S.autoSunset = !S.autoSunset; Store.save(); renderWelcome(); }
+  if (a === 'sunset') { const S = Store.data.settings; S.autoSunset = !S.autoSunset; S.updatedAt = new Date().toISOString(); Store.save(); renderWelcome(); }
   if (a === 'notify') {
     if (await askPermission()) { Store.prayers().forEach((p) => { p.notify = true; }); Store.save(); }
     renderWelcome();
@@ -1957,11 +2242,12 @@ $('#welcome').addEventListener('click', (e) => {
 /* =========================================================
    START
    ========================================================= */
-$('#ico-palette').innerHTML = ICON.palette; $('#ico-book').innerHTML = ICON.book; $('#ico-clock').innerHTML = ICON.clock;
+$('#ico-cloud').innerHTML = ICON.cloud; $('#ico-palette').innerHTML = ICON.palette; $('#ico-book').innerHTML = ICON.book; $('#ico-clock').innerHTML = ICON.clock;
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
 Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
 if (!restoreAfterRefresh()) runSplash();
 if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
+Cloud.load(); renderAccount(); handleRecoveryLink(); if (Cloud.session) scheduleSync(800);
 { const id = new URLSearchParams(location.search).get('prayer');
   if (id) { history.replaceState(null, '', location.pathname); focusPrayer(id); } }
 tick();
