@@ -17,6 +17,16 @@
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <script>
+  // App height. On a Home Screen app iOS sometimes reports a too-short height at launch, which left
+  // a gap under the nav bar. In standalone portrait the app always fills the whole screen, so use the
+  // larger of the reported height and the screen height. Re-measured later on resize/launch.
+  window.appHeight = function () {
+    var standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    var h = window.innerHeight;
+    if (standalone) h = Math.max(h, matchMedia('(orientation: portrait)').matches ? screen.height : screen.width);
+    document.documentElement.style.setProperty('--app-h', h + 'px');
+  };
+  appHeight();
   // Apply the saved appearance before the page paints (no flash of the wrong theme)
   try {
     var t = (JSON.parse(localStorage.getItem('prayerTracker.v1')) || {}).settings;
@@ -78,17 +88,24 @@
 
   /* ===== Base, full-screen sizing, no zoom ===== */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* The page itself never moves: html/body are pinned to the screen. Only #scroller scrolls,
+     and it can't be pulled past its top or bottom (no rubber-band / pull-to-refresh look). */
+  html, body { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100vh); overflow: hidden; overscroll-behavior: none; }
   html {
-    height: 100%; background: var(--bg);
+    background: var(--bg);
     -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
     touch-action: manipulation;              /* no double-tap zoom */
   }
   body {
-    margin: 0; min-height: 100vh; min-height: 100dvh;
+    margin: 0;
     background: var(--bg); color: var(--ink);
     font: 17px/1.35 var(--serif);
     -webkit-font-smoothing: antialiased;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  #scroller {
+    position: absolute; top: 0; left: 0; right: 0; height: 100%;
+    overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
     padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px);
   }
@@ -97,20 +114,23 @@
   /* Dark strip behind the status bar once you scroll, so the white clock stays readable */
   .statusbar { position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: #0D0A07; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none; }
   body.scrolled .statusbar { opacity: .97; }
+  .statusbar { position: absolute; }
 
   /* ===== Splash ===== */
-  #splash { position: fixed; inset: 0; z-index: 100; background: #000; transition: opacity .8s ease; }
+  #splash { position: fixed; top: 0; left: 0; right: 0; height: calc(var(--app-h, 100vh) + 200px); margin-bottom: -200px;
+    z-index: 100; background: #000; overflow: hidden; transition: opacity .9s ease; }
   #splash.hide { opacity: 0; pointer-events: none; }
   #splash img, #splash .glow {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; object-position: 50% 30%; opacity: 0; transition: opacity 1.4s ease;
+    position: absolute; top: 0; left: 0; width: 100%; height: var(--app-h, 100vh);
+    object-fit: cover; object-position: 50% 30%; opacity: 0; transform: scale(1); transform-origin: 50% 35%;
+    will-change: opacity, transform;   /* fade + zoom timings are set in runSplash() */
   }
   #splash .glow { display: none; background: radial-gradient(circle at 50% 42%, #FBDDA4 0, #D4A04F 18%, #6F0B05 52%, #1a0806 85%); }
-  #splash.in img, #splash.in .glow { opacity: 1; }
+  #splash.in img, #splash.in .glow { opacity: 1; transform: scale(1.12); }
 
   /* ===== Header photo (every screen) ===== */
   .hero {
-    position: relative; height: calc(var(--safe-top) + 172px); overflow: hidden;
+    position: relative; height: calc(var(--safe-top) + 150px); overflow: hidden;
     background: linear-gradient(160deg, #1d0f06 0%, #5a2a09 40%, #c9711f 68%, #2a1406 100%); /* shown until header.jpg loads */
   }
   .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% 50%; }
@@ -118,7 +138,7 @@
     content: ""; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(0,0,0,.38) 0%, rgba(0,0,0,.05) 32%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
   }
-  .hero-text { position: absolute; left: 20px; right: 20px; bottom: 46px; z-index: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
+  .hero-text { position: absolute; left: 20px; right: 20px; bottom: 42px; z-index: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
   .hero-text h1 { margin: 0; font-size: 36px; line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
   .hero-text p { margin: 6px 0 0; font-size: 18px; opacity: .95; }
 
@@ -136,15 +156,14 @@
   /* ===== Prayers page fits the screen: no scrolling =====
      The page is exactly one screen tall; the five rows share the space left
      under the summary card and shrink a little on smaller iPhones. */
-  body.fit { height: 100vh; height: 100dvh; overflow: hidden; padding-bottom: 0; display: flex; flex-direction: column; }
-  body.fit .hero { flex: none; height: calc(var(--safe-top) + 138px); }
-  body.fit .hero-text { bottom: 40px; }
+  body.fit #scroller { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+  body.fit .hero { flex: none; }
   body.fit main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column;
-    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 10px); }
+    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); }
   body.fit #view-prayers.active { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  body.fit #view-prayers .card { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-  body.fit #prayer-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-  body.fit #prayer-list .row { flex: 1 1 72px; min-height: 50px; max-height: 76px; }
+  body.fit #view-prayers .card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  body.fit #prayer-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: none; }
+  body.fit #prayer-list .row { flex: 1 1 72px; min-height: 50px; }   /* rows share all the space down to the nav bar */
 
   /* ===== Prayers: summary card ===== */
   .summary { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 14px; border-bottom: 1px solid var(--divider); }
@@ -304,7 +323,7 @@
 
   /* ===== Bottom nav ===== */
   nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     background: var(--nav-bg); border-top: 1.5px solid var(--gold);
     padding-bottom: var(--safe-bottom);
@@ -336,6 +355,7 @@
   <div class="glow"></div>
 </div>
 
+<div id="scroller">
 <header class="hero">
   <img src="header.jpg" alt="" onerror="this.remove()">
   <div class="hero-text">
@@ -441,6 +461,7 @@
     </div>
   </section>
 </main>
+</div>
 
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-view="prayers">
@@ -460,7 +481,7 @@
 /* =========================================================
    CONFIG
    ========================================================= */
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 const TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
@@ -976,7 +997,7 @@ function show(view) {
   if (view === 'settings') renderSettings();
   if (view === 'prayers') renderPrayers(true);
   setTitle();
-  window.scrollTo(0, 0);
+  $('#scroller').scrollTop = 0;
 }
 document.querySelector('nav').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (b) show(b.dataset.view);
@@ -1022,27 +1043,39 @@ document.addEventListener('touchend', (e) => {
   lastTouchEnd = t;
 }, { passive: false });
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
-addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 90), { passive: true });
+$('#scroller').addEventListener('scroll', (e) => document.body.classList.toggle('scrolled', e.target.scrollTop > 90), { passive: true });
+// Re-measure the screen height whenever iOS might have changed it (fixes the gap under the nav at launch)
+function relayout() { appHeight(); void document.body.offsetHeight; }
+['resize', 'orientationchange', 'pageshow', 'load'].forEach((ev) => addEventListener(ev, relayout));
+if (window.visualViewport) visualViewport.addEventListener('resize', relayout);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) relayout(); });
+[100, 400, 1000, 2500].forEach((ms) => setTimeout(relayout, ms));
 
 /* =========================================================
    SPLASH
    ========================================================= */
 function runSplash() {
-  const s = $('#splash'), img = s.querySelector('img');
+  const s = $('#splash'), img = s.querySelector('img'), glow = s.querySelector('.glow');
+  // Timeline (ms): black pause → fade in → hold → fade out into the app.
+  const BLACK = 400, FADE_IN = 2200, HOLD = 1400, FADE_OUT = 900;
+  const ZOOM = FADE_IN + HOLD + FADE_OUT;           // zoom runs the whole time and ends as the app appears
+  [img, glow].forEach((el) => { el.style.transition =
+    `opacity ${FADE_IN}ms cubic-bezier(.45,0,.55,1), transform ${ZOOM}ms cubic-bezier(.33,0,.4,1)`; });
+  s.style.transition = `opacity ${FADE_OUT}ms ease`;
   let done = false, started = false;
-  const finish = () => { if (done) return; done = true; s.classList.add('hide'); setTimeout(() => s.remove(), 900); };
+  const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout(); setTimeout(() => s.remove(), FADE_OUT + 50); };
   const start = () => {
     if (started) return; started = true;
-    requestAnimationFrame(() => s.classList.add('in'));   // fade in from black (1.4s)
-    setTimeout(finish, 1400 + 1800);                      // hold ~1.8s, then fade into the app
+    setTimeout(() => requestAnimationFrame(() => s.classList.add('in')), BLACK);
+    setTimeout(finish, BLACK + FADE_IN + HOLD);
   };
   if (img.complete && img.naturalWidth) start();
   else {
     img.onload = start;
-    img.onerror = () => { img.remove(); s.querySelector('.glow').style.display = 'block'; start(); };
+    img.onerror = () => { img.remove(); glow.style.display = 'block'; start(); };
   }
   setTimeout(() => { if (!started && img.onerror) img.onerror(); }, 2500); // slow network fallback
-  s.addEventListener('click', finish);                    // tap to skip
+  s.addEventListener('click', finish);                                     // tap to skip
 }
 
 /* =========================================================
