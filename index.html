@@ -22,8 +22,15 @@
   // strip pinned to the top and bottom edges of the screen (#vh-probe) and use that. Re-measured on
   // launch, resize and when the app comes back to the front.
   window.appHeight = function () {
-    var pr = document.getElementById('vh-probe'), h = window.innerHeight, ph = pr ? pr.getBoundingClientRect().height : 0;
+    var pr = document.getElementById('vh-probe'), st = document.getElementById('st-probe'),
+        h = window.innerHeight, ph = pr ? pr.getBoundingClientRect().height : 0,
+        top = st ? st.getBoundingClientRect().height : 0;
     if (ph > 0) h = Math.max(ph, window.visualViewport ? Math.round(visualViewport.height) : 0);
+    // iOS bug (Home Screen apps with a see-through status bar): the app is drawn on the whole screen,
+    // but iOS reports a height that is short by exactly the status-bar height, which leaves a gap
+    // under the bottom bar. If the height is short by that amount, add it back.
+    var full = Math.max(screen.width, screen.height), portrait = window.innerWidth < window.innerHeight;
+    if (navigator.standalone && portrait && top > 0 && Math.abs(full - h - top) <= 3) h = full;
     document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
   };
   appHeight();
@@ -341,6 +348,9 @@
   .s-head p { margin: 2px 0 0; font-size: calc(15px * var(--fs)); color: var(--ink-dim); }
   .s-head .seg button { padding: 7px 12px; font-size: calc(15px * var(--fs)); }
   .srow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--divider); font-size: calc(18px * var(--fs)); }
+  .srow.all-row { border: 1.5px solid var(--card-line); border-radius: 12px; padding: 4px 12px; margin: 6px 0 4px; }
+  .sub-head { font-size: calc(13px * var(--fs)); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); padding: 14px 0 6px; }
+  .sub-head + .srow { border-top: 1px solid var(--divider); }
   .srow .label { flex: 1; }
   .srow .label small { display: block; font-size: calc(13px * var(--fs)); color: var(--ink-dim); }
   .srow .value { font-variant-numeric: tabular-nums; color: var(--ink); }
@@ -566,6 +576,7 @@
 </head>
 <body class="fit">
 <div id="vh-probe" style="position:fixed;top:0;bottom:0;left:0;width:1px;visibility:hidden;pointer-events:none"></div>
+<div id="st-probe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
 <div id="lvh-probe" style="position:fixed;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <div class="statusbar"></div>
 
@@ -754,7 +765,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1486,6 +1497,10 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.7.1', date: '2026-10-02', items: [
+    'Fixed: on some iPhones the bottom bar sat too high, leaving a gap under it. It now reaches the bottom of the screen.',
+    '“All reminders” now has its own box, separate from each prayer’s reminder.',
+  ] },
   { v: '1.7.0', date: '2026-10-02', items: [
     'The bottom bar now reaches the bottom of the screen, like other iPhone apps.',
     'Removed the journal button from the Today’s prayers card (the Journal has its own tab).',
@@ -1535,8 +1550,9 @@ function renderSettings() {
   }).join('') + sunsetRow;
   renderLocationSettings();
   const allOn = Store.prayers().every((p) => p.notify);
-  $('#settings-notify').innerHTML = `<div class="srow"><span class="label"><b style="font-weight:600">All reminders</b><small>Turn every prayer’s reminder on or off</small></span>
-     <button class="switch" role="switch" id="sw-all" aria-checked="${allOn}" aria-label="All reminders"></button></div>` + Store.prayers().map((p) =>
+  $('#settings-notify').innerHTML = `<div class="srow all-row"><span class="label"><b style="font-weight:600">All reminders</b><small>Turn every prayer’s reminder on or off</small></span>
+     <button class="switch" role="switch" id="sw-all" aria-checked="${allOn}" aria-label="All reminders"></button></div>
+     <div class="sub-head">Each prayer</div>` + Store.prayers().map((p) =>
     `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
      <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('');
   $('#app-version').textContent = APP_VERSION;
@@ -1664,7 +1680,7 @@ $('#ver-row').onclick = () => {
   const nav = document.querySelector('nav').getBoundingClientRect();
   openSheet(`${sheetHead('Screen check')}<p class="wl-small" style="margin-top:0">If the bottom bar ever doesn’t sit at the bottom of the screen, send a screenshot of this.</p>
     <div class="note" style="border-top:0;font-variant-numeric:tabular-nums;line-height:1.7">
-    Version: <b>${APP_VERSION}</b><br>Screen size: <b>${screen.width} × ${screen.height}</b><br>Window height: <b>${innerHeight}</b><br>
+    Version: <b>${APP_VERSION}</b><br>Status bar: <b>${probe('#st-probe')}</b><br>Screen size: <b>${screen.width} × ${screen.height}</b><br>Window height: <b>${innerHeight}</b><br>
     Visible area: <b>${window.visualViewport ? px(visualViewport.height) : '–'}</b><br>Pinned strip: <b>${probe('#vh-probe')}</b> · large: <b>${probe('#lvh-probe')}</b><br>
     App height used: <b>${cs.getPropertyValue('--app-h').trim()}</b><br>Bottom bar ends at: <b>${px(nav.bottom)}</b><br>
     Home Screen app: <b>${isStandalone ? 'yes' : 'no'}</b></div>`);
