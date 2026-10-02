@@ -243,6 +243,8 @@
   }
   @keyframes trace { to { --a: 360deg; } }
   @media (prefers-reduced-motion: reduce) { .row.now::after { animation: none; background: var(--gold); } }
+  .row.pulse { animation: pulse 1.6s ease 2; }
+  @keyframes pulse { 0%, 100% { box-shadow: none; } 40% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 24px rgba(245,191,79,.45); } }
   .badge { font: 700 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: .05em; background: var(--gold); color: #1A1206; padding: 4px 6px; border-radius: 4px; flex: none; }
 
   /* ===== Calendar ===== */
@@ -498,7 +500,7 @@
 /* =========================================================
    CONFIG
    ========================================================= */
-const APP_VERSION = '1.1.6';
+const APP_VERSION = '1.1.7';
 const TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
@@ -938,22 +940,47 @@ async function toggleBell(id) {
   if (turningOn && notifSupport() === 'granted') toast(`${p.name} reminder on`);
 }
 
-async function showNotification(p, test) {
+// Notification text, e.g.
+//   It's time for Sunset prayer 🇸🇪
+//   3 of 5 prayed – mark Sunset ✓
+function notificationText(p) {
+  const key = nowInfo().key, n = Store.prayers().length, c = Store.count(key);
+  return {
+    title: `It’s time for ${p.name} prayer 🇸🇪`,
+    body: Store.isDone(key, p.id) ? `${c} of ${n} prayed – ${p.name} is already marked ✓` : `${c} of ${n} prayed – mark ${p.name} ✓`,
+  };
+}
+
+async function showNotification(p) {
   const silent = SILENT_IDS.includes(p.id);
+  const { title, body } = notificationText(p);
   const opts = {
-    body: test ? 'Test notification' : `${p.time} · Time for ${p.name.toLowerCase()} prayer`,
-    tag: 'prayer-' + p.id, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+    body, tag: 'prayer-' + p.id, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+    data: { prayer: p.id },          // tapping it opens the app on this prayer
     silent,                          // honoured on Android/desktop; iOS decides on its own
     vibrate: silent ? [] : [80],     // single short buzz (ignored by iOS)
   };
   try {
     const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification(p.name, opts);
+    await reg.showNotification(title, opts);
   } catch (_) {
-    try { new Notification(p.name, opts); } catch (__) {}
+    try { new Notification(title, opts); } catch (__) {}
   }
   if (!silent && navigator.vibrate) navigator.vibrate(80); // no-op on iPhone
 }
+
+// Opened from a notification: go to Prayers and make that row glow briefly
+function focusPrayer(id) {
+  if (!Store.prayers().some((p) => p.id === id)) return;
+  show('prayers');
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`#prayer-list .row[data-id="${id}"]`);
+    if (row) { row.classList.remove('pulse'); void row.offsetWidth; row.classList.add('pulse'); }
+  });
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'open-prayer') focusPrayer(e.data.id);
+});
 
 function checkReminders() {
   if (notifSupport() !== 'granted') return;
@@ -971,7 +998,7 @@ function checkReminders() {
 }
 
 $('#btn-permission').onclick = askPermission;
-$('#btn-test').onclick = () => showNotification(Store.prayers()[1], true);
+$('#btn-test').onclick = () => showNotification(Store.prayers().find((p) => p.id === currentPrayerId(nowInfo().min)) || Store.prayers()[0]);
 
 /* =========================================================
    BACKUP
@@ -1165,6 +1192,8 @@ $('#ico-palette').innerHTML = ICON.palette; $('#ico-clock').innerHTML = ICON.clo
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
 Store.load(); Store.save(); applyTheme();
 if (!restoreAfterRefresh()) runSplash();
+{ const id = new URLSearchParams(location.search).get('prayer');
+  if (id) { history.replaceState(null, '', location.pathname); focusPrayer(id); } }
 tick();
 setInterval(tick, 15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });

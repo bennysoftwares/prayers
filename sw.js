@@ -1,6 +1,6 @@
 // Service worker: offline support + showing notifications.
 // Bump VERSION whenever you upload new files so phones pick up changes.
-const VERSION = 'prayers-v11';
+const VERSION = 'prayers-v12';
 const ASSETS = ['./', './index.html', './manifest.json', './splash.jpg', './header.jpg',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
@@ -33,11 +33,13 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
+// Tapping a notification opens the app on that prayer
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const id = e.notification.data && e.notification.data.prayer;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    for (const c of list) if ('focus' in c) return c.focus();
-    return self.clients.openWindow('./');
+    for (const c of list) if ('focus' in c) { if (id) c.postMessage({ type: 'open-prayer', id }); return c.focus(); }
+    return self.clients.openWindow(id ? './?prayer=' + encodeURIComponent(id) : './');
   }));
 });
 
