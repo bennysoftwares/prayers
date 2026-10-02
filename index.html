@@ -247,6 +247,7 @@
                      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
   .row .time { flex: none; font-size: calc(19px * var(--fs)); font-variant-numeric: tabular-nums; }
   /* Square checkbox */
+  .row.later .check { opacity: .35; border-style: dashed; }
   .check { width: 28px; height: 28px; flex: none; border: 2px solid var(--ink-dim); border-radius: 3px; display: grid; place-items: center; transition: background .15s, border-color .15s; }
   .check svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .15s ease; color: var(--on-accent); }
   .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
@@ -546,6 +547,19 @@
   .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--ink-faint); }
   .sync-dot.ok { background: #5BB974; } .sync-dot.busy { background: var(--gold); animation: blink 1s infinite; } .sync-dot.err { background: var(--danger); }
   @keyframes blink { 50% { opacity: .3; } }
+  .rem-panel { margin: 4px 0 10px; padding: 12px; border-radius: 14px; border: 1.5px solid var(--card-line);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 9%, transparent), transparent 70%); }
+  .rem-head { display: flex; gap: 12px; align-items: flex-start; }
+  .rem-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+  .rem-ico svg { width: 20px; height: 20px; }
+  .rem-head b { display: block; font-size: calc(17px * var(--fs)); color: var(--ink-strong); font-weight: 600; }
+  .rem-head small { display: block; font-size: calc(14px * var(--fs)); color: var(--ink-dim); line-height: 1.35; margin-top: 2px; }
+  .rem-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 12px;
+    border-radius: 12px; background: var(--accent); color: var(--on-accent); font-size: calc(16px * var(--fs)); font-weight: 700; transition: opacity .2s, transform .1s; }
+  .rem-btn:active { transform: scale(.98); }
+  .rem-btn svg { width: 18px; height: 18px; }
+  .rem-btn.sending { opacity: .6; }
   .acct-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 8px; }
   .acct-btns .sbtn { margin: 0; }
   .auth-form label { display: block; font-size: calc(15px * var(--fs)); color: var(--ink-dim); margin: 0 0 12px; }
@@ -779,7 +793,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1226,6 +1240,14 @@ function setTitle() {
   }[currentView];
 }
 
+// A prayer can't be ticked before its time has come (today's later prayers, or a future day)
+function notYet(key, p) {
+  const now = nowInfo();
+  return !Store.isDone(key, p.id) && (key > now.key || (key === now.key && toMin(timeOf(p, key)) > now.min));
+}
+function notYetToast(key, p) {
+  toast(key === nowInfo().key ? `${p.name} prayer is at ${timeOf(p, key)}. You can mark it then.` : 'You can’t mark a day that hasn’t come yet.');
+}
 function currentPrayerId(min) {
   // whichever prayer's time most recently passed today (none before the first one)
   let best = null;
@@ -1259,7 +1281,7 @@ function renderPrayers(force) {
   list.classList.toggle('has-now', !!nowId);
   list.innerHTML = Store.prayers().map((p) => {
     const done = Store.isDone(now.key, p.id);
-    return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}" data-id="${p.id}">
+    return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(now.key, p) ? ' later' : ''}" data-id="${p.id}">
       <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
@@ -1308,7 +1330,8 @@ $('#prayer-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const id = btn.closest('.row').dataset.id;
   if (btn.dataset.act === 'toggle') {
-    const key = nowInfo().key, on = !Store.isDone(key, id), name = Store.prayers().find((p) => p.id === id).name;
+    const key = nowInfo().key, on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
+    if (notYet(key, pr)) { notYetToast(key, pr); renderPrayers(true); return; }
     changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed` : `${name} unmarked`);
   } else {
     await toggleBell(id);
@@ -1396,7 +1419,7 @@ function renderDetail() {
     </div>
     <div class="list">${Store.prayers().map((p) => {
       const done = Store.isDone(k, p.id);
-      return `<div class="row${done ? ' done' : ''}" data-id="${p.id}">
+      return `<div class="row${done ? ' done' : ''}${cal.edit && notYet(k, p) ? ' later' : ''}" data-id="${p.id}">
         <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
         <span class="p-ico">${iconFor(p)}</span>
         <span class="name">${p.name}</span><span class="time">${timeOf(p, k)}</span></div>`;
@@ -1417,7 +1440,8 @@ $('#cal-detail').addEventListener('click', (e) => {
   if (e.target.closest('#btn-note')) { openNote(cal.sel); return; }
   const c = e.target.closest('.check'); if (!c || !cal.edit) return;
   const id = c.closest('.row').dataset.id, key = cal.sel, on = !Store.isDone(key, id);
-  const name = Store.prayers().find((p) => p.id === id).name;
+  const pr = Store.prayers().find((p) => p.id === id), name = pr.name;
+  if (notYet(key, pr)) { notYetToast(key, pr); return; }
   changeDay(key, () => Store.setDone(key, id, on), `${name} ${on ? 'marked' : 'unmarked'} for ${fmt(key, { month: 'short', day: 'numeric' })}`);
 });
 document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
@@ -1511,6 +1535,10 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.8.2', date: '2026-10-02', items: [
+    'Prayers can’t be marked before their time. Later prayers show a faded box until their time comes.',
+    'The test notification now arrives within seconds instead of up to a minute.',
+  ] },
   { v: '1.8.1', date: '2026-10-02', items: [
     'Fixed: the reminder server couldn’t reach the database, so phones couldn’t connect to it.',
     'The test button now says when its test only came from this phone (not yet from your account).',
@@ -1739,7 +1767,7 @@ function renderNotifyStatus() {
     unsupported: 'This browser doesn’t support web notifications.',
     default: 'Notifications are <b>not allowed yet</b>.',
     granted: window.Push && Push.active()
-      ? 'Notifications are <b>allowed</b>. ✓ Reminders come from your account, so they arrive on time even when the app is closed.'
+      ? 'Notifications are <b>allowed</b>. ✓ Reminders come from your account, so they arrive on time even when the app is closed. You can send a test in <b>Account &amp; sync</b>.'
       : Cloud.session
         ? (window.Push && Push.error ? `Notifications are <b>allowed</b>, but couldn’t connect reminders to your account: ${esc(Push.error)}` : 'Notifications are <b>allowed</b>. Connecting reminders to your account…')
         : 'Notifications are <b>allowed</b>, but only arrive while the app is open. <b>Create an account or sign in</b> (top of Settings) to get reminders on time even when the app is closed.',
@@ -1747,7 +1775,7 @@ function renderNotifyStatus() {
   }[s];
   $('#notify-status').innerHTML = msg;
   $('#btn-permission').style.display = s === 'default' ? '' : 'none';
-  $('#btn-test').style.display = s === 'granted' ? '' : 'none';
+  $('#btn-test').style.display = s === 'granted' && !Cloud.session ? '' : 'none';   // with an account it's in Account & sync
   $('#btn-push-retry').style.display = s === 'granted' && Cloud.session && window.Push && !Push.active() && Push.error ? '' : 'none';
 }
 
@@ -1833,7 +1861,7 @@ $('#btn-permission').onclick = askPermission;
 $('#btn-push-retry').onclick = async () => { if (await Push.ensure()) toast('Reminders connected to your account'); };
 $('#btn-test').onclick = async () => {
   if (Push.active()) {
-    try { await Push.test(); toast('Test on its way. It arrives within a minute, so you can close the app now to check.'); }
+    try { toast(await Push.test() === 'fast' ? 'Test on its way. It should arrive in a few seconds.' : 'Test on its way. It arrives within a minute, so you can close the app now to check.'); }
     catch (e) { toast(e.code === 'offline' ? 'No internet connection.' : 'Couldn’t send the test: ' + e.message); }
     return;
   }
@@ -2211,7 +2239,7 @@ var Push = {   // var: other code checks window.Push before this line has run
     } catch (e) {
       this.error = e.code === 'offline' ? '' : (e.message || String(e));
       return false;
-    } finally { renderNotifyStatus(); }
+    } finally { renderNotifyStatus(); renderAccount(); }
   },
   async remove() {
     const ep = this.endpoint();
@@ -2220,7 +2248,10 @@ var Push = {   // var: other code checks window.Push before this line has run
     try { const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (_) {}
   },
   async test() {
+    try { await Cloud.api('POST', 'rpc/push_test', { ep: this.endpoint() }); return 'fast'; }   // server starts right away
+    catch (e) { if (e.code === 'offline') throw e; }                                          // (older setup: next minute)
     await Cloud.api('PATCH', 'push_subs?endpoint=eq.' + encodeURIComponent(this.endpoint()), { test_at: new Date().toISOString() }, 'return=minimal');
+    return 'slow';
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.session && notifSupport() === 'granted') Push.ensure(); });
@@ -2231,6 +2262,18 @@ function ago(iso) {
   return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : fmt(iso.slice(0, 10), { month: 'short', day: 'numeric' });
 }
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+// "Prayer reminders" panel in Account & sync: is this phone connected, plus the test button
+function reminderPanel() {
+  const n = notifSupport(), on = window.Push && Push.active();
+  const st = on ? { dot: 'ok', line: 'Connected. They arrive on time, even when the app is closed.' }
+    : n === 'granted' ? { dot: 'err', line: window.Push && Push.error ? 'Not connected yet.' : 'Connecting…' }
+    : n === 'install' ? { dot: '', line: 'Open the app from your Home Screen icon to use reminders.' }
+    : { dot: '', line: 'Turn on a prayer’s reminder in Notifications below.' };
+  const btn = on ? `<button class="rem-btn" data-acct="test">${ICON.bell}<span>Send a test notification</span></button>`
+    : n === 'granted' ? `<button class="rem-btn" data-acct="connect">${ICON.bell}<span>Connect reminders</span></button>` : '';
+  return `<div class="rem-panel"><div class="rem-head"><span class="rem-ico">${ICON.bell}</span>
+    <div><b>Prayer reminders</b><small><span class="sync-dot ${st.dot}"></span>${st.line}</small></div></div>${btn}</div>`;
+}
 function renderAccount() {
   const el = $('#settings-account'); if (!el) return;
   const s = Cloud.session;
@@ -2247,6 +2290,7 @@ function renderAccount() {
   el.innerHTML = `<div class="acct-state"><span class="acct-who">Signed in as</span><span class="acct-email" title="${esc(s.user.email)}">${esc(s.user.email)}</span>
     <small><span class="sync-dot ${dot}"></span>${esc(line)}</small>${held}</div>
     <div class="acct-btns"><button class="sbtn" data-acct="sync">Sync now</button><button class="sbtn" data-acct="password">Change password</button></div>
+    ${reminderPanel()}
     <button class="srow btnrow" data-acct="signout"><span class="label">Sign out</span>${ICON.chev}</button>`;
 }
 $('#settings-account').addEventListener('click', async (e) => {
@@ -2255,6 +2299,13 @@ $('#settings-account').addEventListener('click', async (e) => {
   if (a === 'signup' || a === 'signin') openAuth(a);
   if (a === 'sync') syncNow();
   if (a === 'password') openNewPassword();
+  if (a === 'connect') { b.disabled = true; if (await Push.ensure()) toast('Reminders connected to your account'); else toast(Push.error || 'Couldn’t connect. Try again in a minute.'); renderAccount(); }
+  if (a === 'test') {
+    b.disabled = true; b.classList.add('sending'); b.querySelector('span').textContent = 'Sending…';
+    try { toast(await Push.test() === 'fast' ? 'Test on its way. It should arrive in a few seconds.' : 'Test on its way. It arrives within a minute.'); }
+    catch (ex) { toast(ex.code === 'offline' ? 'No internet connection.' : 'Couldn’t send the test: ' + ex.message); }
+    setTimeout(renderAccount, 2500);
+  }
   if (a === 'signout') {
     if (!confirm('Sign out?\n\nYour prayers stay on this phone and in your account. Sign in again any time to keep syncing.')) return;
     await Push.remove(); await Cloud.signOut(); syncState = 'idle'; renderAccount(); renderNotifyStatus(); toast('Signed out');
