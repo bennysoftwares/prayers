@@ -350,6 +350,13 @@
   .scard .s-ico { width: 36px; height: 36px; color: var(--icon); margin-top: 2px; }
   .scard .s-ico svg { width: 100%; height: 100%; }
   .s-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 8px; }
+  /* Fold-out settings cards: tap the heading to open or close */
+  .scard.fold .s-head { cursor: pointer; flex-wrap: nowrap; }
+  .scard.fold .s-head::after { content: ''; flex: none; width: 10px; height: 10px; margin-right: 6px;
+    border-right: 2px solid var(--ink-dim); border-bottom: 2px solid var(--ink-dim); transform: rotate(45deg) translate(-3px, -3px); transition: transform .2s; }
+  .scard.fold.open .s-head::after { transform: rotate(-135deg) translate(-3px, -3px); }
+  .scard.fold:not(.open) > div > :not(.s-head) { display: none; }
+  .scard.fold:not(.open) { padding-bottom: 10px; }
   .s-head h3 { margin: 0; font-size: calc(21px * var(--fs)); color: var(--ink-strong); }
   .s-head p { margin: 2px 0 0; font-size: calc(15px * var(--fs)); color: var(--ink-dim); }
   .s-head .seg button { padding: 7px 12px; font-size: calc(15px * var(--fs)); }
@@ -671,15 +678,14 @@
       </div>
     </div>
 
-    <div class="card scard">
+    <div class="card scard fold" data-fold="palette">
       <div class="s-ico" id="ico-palette"></div>
       <div>
-        <div class="s-head">
-          <div><h3>Appearance</h3><p>Choose how the app looks</p></div>
+        <div class="s-head"><div><h3>Appearance</h3><p>Theme and text size</p></div></div>
+        <div class="s-row2"><span>Theme</span>
           <div class="seg" id="theme-seg" role="group" aria-label="Appearance">
             <button data-theme="light">Light</button><button data-theme="dark">Dark</button><button data-theme="system">System</button>
-          </div>
-        </div>
+          </div></div>
         <div class="s-row2"><span>Text size</span>
           <div class="seg" id="size-seg" role="group" aria-label="Text size">
             <button data-size="small">Small</button><button data-size="normal">Normal</button><button data-size="large">Large</button>
@@ -687,7 +693,7 @@
       </div>
     </div>
 
-    <div class="card scard">
+    <div class="card scard fold" data-fold="book">
       <div class="s-ico" id="ico-book"></div>
       <div>
         <div class="s-head"><div><h3>Verse of the day</h3><p>A new Bible verse every day</p></div></div>
@@ -696,7 +702,7 @@
       </div>
     </div>
 
-    <div class="card scard">
+    <div class="card scard fold" data-fold="clock">
       <div class="s-ico" id="ico-clock"></div>
       <div>
         <div class="s-head"><div><h3>Prayer times</h3><p>Tap a time to change it</p></div></div>
@@ -704,18 +710,19 @@
       </div>
     </div>
 
-    <div class="card scard">
+    <div class="card scard fold" data-fold="bell">
       <div class="s-ico" id="ico-bell"></div>
       <div>
         <div class="s-head"><div><h3>Notifications</h3><p>Get reminded when it’s time to pray</p></div></div>
         <div id="settings-notify"></div>
         <div class="note" id="notify-status"></div>
         <button class="sbtn" id="btn-permission">Allow notifications</button>
+        <button class="sbtn" id="btn-push-retry">Try connecting again</button>
         <button class="sbtn" id="btn-test">Send a test notification</button>
       </div>
     </div>
 
-    <div class="card scard">
+    <div class="card scard fold" data-fold="pin">
       <div class="s-ico" id="ico-pin"></div>
       <div>
         <div class="s-head"><div><h3>Location</h3><p>Used for your local time, sunset and display</p></div></div>
@@ -772,7 +779,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.8.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1504,6 +1511,12 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.8.0', date: '2026-10-02', items: [
+    'New: reminders now come from your account, so they arrive on time even when the app is closed (needs an account and allowed notifications).',
+    '“Send a test notification” now tests the real thing: the test comes from your account within a minute.',
+    'Sync: your ticks are sent the moment you leave the app, so you aren’t reminded about a prayer you’ve already marked.',
+    'Settings: Appearance, Verse of the day, Prayer times, Notifications and Location are now dropdowns. Tap a heading to open it.',
+  ] },
   { v: '1.7.2', date: '2026-10-02', items: [
     'Fixed: the labels under the bottom bar icons were cut off. The bar still reaches the bottom of the screen.',
   ] },
@@ -1721,12 +1734,17 @@ function renderNotifyStatus() {
     install: 'Open this app from your <b>Home Screen icon</b> to use notifications (iOS only allows them there).',
     unsupported: 'This browser doesn’t support web notifications.',
     default: 'Notifications are <b>not allowed yet</b>.',
-    granted: 'Notifications are <b>allowed</b>. They fire while the app is open; reliable reminders with the app closed come in phase 2.',
+    granted: window.Push && Push.active()
+      ? 'Notifications are <b>allowed</b>. ✓ Reminders come from your account, so they arrive on time even when the app is closed.'
+      : Cloud.session
+        ? (window.Push && Push.error ? `Notifications are <b>allowed</b>, but couldn’t connect reminders to your account: ${esc(Push.error)}` : 'Notifications are <b>allowed</b>. Connecting reminders to your account…')
+        : 'Notifications are <b>allowed</b>, but only arrive while the app is open. <b>Create an account or sign in</b> (top of Settings) to get reminders on time even when the app is closed.',
     denied: 'Notifications are <b>blocked</b>. Turn them on in iOS Settings › Notifications › Prayers.',
   }[s];
   $('#notify-status').innerHTML = msg;
   $('#btn-permission').style.display = s === 'default' ? '' : 'none';
   $('#btn-test').style.display = s === 'granted' ? '' : 'none';
+  $('#btn-push-retry').style.display = s === 'granted' && Cloud.session && window.Push && !Push.active() && Push.error ? '' : 'none';
 }
 
 async function askPermission() {
@@ -1737,6 +1755,7 @@ async function askPermission() {
   if (s === 'denied') { toast('Blocked — enable in iOS Settings › Notifications.'); return false; }
   const r = await Notification.requestPermission();
   renderNotifyStatus();
+  if (r === 'granted') Push.ensure();
   return r === 'granted';
 }
 
@@ -1792,7 +1811,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 });
 
 function checkReminders() {
-  if (notifSupport() !== 'granted') return;
+  if (notifSupport() !== 'granted' || (window.Push && Push.active())) return;   // the account sends them instead
   const now = nowInfo();
   const sent = Store.data.meta.notified;
   for (const key of Object.keys(sent)) if (key !== now.key) delete sent[key];
@@ -1807,7 +1826,16 @@ function checkReminders() {
 }
 
 $('#btn-permission').onclick = askPermission;
-$('#btn-test').onclick = () => showNotification(Store.prayers().find((p) => p.id === currentPrayerId(nowInfo().min)) || Store.prayers()[0]);
+$('#btn-push-retry').onclick = async () => { if (await Push.ensure()) toast('Reminders connected to your account'); };
+$('#btn-test').onclick = async () => {
+  if (Push.active()) {
+    try { await Push.test(); toast('Test on its way. It arrives within a minute, so you can close the app now to check.'); }
+    catch (e) { toast(e.code === 'offline' ? 'No internet connection.' : 'Couldn’t send the test: ' + e.message); }
+    return;
+  }
+  localTest();
+};
+const localTest = () => showNotification(Store.prayers().find((p) => p.id === currentPrayerId(nowInfo().min)) || Store.prayers()[0]);
 
 /* =========================================================
    BACKUP
@@ -2060,11 +2088,12 @@ const Cloud = {
       throw e;
     }
   },
-  async rest(method, query, body, prefer) {
+  rest(method, query, body, prefer) { return this.api(method, 'user_data' + (query || ''), body, prefer); },
+  async api(method, path, body, prefer) {
     const tok = await this.token();
     let r;
     try {
-      r = await fetch(`${SUPABASE_URL}/rest/v1/user_data${query || ''}`, { method, headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json', ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined });
+      r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method, headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json', ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined });
     } catch (_) { throw new CloudError('Offline', 0, 'offline'); }
     if (!r.ok) { const j = await r.json().catch(() => ({})); throw new CloudError(j.message || `Sync error (${r.status})`, r.status, j.code); }
     return r.status === 204 ? null : r.json().catch(() => null);
@@ -2107,9 +2136,11 @@ const stable = (v) => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'
 
 /* ----- Syncing ----- */
 let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncError = '';
-function scheduleSync(delay = 2500) { if (!Cloud.session) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(), delay); }
+let syncPending = false;
+function scheduleSync(delay = 2500) { if (!Cloud.session) return; syncPending = true; clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(), delay); }
 async function syncNow(force = false) {
   if (!Cloud.session) return;
+  clearTimeout(syncTimer); syncPending = false;
   if (syncing) { syncAgain = true; return; }
   syncing = true; syncState = 'busy'; renderAccount();
   try {
@@ -2137,8 +2168,57 @@ async function syncNow(force = false) {
   }
 }
 addEventListener('online', () => scheduleSync(500));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleSync(300); });
+// Coming back: fetch changes from other phones. Leaving: send unsynced ticks right away, so the
+// reminder server knows a prayer is already marked and doesn't remind you about it.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleSync(300); else if (syncPending) syncNow(); });
+addEventListener('pagehide', () => { if (syncPending) syncNow(); });
 setInterval(() => { if (!document.hidden) scheduleSync(0); }, 5 * 60 * 1000);
+
+/* ----- Reminders from the account (web push): arrive on time even when the app is closed ----- */
+const PUSH_KEY = 'prayerTracker.push';            // this phone's push address, once the account has it
+const b64uBytes = (b) => { const s = atob((b + '==='.slice((b.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, (c) => c.charCodeAt(0)); };
+var Push = {   // var: other code checks window.Push before this line has run
+  error: '',
+  endpoint() { try { return localStorage.getItem(PUSH_KEY); } catch (_) { return null; } },
+  active() { return !!(Cloud.session && this.endpoint() && notifSupport() === 'granted'); },
+  possible() { return 'PushManager' in window && 'serviceWorker' in navigator; },
+  // Make sure the account can reach this phone. Safe to call often.
+  async ensure(retry = true) {
+    if (!Cloud.session || notifSupport() !== 'granted' || !this.possible()) return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const key = await Cloud.api('POST', 'rpc/push_public_key', {});
+        if (!key) throw new Error('The reminder server isn’t set up yet (or is starting). Try again in a minute.');
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uBytes(key) });
+      }
+      try {
+        await Cloud.api('POST', 'push_subs?on_conflict=endpoint', { endpoint: sub.endpoint, sub: sub.toJSON(), updated_at: new Date().toISOString() },
+          'resolution=merge-duplicates,return=minimal');
+      } catch (e) {
+        // address belongs to another account (signed in with a different email): get a fresh one
+        if (retry && (e.status === 403 || e.code === '42501')) { await sub.unsubscribe(); return this.ensure(false); }
+        throw e;
+      }
+      try { localStorage.setItem(PUSH_KEY, sub.endpoint); } catch (_) {}
+      this.error = ''; return true;
+    } catch (e) {
+      this.error = e.code === 'offline' ? '' : (e.message || String(e));
+      return false;
+    } finally { renderNotifyStatus(); }
+  },
+  async remove() {
+    const ep = this.endpoint();
+    try { localStorage.removeItem(PUSH_KEY); } catch (_) {}
+    if (ep && Cloud.session) try { await Cloud.api('DELETE', 'push_subs?endpoint=eq.' + encodeURIComponent(ep)); } catch (_) {}
+    try { const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (_) {}
+  },
+  async test() {
+    await Cloud.api('PATCH', 'push_subs?endpoint=eq.' + encodeURIComponent(this.endpoint()), { test_at: new Date().toISOString() }, 'return=minimal');
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.session && notifSupport() === 'granted') Push.ensure(); });
 
 /* ----- Account card in Settings ----- */
 function ago(iso) {
@@ -2172,7 +2252,7 @@ $('#settings-account').addEventListener('click', async (e) => {
   if (a === 'password') openNewPassword();
   if (a === 'signout') {
     if (!confirm('Sign out?\n\nYour prayers stay on this phone and in your account. Sign in again any time to keep syncing.')) return;
-    await Cloud.signOut(); syncState = 'idle'; renderAccount(); toast('Signed out');
+    await Push.remove(); await Cloud.signOut(); syncState = 'idle'; renderAccount(); renderNotifyStatus(); toast('Signed out');
   }
 });
 
@@ -2203,7 +2283,7 @@ $('#sheet').addEventListener('submit', async (e) => {
       f.dataset.mode === 'signup' ? await Cloud.signUp(email, pw) : await Cloud.signIn(email, pw);
       closeSheet(); renderAccount();
       toast(f.dataset.mode === 'signup' ? 'Account created. Your prayers are now saved to it.' : 'Signed in. Bringing your prayers over…');
-      await syncNow();
+      await syncNow(); Push.ensure();
       if (authFromWelcome) finishWelcome();
     } catch (ex) { err.textContent = ex.message; go.disabled = false; go.textContent = f.dataset.mode === 'signup' ? 'Create account' : 'Sign in'; }
   }
@@ -2338,10 +2418,25 @@ $('#welcome').addEventListener('click', (e) => {
    ========================================================= */
 $('#ico-cloud').innerHTML = ICON.cloud; $('#ico-palette').innerHTML = ICON.palette; $('#ico-book').innerHTML = ICON.book; $('#ico-clock').innerHTML = ICON.clock;
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear; $('#ico-new').innerHTML = ICON.sparkle;
+
+// Settings dropdowns. They start closed; the ones you open stay open while the app is running (also after pull-to-refresh).
+const FOLD_KEY = 'prayerTracker.open';
+let openFolds = []; try { openFolds = JSON.parse(sessionStorage.getItem(FOLD_KEY)) || []; } catch (_) {}
+function setFold(card, open) {
+  card.classList.toggle('open', open); card.querySelector('.s-head').setAttribute('aria-expanded', open);
+  openFolds = [...document.querySelectorAll('.scard.fold.open')].map((c) => c.dataset.fold);
+  try { sessionStorage.setItem(FOLD_KEY, JSON.stringify(openFolds)); } catch (_) {}
+}
+document.querySelectorAll('.scard.fold').forEach((card) => {
+  const h = card.querySelector('.s-head');
+  h.setAttribute('role', 'button'); h.tabIndex = 0;
+  const o = openFolds.includes(card.dataset.fold); card.classList.toggle('open', o); h.setAttribute('aria-expanded', o);
+  h.addEventListener('click', () => setFold(card, !card.classList.contains('open')));
+});
 Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
 if (!restoreAfterRefresh()) runSplash();
 if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
-Cloud.load(); renderAccount(); handleRecoveryLink(); if (Cloud.session) scheduleSync(800);
+Cloud.load(); renderAccount(); handleRecoveryLink(); if (Cloud.session) { scheduleSync(800); setTimeout(() => Push.ensure(), 1500); }
 { const id = new URLSearchParams(location.search).get('prayer');
   if (id) { history.replaceState(null, '', location.pathname); focusPrayer(id); } }
 tick();
