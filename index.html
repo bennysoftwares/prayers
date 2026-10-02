@@ -481,7 +481,7 @@
 /* =========================================================
    CONFIG
    ========================================================= */
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 const TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
@@ -1090,7 +1090,17 @@ setInterval(tick, 15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 window.addEventListener('focus', tick);
 window.addEventListener('pageshow', tick);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// Updates: check for a new version every time the app is opened, and switch to it straight away.
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+  }).catch(() => {});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }   // new version installed → show it
+  });
+}
 </script>
 </body>
 </html>
