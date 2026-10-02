@@ -2,21 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Prayers</title>
 <meta name="description" content="Personal daily prayer tracker">
-<meta name="theme-color" content="#6F0B05">
+<meta name="theme-color" content="#0D0A07">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Prayers">
 <meta name="format-detection" content="telephone=no">
 <link rel="preload" as="image" href="splash.jpg">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preload" as="image" href="header.jpg">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <script>
-  // Apply the saved appearance before the page paints
+  // Apply the saved appearance before the page paints (no flash of the wrong theme)
   try {
     var t = (JSON.parse(localStorage.getItem('prayerTracker.v1')) || {}).settings;
     t = t && t.theme;
@@ -24,249 +25,309 @@
   } catch (e) {}
 </script>
 <style>
-  /* ===== Palette (from the painting) =====
-     Light is the default. Dark applies when chosen in Settings, or when
-     "Follow system" is chosen and the phone is in dark mode. */
+  /* ===== Colour tokens =====
+     Light = cream / red / gold (from the painting). Dark = near-black / gold (from the mockups).
+     "System" leaves data-theme unset, so the phone's setting decides. */
   :root {
     color-scheme: light;
-    --cream: #F4EBDA;        /* tunic: page base */
-    --cream-hi: #FBF6EC;     /* container surface */
-    --line: #E6D6BA;         /* thin dividers */
-    --ink: #2B1608;          /* main text */
-    --ink-soft: #6E5440;     /* secondary text */
-    --ink-strong: #1A0B03;   /* "Now" row text */
-    --ink-dim: #7A6352;      /* non-active rows */
-    --red: #9A1B10;          /* robe / sash: buttons, checks */
-    --red-ui: #9A1B10;       /* red used for outlines and red text */
-    --red-deep: #6F0B05;     /* robe in shadow: nav, status bar */
-    --gold: #D4A04F;         /* warm sky: highlights */
-    --gold-hi: #FBDDA4;      /* glow behind the head */
-    --gold-soft: #F2DCAE;    /* partial days */
-    --now-bg: #FFF7E6;
-    --hero-bg: #FFF8E6;
-    --missed: #E8DFCF;
-    --missed-ink: #9C8C7C;
-    --missed-line: #B9A894;
-    --faint: #B7A897;        /* future days */
-    --switch-off: #D6C9B3;
-    --badge-ink: #2B1608;
+    --bg: #F4EBDA;
+    --card: #FBF6EC;
+    --card-line: #E6D6BA;
+    --divider: #EADFCB;
+    --ink: #2B1608;
+    --ink-strong: #160900;
+    --ink-dim: #7A6352;
+    --ink-faint: #B9AA98;
+    --accent: #9A1B10;        /* ticks, ring, switches */
+    --on-accent: #FFFFFF;
+    --gold: #C8902E;          /* NOW outline, badge */
+    --gold-hi: #FBDDA4;
+    --gold-text: #8E5F0E;     /* gold text that must be readable on cream */
+    --icon: #B07A22;          /* prayer and card icons */
+    --now-bg: #FFF4DE;
+    --ring-track: #E8DCC6;
+    --seg-bg: #EFE4CF;
+    --nav-bg: #FBF6EC;
+    --nav-ink: #8C7766;
+    --nav-active: #A8741C;
+    --danger: #A3271B;
+    --missed-dot: #C9A79E;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --nav-h: 64px;
+    --nav-h: 66px;
+    --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Times New Roman", serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --cream: #12100F;  --cream-hi: #1C1917;  --line: #352D28;
-      --ink: #EFE6D6;    --ink-soft: #A99A89;  --ink-strong: #FFF9EE;  --ink-dim: #9C8E7E;
-      --red-ui: #C5352A; --gold-soft: rgba(212,160,79,.24);
-      --now-bg: #2A2117; --hero-bg: #261E16;
-      --missed: #26211E; --missed-ink: #6F6459; --missed-line: #5A4F46;
-      --faint: #5C5249;  --switch-off: #4A403A;
+      --bg: #0D0A07; --card: #16110C; --card-line: rgba(245,191,79,.16); --divider: rgba(255,235,200,.08);
+      --ink: #EFE6D6; --ink-strong: #FFFFFF; --ink-dim: #9C9083; --ink-faint: #4E453C;
+      --accent: #F5BF4F; --on-accent: #1A1206; --gold: #F5BF4F; --gold-hi: #FFE3A0; --gold-text: #F5BF4F;
+      --icon: #F5BF4F; --now-bg: rgba(245,191,79,.07); --ring-track: #2A231B; --seg-bg: #1F1912;
+      --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --cream: #12100F;  --cream-hi: #1C1917;  --line: #352D28;
-    --ink: #EFE6D6;    --ink-soft: #A99A89;  --ink-strong: #FFF9EE;  --ink-dim: #9C8E7E;
-    --red-ui: #C5352A; --gold-soft: rgba(212,160,79,.24);
-    --now-bg: #2A2117; --hero-bg: #261E16;
-    --missed: #26211E; --missed-ink: #6F6459; --missed-line: #5A4F46;
-    --faint: #5C5249;  --switch-off: #4A403A;
+    --bg: #0D0A07; --card: #16110C; --card-line: rgba(245,191,79,.16); --divider: rgba(255,235,200,.08);
+    --ink: #EFE6D6; --ink-strong: #FFFFFF; --ink-dim: #9C9083; --ink-faint: #4E453C;
+    --accent: #F5BF4F; --on-accent: #1A1206; --gold: #F5BF4F; --gold-hi: #FFE3A0; --gold-text: #F5BF4F;
+    --icon: #F5BF4F; --now-bg: rgba(245,191,79,.07); --ring-track: #2A231B; --seg-bg: #1F1912;
+    --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31;
   }
+
+  /* ===== Base, full-screen sizing, no zoom ===== */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { background: #000; }
+  html {
+    height: 100%; background: var(--bg);
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+    touch-action: manipulation;              /* no double-tap zoom */
+  }
   body {
     margin: 0; min-height: 100vh; min-height: 100dvh;
-    background: var(--cream); color: var(--ink);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.35 var(--serif);
     -webkit-font-smoothing: antialiased;
-    -webkit-user-select: none; user-select: none;
-    overscroll-behavior-y: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    overscroll-behavior: none;
+    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px);
   }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-  /* Red strip behind the iPhone status bar so the white clock/battery stay readable */
-  .statusbar { position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: var(--red-deep); z-index: 20; }
+  svg { display: block; }
+  /* Dark strip behind the status bar once you scroll, so the white clock stays readable */
+  .statusbar { position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: #0D0A07; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  body.scrolled .statusbar { opacity: .97; }
 
   /* ===== Splash ===== */
-  #splash {
-    position: fixed; inset: 0; z-index: 100; background: #000;
-    display: grid; place-items: center; transition: opacity .8s ease;
-  }
+  #splash { position: fixed; inset: 0; z-index: 100; background: #000; transition: opacity .8s ease; }
   #splash.hide { opacity: 0; pointer-events: none; }
   #splash img, #splash .glow {
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; object-position: 50% 30%; opacity: 0; transition: opacity 1.4s ease;
   }
-  #splash .glow {
-    display: none;
-    background: radial-gradient(circle at 50% 42%, var(--gold-hi) 0, var(--gold) 18%, var(--red-deep) 52%, #1a0806 85%);
-  }
+  #splash .glow { display: none; background: radial-gradient(circle at 50% 42%, #FBDDA4 0, #D4A04F 18%, #6F0B05 52%, #1a0806 85%); }
   #splash.in img, #splash.in .glow { opacity: 1; }
 
-  /* ===== Layout ===== */
-  main {
-    padding: calc(var(--safe-top) + 20px) 16px calc(var(--nav-h) + var(--safe-bottom) + 24px);
-    max-width: 560px; margin: 0 auto;
+  /* ===== Header photo (every screen) ===== */
+  .hero {
+    position: relative; height: calc(var(--safe-top) + 172px); overflow: hidden;
+    background: linear-gradient(160deg, #1d0f06 0%, #5a2a09 40%, #c9711f 68%, #2a1406 100%); /* shown until header.jpg loads */
   }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% 50%; }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.38) 0%, rgba(0,0,0,.05) 32%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
+  }
+  .hero-text { position: absolute; left: 20px; right: 20px; bottom: 46px; z-index: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
+  .hero-text h1 { margin: 0; font-size: 36px; line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
+  .hero-text p { margin: 6px 0 0; font-size: 18px; opacity: .95; }
+
+  /* ===== Layout ===== */
+  main { position: relative; z-index: 2; margin: -30px auto 0; padding: 0 14px; max-width: 560px; }
   .view { display: none; }
   .view.active { display: block; animation: viewIn .25s ease; }
   @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  h1 { font-size: 30px; line-height: 1.15; margin: 4px 0 4px; font-weight: 700; letter-spacing: -.02em; }
-  h2 { font-size: 26px; margin: 4px 0 16px; font-weight: 700; letter-spacing: -.02em; }
-  .loc { color: var(--ink-soft); font-size: 16px; margin: 0 0 22px; }
-  .muted { color: var(--ink-soft); }
+  .card { background: var(--card); border: 1px solid var(--card-line); border-radius: 16px; }
+  .card + .card { margin-top: 12px; }
+  .pad { padding: 18px; }
+  .muted { color: var(--ink-dim); }
+  .ico { color: var(--icon); }
 
-  /* ===== Prayer list: one square container ===== */
-  .box { background: var(--cream-hi); border: 1px solid var(--line); }
-  .row {
-    position: relative; display: flex; align-items: center; gap: 14px;
-    min-height: 70px; padding: 0 6px 0 16px;
+  /* ===== Prayers page fits the screen: no scrolling =====
+     The page is exactly one screen tall; the five rows share the space left
+     under the summary card and shrink a little on smaller iPhones. */
+  body.fit { height: 100vh; height: 100dvh; overflow: hidden; padding-bottom: 0; display: flex; flex-direction: column; }
+  body.fit .hero { flex: none; height: calc(var(--safe-top) + 138px); }
+  body.fit .hero-text { bottom: 40px; }
+  body.fit main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column;
+    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 10px); }
+  body.fit #view-prayers.active { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  body.fit #view-prayers .card { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  body.fit #prayer-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+  body.fit #prayer-list .row { flex: 1 1 72px; min-height: 50px; max-height: 76px; }
+
+  /* ===== Prayers: summary card ===== */
+  .summary { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 14px; border-bottom: 1px solid var(--divider); }
+  .ring-wrap { position: relative; flex: none; width: 94px; height: 94px; }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-wrap .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-wrap .num b { font-size: 30px; line-height: 1; color: var(--ink-strong); }
+  .ring-wrap .num b span { font-size: 18px; font-weight: 400; color: var(--ink); }
+  .ring-wrap .num small { font-size: 13px; color: var(--ink-dim); margin-top: 3px; }
+  .ring-prog { transition: stroke-dashoffset .5s ease; }
+  .sum-text { flex: 1; min-width: 0; }
+  .sum-text h2 { margin: 0; font-size: 20px; color: var(--ink-strong); }
+  .sum-text p { margin: 2px 0 9px; font-size: 14.5px; color: var(--ink-dim); }
+  .mark-btn {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    border: 1.5px solid var(--gold); border-radius: 12px; padding: 7px 10px;
   }
-  .row + .row { border-top: 1px solid var(--line); }
-  .row .name { flex: 1; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-  .row .time { font-size: 19px; font-variant-numeric: tabular-nums; font-weight: 500; }
-  .row.done .name, .row.done .time { color: var(--ink-soft); }
-  /* When a prayer is "Now": dim the other rows, brighten the active one */
-  .box.has-now .row:not(.now) .name, .box.has-now .row:not(.now) .time { color: var(--ink-dim); font-weight: 500; }
-  .box.has-now .row:not(.now) .bell { opacity: .75; }
-  .row.now .name { color: var(--ink-strong); font-weight: 700; }
-  .row.now .time { color: var(--ink-strong); font-weight: 700; }
+  .mark-btn .mb-ico { flex: none; width: 26px; height: 26px; border: 2px solid var(--gold); border-radius: 4px; display: grid; place-items: center; color: #1A1206; transition: background .15s; }
+  .mark-btn .mb-ico svg { opacity: 0; transform: scale(.6); transition: .15s ease; }   /* unticked by default */
+  .mark-btn.on .mb-ico { background: var(--gold); }
+  .mark-btn.on .mb-ico svg { opacity: 1; transform: none; }
+  .mark-btn b { display: block; font-size: 14px; line-height: 1.2; color: var(--gold-text); }
+  .mark-btn small { display: block; font-size: 12px; color: var(--ink-dim); line-height: 1.25; margin-top: 2px; }
+  .mark-btn:active { background: var(--now-bg); }
 
+  /* ===== Prayer rows ===== */
+  .row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 74px; padding: 0 4px 0 14px; }
+  .row + .row { border-top: 1px solid var(--divider); }
+  .row .hit { position: absolute; inset: 0; z-index: 0; }
+  .row > *:not(.hit) { position: relative; z-index: 1; }
+  .row .p-ico, .row .name, .row .time { pointer-events: none; }
+  .p-ico { width: 30px; height: 30px; flex: none; color: var(--icon); }
+  .p-ico svg { width: 100%; height: 100%; }
+  .row .name { flex: 1; font-size: 19px; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+  .row .time { flex: none; font-size: 19px; font-variant-numeric: tabular-nums; }
   /* Square checkbox */
-  .check {
-    width: 28px; height: 28px; flex: none; border: 2px solid var(--red-ui);
-    background: var(--cream-hi); display: grid; place-items: center;
-    transition: background .15s ease;
-  }
-  .check svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .15s ease; }
-  .check[aria-checked="true"] { background: var(--red); border-color: var(--red); }
+  .check { width: 28px; height: 28px; flex: none; border: 2px solid var(--ink-dim); border-radius: 3px; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+  .check svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .15s ease; color: var(--on-accent); }
+  .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
   .check[aria-checked="true"] svg { opacity: 1; transform: none; }
   .check:disabled { cursor: default; }
-  .row .hit { position: absolute; inset: 0; z-index: 0; } /* tapping the row name also toggles */
-  .row > *:not(.hit) { position: relative; z-index: 1; }
-  .row .name, .row .time { pointer-events: none; }
-
-  /* Bell */
-  .bell { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-soft); }
-  .bell svg { width: 22px; height: 22px; }
-  .bell.on { color: var(--red-ui); }
-
-  /* "Now" row: tracing gold outline */
+  .bell { width: 40px; height: 44px; flex: none; display: grid; place-items: center; color: var(--ink-dim); }
+  .bell svg { width: 24px; height: 24px; }
+  .bell.on { color: var(--gold); }
+  /* Active ("Now") prayer: bright text + tracing gold outline. Others dimmer. */
+  .list.has-now .row:not(.now) .name, .list.has-now .row:not(.now) .time { color: var(--ink-dim); }
+  .list.has-now .row:not(.now) .p-ico { opacity: .8; }
+  .row.now { background: var(--now-bg); border-radius: 14px; box-shadow: 0 0 22px rgba(245,191,79,.18); }
+  .row.now + .row { border-top-color: transparent; }
+  .row.now .name { color: var(--ink-strong); font-weight: 700; }
+  .row.now .time { color: var(--gold-text); font-weight: 700; }
   @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-  .row.now { background: var(--now-bg); }
   .row.now::after {
-    content: ""; position: absolute; inset: -1px; z-index: 2; pointer-events: none; padding: 2px;
+    content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; padding: 2px; border-radius: 14px;
     background: conic-gradient(from var(--a),
-      var(--gold-hi) 0deg, var(--gold) 25deg, rgba(212,160,79,.45) 70deg,
-      rgba(212,160,79,.45) 290deg, var(--gold) 335deg, var(--gold-hi) 360deg);
+      var(--gold-hi) 0deg, var(--gold) 25deg, color-mix(in srgb, var(--gold) 45%, transparent) 70deg,
+      color-mix(in srgb, var(--gold) 45%, transparent) 290deg, var(--gold) 335deg, var(--gold-hi) 360deg);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor; mask-composite: exclude;
     animation: trace 3.2s linear infinite;
   }
   @keyframes trace { to { --a: 360deg; } }
   @media (prefers-reduced-motion: reduce) { .row.now::after { animation: none; background: var(--gold); } }
-  .badge {
-    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    background: var(--gold); color: var(--badge-ink); padding: 3px 7px;
-  }
-  .summary { margin: 14px 2px 0; color: var(--ink-soft); font-size: 15px; }
+  .badge { font: 700 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: .05em; background: var(--gold); color: #1A1206; padding: 4px 6px; border-radius: 4px; flex: none; }
 
   /* ===== Calendar ===== */
-  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .cal-head .m { font-size: 20px; font-weight: 700; }
-  .iconbtn { width: 44px; height: 44px; display: grid; place-items: center; color: var(--red-ui); }
-  .iconbtn:disabled { color: var(--line); }
-  .iconbtn svg { width: 22px; height: 22px; }
-  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .dow { text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-soft); padding: 4px 0; }
-  .day {
-    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;
-    border: 1px solid transparent; position: relative;
-  }
-  .day small { font-size: 10px; font-weight: 600; line-height: 1; margin-top: 2px; }
-  .day.full { background: var(--red); color: #fff; }
-  .day.partial { background: var(--gold-soft); color: var(--ink); border-color: var(--gold); }
-  .day.missed { background: var(--missed); color: var(--missed-ink); }
-  .day.missed::after { content: ""; position: absolute; left: 22%; right: 22%; top: 50%; height: 1.5px; background: var(--missed-line); transform: rotate(-35deg); }
-  .day.missed span { position: relative; z-index: 1; }
-  .day.open, .day.none { color: var(--ink); }
-  .day.future, .day.none { color: var(--faint); }
-  .day.today { outline: 2px solid var(--ink); outline-offset: -2px; }
-  .day.sel { box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--gold); }
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 2px 18px; font-size: 13px; color: var(--ink-soft); }
-  .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-right: 6px; }
-  .detail-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 8px; }
-  .detail-head b { font-size: 17px; }
-  .link { color: var(--red-ui); font-weight: 600; font-size: 15px; padding: 6px 0; }
-  .detail .row { min-height: 56px; }
-  .detail .row .name, .detail .row .time { font-size: 17px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card-head h3 { margin: 0; font-size: 22px; color: var(--ink-strong); }
+  .seg { display: inline-flex; background: var(--seg-bg); border: 1px solid var(--card-line); border-radius: 12px; padding: 3px; }
+  .seg button { padding: 7px 16px; border-radius: 10px; border: 1.5px solid transparent; color: var(--ink-dim); font-size: 16px; }
+  .seg button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-text); background: var(--card); }
+  .range { display: flex; align-items: center; justify-content: space-between; margin: 12px -6px 6px; }
+  .range b { font-size: 18px; color: var(--ink-strong); font-weight: 600; }
+  .arrow { width: 40px; height: 40px; display: grid; place-items: center; color: var(--gold); }
+  .arrow svg { width: 22px; height: 22px; }
+  .arrow:disabled { opacity: .25; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .wday { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 10px; border-radius: 12px; border: 1.5px solid transparent; }
+  .wday .d1 { font-size: 15px; color: var(--ink-dim); }
+  .wday .d2 { font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .wday svg { width: 38px; height: 38px; transform: rotate(-90deg); }
+  .wday.today { border-color: var(--gold); background: var(--now-bg); }
+  .wday.today .d1, .wday.today .d2 { color: var(--gold-text); font-weight: 700; }
+  .wday.sel:not(.today) { background: var(--seg-bg); }
+  .wday.future { opacity: .55; }
+  .dows { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 15px; color: var(--ink-dim); margin-bottom: 4px; }
+  .month { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; }
+  .mday { position: relative; height: 48px; display: grid; place-items: center; font-size: 18px; font-variant-numeric: tabular-nums; border-radius: 12px; border: 1.5px solid transparent; }
+  .mday .mr { position: absolute; width: 38px; height: 38px; left: 50%; top: 50%; margin: -19px 0 0 -19px; transform: rotate(-90deg); }
+  .mday span { position: relative; }
+  .mday.out, .mday.out span { color: var(--ink-faint) !important; font-weight: 400 !important; }
+  .mday.out::after { display: none; }
+  .mday.full span { color: var(--gold-text); font-weight: 700; }
+  .mday.missed::after { content: ""; position: absolute; bottom: 5px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--missed-dot); }
+  .mday.today { border-color: var(--gold); }
+  .mday.today span { color: var(--gold-text); font-weight: 700; }
+  .mday.sel:not(.today) { background: var(--seg-bg); }
+  .mday:disabled { cursor: default; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 14px; color: var(--ink-dim); align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend svg { width: 16px; height: 16px; transform: rotate(-90deg); }
+  .legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--missed-dot); display: inline-block; }
+  .detail-head { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 16px 8px; }
+  .detail-head b { font-size: 18px; color: var(--ink-strong); }
+  .detail-head small { display: block; font-size: 14px; color: var(--ink-dim); font-weight: 400; margin-top: 2px; }
+  .link { color: var(--gold-text); font-size: 16px; font-weight: 600; padding: 6px 2px; }
+  .detail .row { min-height: 58px; }
+  .detail .row .name, .detail .row .time { font-size: 18px; }
+  .detail .p-ico { width: 28px; height: 28px; }
+  .detail .row .time { padding-right: 12px; color: var(--ink-dim); }
 
-  /* ===== Stats ===== */
-  .tiles { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); background: var(--cream-hi); }
-  .tile { padding: 18px 16px 16px; }
-  .tile.hero { grid-column: 1 / -1; background: linear-gradient(135deg, var(--hero-bg), var(--cream-hi)); }
-  .tile.hero .v { font-size: 56px; color: var(--red-ui); }
-  .tile:not(.hero):nth-child(even) { border-right: 1px solid var(--line); }
-  .tile:nth-child(n+2) { border-top: 1px solid var(--line); }
+  /* ===== Statistics ===== */
+  .stat { display: flex; align-items: center; gap: 22px; padding: 22px 20px; }
+  .big-ico { width: 72px; height: 72px; flex: none; color: var(--icon); display: grid; place-items: center; }
+  .big-ico svg { width: 64px; height: 64px; }
+  .stat h3 { margin: 0; font-size: 20px; font-weight: 600; color: var(--ink); }
+  .stat .val { display: flex; align-items: baseline; gap: 12px; margin-top: 2px; }
+  .stat .val b { font-size: 58px; line-height: 1.05; color: var(--gold-text); font-variant-numeric: tabular-nums; }
+  .stat .val span { font-size: 28px; font-weight: 700; color: var(--ink-strong); }
+  .stat .sub { font-size: 16px; color: var(--ink-dim); margin-top: 2px; }
+  .streak-card { padding: 22px 20px 18px; }
+  .streak-card h3 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+  .streak-top { display: flex; align-items: center; gap: 22px; }
+  .dots { display: flex; align-items: center; margin: 18px 4px 6px; }
+  .dots i { width: 18px; height: 18px; border-radius: 50%; background: var(--ring-track); flex: none; border: 2px solid transparent; }
+  .dots i.on { background: var(--gold); }
+  .dots i.today { border-color: var(--gold); }
+  .dots i.future { opacity: .6; }
+  .dots em { flex: 1; height: 2px; background: var(--ring-track); }
+  .dots em.on { background: var(--gold); }
+  .dot-dates { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-dim); }
 
   /* ===== Settings ===== */
-  .section-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 24px 2px 8px; }
-  .section-label:first-of-type { margin-top: 0; }
-  .set-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px 8px 16px; }
-  .set-row + .set-row { border-top: 1px solid var(--line); }
-  .set-row .name { flex: 1; font-size: 17px; font-weight: 600; }
-  .set-row .name small { display: block; font-weight: 400; font-size: 13px; color: var(--ink-soft); }
-  input[type="time"] {
-    font: inherit; font-size: 17px; font-variant-numeric: tabular-nums; color: var(--ink);
-    background: var(--cream); border: 1px solid var(--line); border-radius: 0; padding: 6px 8px; min-width: 92px;
-    -webkit-appearance: none; appearance: none; text-align: center;
-  }
-  .switch { width: 50px; height: 30px; flex: none; background: var(--switch-off); position: relative; transition: background .2s; }
-  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; background: #fff; transition: transform .2s; }
-  .switch[aria-checked="true"] { background: var(--red); }
-  .switch[aria-checked="true"]::after { transform: translateX(20px); }
-  .btn {
-    display: block; width: 100%; padding: 14px; font-weight: 600; font-size: 16px; text-align: center;
-    background: var(--red); color: #fff;
-  }
-  .btn.ghost { background: transparent; color: var(--red-ui); border: 1.5px solid var(--red-ui); }
-  .btn + .btn { margin-top: 10px; }
-  .note { font-size: 14px; color: var(--ink-soft); margin: 10px 2px 0; line-height: 1.45; }
-  .status { padding: 14px 16px; font-size: 15px; }
-  .status b { color: var(--ink); }
-  /* Appearance: square radio rows */
-  .radio-row { width: 100%; text-align: left; }
-  .radio { width: 24px; height: 24px; flex: none; border: 2px solid var(--red-ui); display: grid; place-items: center; }
-  .radio::after { content: ""; width: 12px; height: 12px; background: var(--red-ui); transform: scale(0); transition: transform .15s ease; }
-  .radio-row[aria-checked="true"] .radio::after { transform: none; }
+  .scard { display: grid; grid-template-columns: 40px 1fr; column-gap: 14px; padding: 18px 16px 10px; }
+  .scard .s-ico { width: 36px; height: 36px; color: var(--icon); margin-top: 2px; }
+  .scard .s-ico svg { width: 100%; height: 100%; }
+  .s-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 8px; }
+  .s-head h3 { margin: 0; font-size: 21px; color: var(--ink-strong); }
+  .s-head p { margin: 2px 0 0; font-size: 15px; color: var(--ink-dim); }
+  .s-head .seg button { padding: 7px 12px; font-size: 15px; }
+  .srow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--divider); font-size: 18px; }
+  .srow .label { flex: 1; }
+  .srow .label small { display: block; font-size: 13px; color: var(--ink-dim); }
+  .srow .value { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .chev { width: 18px; height: 18px; color: var(--ink-dim); flex: none; }
+  .srow input[type="time"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; -webkit-appearance: none; appearance: none; border: 0; font-size: 16px; cursor: pointer; }
+  .srow.btnrow { width: 100%; text-align: left; }
+  .srow.danger .label { color: var(--danger); }
+  .switch { width: 52px; height: 30px; flex: none; background: var(--ring-track); border-radius: 15px; position: relative; transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(22px); background: #fff; }
+  .note { font-size: 14px; color: var(--ink-dim); line-height: 1.4; padding: 10px 0 8px; border-top: 1px solid var(--divider); }
+  .note b { color: var(--ink); font-weight: 600; }
+  .sbtn { display: block; width: 100%; padding: 12px; margin: 4px 0 8px; border-radius: 12px; border: 1.5px solid var(--gold); color: var(--gold-text); font-size: 16px; font-weight: 600; text-align: center; }
+  .sbtn + .sbtn { margin-top: 0; }
 
   /* ===== Bottom nav ===== */
   nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-    background: var(--red-deep); padding-bottom: var(--safe-bottom);
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    border-top: 2px solid var(--gold);
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    background: var(--nav-bg); border-top: 1.5px solid var(--gold);
+    padding-bottom: var(--safe-bottom);
   }
   nav button {
-    height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    color: rgba(255, 244, 225, .7); font-size: 11px; font-weight: 600; letter-spacing: .02em;
+    height: var(--nav-h); width: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: var(--nav-ink); font-size: 14px; text-align: center;
   }
-  nav button svg { width: 24px; height: 24px; }
-  nav button[aria-selected="true"] { color: var(--gold-hi); }
+  nav button svg { width: 28px; height: 28px; }
+  nav button[aria-selected="true"] { color: var(--nav-active); font-weight: 700; }
+  nav button[aria-selected="true"] svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--nav-active) 55%, transparent)); }
 
   /* ===== Toast ===== */
   #toast {
     position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 30;
-    background: var(--ink); color: var(--cream); padding: 12px 14px; font-size: 15px;
-    opacity: 0; transform: translateY(8px); transition: .25s ease; pointer-events: none;
-    max-width: 528px; margin: 0 auto;
+    background: var(--ink); color: var(--bg); padding: 12px 14px; font-size: 16px; border-radius: 12px;
+    opacity: 0; transform: translateY(8px); transition: .25s ease; pointer-events: none; max-width: 528px; margin: 0 auto;
   }
   #toast.show { opacity: 1; transform: none; }
 </style>
 </head>
-<body>
+<body class="fit">
 <div class="statusbar"></div>
 
 <!-- Splash: fades from black into the painting, then into the app -->
@@ -275,74 +336,121 @@
   <div class="glow"></div>
 </div>
 
+<header class="hero">
+  <img src="header.jpg" alt="" onerror="this.remove()">
+  <div class="hero-text">
+    <h1 id="page-title">Today</h1>
+    <p>🇸🇪 Västerås, Sverige</p>
+  </div>
+</header>
+
 <main>
   <!-- PRAYERS -->
   <section class="view active" id="view-prayers">
-    <h1 id="today-label">Today</h1>
-    <p class="loc">🇸🇪 Västerås, Sverige</p>
-    <div class="box" id="prayer-list"></div>
-    <p class="summary" id="today-summary"></p>
+    <div class="card">
+      <div class="summary">
+        <div class="ring-wrap" id="today-ring"></div>
+        <div class="sum-text">
+          <h2>Today’s prayers</h2>
+          <p id="sum-line">Keep going. All glory to God.</p>
+          <button class="mark-btn" id="btn-mark" aria-pressed="false">
+            <span class="mb-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <span><b>Mark previous as prayed</b><small>Marks all past prayer times for today.</small></span>
+          </button>
+        </div>
+      </div>
+      <div class="list" id="prayer-list"></div>
+    </div>
   </section>
 
   <!-- CALENDAR -->
   <section class="view" id="view-calendar">
-    <h2>Calendar</h2>
-    <div class="cal-head">
-      <button class="iconbtn" id="cal-prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <div class="m" id="cal-month"></div>
-      <button class="iconbtn" id="cal-next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div class="card pad">
+      <div class="card-head">
+        <h3 id="cal-title">This week</h3>
+        <div class="seg" role="group" aria-label="Calendar view">
+          <button data-mode="week" aria-pressed="true">Week</button>
+          <button data-mode="month" aria-pressed="false">Month</button>
+        </div>
+      </div>
+      <div class="range">
+        <button class="arrow" id="cal-prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <b id="cal-range"></b>
+        <button class="arrow" id="cal-next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div id="cal-body"></div>
+      <div class="legend" id="cal-legend"></div>
     </div>
-    <div class="grid" id="cal-grid"></div>
-    <div class="legend">
-      <span><i style="background:var(--red)"></i>All 5</span>
-      <span><i style="background:var(--gold-soft);border:1px solid var(--gold)"></i>Partial</span>
-      <span><i style="background:var(--missed)"></i>Missed</span>
-    </div>
-    <div class="detail" id="cal-detail"></div>
+    <div class="card detail" id="cal-detail"></div>
   </section>
 
   <!-- STATISTICS -->
-  <section class="view" id="view-stats">
-    <h2>Statistics</h2>
-    <div class="tiles" id="stats"></div>
-  </section>
+  <section class="view" id="view-stats"><div id="stats"></div></section>
 
   <!-- SETTINGS -->
   <section class="view" id="view-settings">
-    <h2>Settings</h2>
-    <div class="section-label">Appearance</div>
-    <div class="box" id="settings-theme" role="radiogroup" aria-label="Appearance"></div>
-
-    <div class="section-label">Prayer times</div>
-    <div class="box" id="settings-times"></div>
-    <p class="note">Fixed clock times in Swedish local time. They don't shift with daylight saving.</p>
-
-    <div class="section-label">Reminders</div>
-    <div class="box" id="settings-notify"></div>
-    <div class="box status" id="notify-status" style="border-top:0"></div>
-    <div style="margin-top:12px">
-      <button class="btn" id="btn-permission">Allow notifications</button>
-      <button class="btn ghost" id="btn-test">Send a test notification</button>
+    <div class="card scard">
+      <div class="s-ico" id="ico-palette"></div>
+      <div>
+        <div class="s-head">
+          <div><h3>Appearance</h3><p>Choose how the app looks</p></div>
+          <div class="seg" id="theme-seg" role="group" aria-label="Appearance">
+            <button data-theme="light">Light</button><button data-theme="dark">Dark</button><button data-theme="system">System</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <p class="note">Phase 1: reminders only fire while the app is open (or was recently open) on your phone. Reliable reminders with the app closed come in phase 2.</p>
 
-    <div class="section-label">Your data</div>
-    <button class="btn ghost" id="btn-export">Export backup</button>
-    <button class="btn ghost" id="btn-import">Import backup</button>
-    <input type="file" id="file-import" accept="application/json,.json" hidden>
-    <p class="note">Everything is saved on this phone only. Export a backup now and then until phase 2 sync is set up.</p>
+    <div class="card scard">
+      <div class="s-ico" id="ico-clock"></div>
+      <div>
+        <div class="s-head"><div><h3>Prayer times</h3><p>Tap a time to change it</p></div></div>
+        <div id="settings-times"></div>
+      </div>
+    </div>
+
+    <div class="card scard">
+      <div class="s-ico" id="ico-bell"></div>
+      <div>
+        <div class="s-head"><div><h3>Notifications</h3><p>Get reminded when it’s time to pray</p></div></div>
+        <div id="settings-notify"></div>
+        <div class="note" id="notify-status"></div>
+        <button class="sbtn" id="btn-permission">Allow notifications</button>
+        <button class="sbtn" id="btn-test">Send a test notification</button>
+      </div>
+    </div>
+
+    <div class="card scard">
+      <div class="s-ico" id="ico-pin"></div>
+      <div>
+        <div class="s-head"><div><h3>Location</h3><p>Used for your local time and display</p></div></div>
+        <div class="srow"><span class="label">Västerås, Sverige</span><span class="value muted">🇸🇪</span></div>
+      </div>
+    </div>
+
+    <div class="card scard">
+      <div class="s-ico" id="ico-gear"></div>
+      <div>
+        <div class="s-head"><div><h3>App</h3><p>Version, data and other options</p></div></div>
+        <div class="srow"><span class="label">Version</span><span class="value" id="app-version"></span></div>
+        <button class="srow btnrow" id="btn-export"><span class="label">Export backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="srow btnrow" id="btn-import"><span class="label">Import backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="srow btnrow danger" id="btn-reset"><span class="label">Reset all data</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <input type="file" id="file-import" accept="application/json,.json" hidden>
+      </div>
+    </div>
   </section>
 </main>
 
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-view="prayers">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17"/><path d="M8 12.5l3 3 5.5-6.5" stroke-linecap="square"/></svg>Prayers</button>
+    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2v5M12 4h4M8.5 13L14 7.5l5.5 5.5M9 12.5V24h10V12.5M4 24V16l5-2.5M24 24V16l-5-2.5M3 24h22M12 24v-4a2 2 0 0 1 4 0v4"/></svg>Prayers</button>
   <button role="tab" aria-selected="false" data-view="calendar">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 10h17M8 2.5v5M16 2.5v5"/></svg>Calendar</button>
+    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><rect x="4" y="6" width="20" height="18" rx="2.5"/><path d="M4 11h20M9.5 3.5v5M18.5 3.5v5M11 17.5h6"/></svg>Calendar</button>
   <button role="tab" aria-selected="false" data-view="stats">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 20V12M12 20V5M19 20v-5M3 20.5h18"/></svg>Statistics</button>
+    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 22v-7M14 22V5M20 22v-10M4 24.5h20"/></svg>Statistics</button>
   <button role="tab" aria-selected="false" data-view="settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
 </nav>
 
 <div id="toast" role="status"></div>
@@ -352,6 +460,7 @@
 /* =========================================================
    CONFIG
    ========================================================= */
+const APP_VERSION = '1.1.3';
 const TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
@@ -363,9 +472,37 @@ const DEFAULT_PRAYERS = [
 ];
 const SILENT_IDS = ['morning']; // banner only: no sound, no vibration
 
-const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="square"><path d="M4.5 12.5l5 5 10-11"/></svg>';
-const ICON_BELL_ON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a6 6 0 0 0-6 6v4.2L4.2 16.5h15.6L18 12.7V8.5a6 6 0 0 0-6-6zM9.5 18.5a2.5 2.5 0 0 0 5 0z"/></svg>';
-const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5.5 5.5 0 0 0-5.5 5.5v4.3L4.8 16h14.4l-1.7-3.2V8.5A5.5 5.5 0 0 0 12 3zM9.8 18.5a2.2 2.2 0 0 0 4.4 0"/><path d="M3.5 3.5l17 17" stroke-linecap="round"/></svg>';
+/* ===== Icons ===== */
+const S = (body, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ${extra}>${body}</svg>`;
+const ICON = {
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  bellOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a6 6 0 0 0-6 6v4.2L4.2 16.5h15.6L18 12.7V8.5a6 6 0 0 0-6-6zM9.5 18.5a2.5 2.5 0 0 0 5 0z"/></svg>',
+  bellOff: S('<path d="M12 3a5.5 5.5 0 0 0-5.5 5.5v4.3L4.8 16h14.4l-1.7-3.2V8.5A5.5 5.5 0 0 0 12 3zM9.8 18.5a2.2 2.2 0 0 0 4.4 0"/><path d="M3.5 3.5l17 17"/>'),
+  sunrise: S('<path d="M2.5 18h19M6.5 18a5.5 5.5 0 0 1 11 0M12 6.5v2.5M4.9 10.9l1.6 1.6M19.1 10.9l-1.6 1.6M2.5 14.8h2M19.5 14.8h2M9 21h6"/>'),
+  sun: S('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>'),
+  sunset: S('<path d="M6.5 15a5.5 5.5 0 0 1 11 0z" fill="currentColor"/><path d="M2.5 15h19M6 18h12M9.5 21h5M12 4.5v2.3M5.2 8l1.5 1.5M18.8 8l-1.5 1.5"/>'),
+  moon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z"/></svg>',
+  flame: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.6 1.8c.5 3.3 3 5.1 4.8 7.4 1.4 1.8 2.1 3.6 2.1 5.6a7.5 7.5 0 0 1-15 0c0-2.6 1.1-4.8 2.9-6.6.1 1.7.7 3 1.8 3.8C9 8.2 10.3 4.6 12.6 1.8zM12 22.3a3.6 3.6 0 0 0 3.6-3.6c0-1.6-.9-2.7-2-3.9-.6 1.4-1.6 2.1-2.8 2.4.1-1.2-.2-2.3-.9-3.2-1 1.2-1.6 2.6-1.6 4.7a3.6 3.6 0 0 0 3.7 3.6z" fill-rule="evenodd"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.5 2.5h11v5.5a5.5 5.5 0 0 1-11 0z"/><path d="M6.6 4.2H3.4v1.6a4 4 0 0 0 4 4M17.4 4.2h3.2v1.6a4 4 0 0 1-4 4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 13h2.8v4.2h-2.8zM7.5 18.2h9a1 1 0 0 1 1 1v2.3h-11v-2.3a1 1 0 0 1 1-1z"/></svg>',
+  bars: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="10" width="4.6" height="11.5" rx="1.4"/><rect x="9.7" y="3" width="4.6" height="18.5" rx="1.4"/><rect x="16.4" y="8" width="4.6" height="13.5" rx="1.4"/></svg>',
+  palette: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2.2C6.4 2.2 2 6.3 2 11.6c0 5.1 4.2 9.9 9.6 9.9 1.7 0 2.4-.9 2.4-2 0-1.4-1.3-1.9-1.3-3.2 0-1.1.9-1.9 2.1-1.9h2.6c2.6 0 4.6-1.9 4.6-4.6 0-4.4-4.4-7.6-10-7.6zM7 12.4a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zm3.4-4.3a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zm5 .1a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zM8 17.4a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4z"/></svg>',
+  clock: S('<circle cx="12" cy="12" r="9.3"/><path d="M12 6.8V12l3.5 2.6"/>', 'stroke-width="2"'),
+  bell: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2a6.3 6.3 0 0 0-6.3 6.3v4.3L3.6 16.6h16.8l-2.1-3.8V8.5A6.3 6.3 0 0 0 12 2.2zM9.3 18.3a2.7 2.7 0 0 0 5.4 0z"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 1.8a7.4 7.4 0 0 0-7.4 7.4c0 5.4 7.4 13 7.4 13s7.4-7.6 7.4-13A7.4 7.4 0 0 0 12 1.8zm0 10.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M10.3 1.8h3.4l.5 2.6c.7.3 1.4.6 2 1.1l2.5-.9 1.7 2.9-2 1.7a8 8 0 0 1 0 2.4l2 1.7-1.7 2.9-2.5-.9c-.6.5-1.3.9-2 1.1l-.5 2.6h-3.4l-.5-2.6c-.7-.3-1.4-.6-2-1.1l-2.5.9-1.7-2.9 2-1.7a8 8 0 0 1 0-2.4l-2-1.7 1.7-2.9 2.5.9c.6-.5 1.3-.9 2-1.1zM12 15.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8z" transform="translate(0 1)"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
+};
+const PRAYER_ICON = { morning: ICON.sunrise, midday: ICON.sun, afternoon: ICON.sun, sunset: ICON.sunset, night: ICON.moon };
+
+/* Ring: fraction 0..1, drawn in a 100x100 box (callers rotate it -90deg) */
+function ring(frac, stroke = 10, dim = false) {
+  const r = 50 - stroke / 2 - 1, c = 2 * Math.PI * r;
+  const off = c * (1 - Math.max(0, Math.min(1, frac)));
+  return `<svg viewBox="0 0 100 100" ${dim ? 'style="opacity:.6"' : ''}>
+    <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--ring-track)" stroke-width="${stroke}"/>
+    ${frac > 0 ? `<circle class="ring-prog" cx="50" cy="50" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${stroke}"
+      stroke-linecap="round" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>` : ''}</svg>`;
+}
 
 /* =========================================================
    TIME HELPERS (always Europe/Stockholm, independent of phone settings)
@@ -384,6 +521,7 @@ const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + 
 const keyToDate = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 const dateToKey = (d) => d.toISOString().slice(0, 10);
 const addDays = (k, n) => { const d = keyToDate(k); d.setUTCDate(d.getUTCDate() + n); return dateToKey(d); };
+const mondayOf = (k) => addDays(k, -((keyToDate(k).getUTCDay() + 6) % 7));
 const fmt = (k, opts) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', ...opts }).format(keyToDate(k));
 
 /* =========================================================
@@ -411,6 +549,11 @@ const Store = {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); }
     catch (e) { toast('Could not save — storage is full or blocked.'); }
   },
+  reset() {
+    const theme = this.data.settings.theme; // keep the chosen look
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+    this.load(); this.data.settings.theme = theme; this.save();
+  },
   prayers() { return this.data.settings.prayers; },
   updatePrayer(id, patch) {
     Object.assign(this.prayers().find((p) => p.id === id), patch);
@@ -435,34 +578,37 @@ const Store = {
 function computeStats(todayKey) {
   const n = Store.prayers().length;
   const complete = (k) => Store.count(k) === n;
-  let total = 0, month = 0;
-  const monthPrefix = todayKey.slice(0, 7);
-  for (const k of Object.keys(Store.data.days)) {
-    const c = Store.count(k);
-    total += c;
-    if (k.startsWith(monthPrefix)) month += c;
-  }
+  let total = 0;
+  for (const k of Object.keys(Store.data.days)) total += Store.count(k);
   // current streak: today counts if complete; an unfinished today doesn't break it yet
   let cur = 0, k = complete(todayKey) ? todayKey : addDays(todayKey, -1);
   while (complete(k)) { cur++; k = addDays(k, -1); }
   // longest streak
-  let longest = 0, run = 0;
-  const keys = Object.keys(Store.data.days).sort();
-  let prev = null;
-  for (const key of keys) {
+  let longest = 0, run = 0, prev = null;
+  for (const key of Object.keys(Store.data.days).sort()) {
     if (!complete(key)) { run = 0; prev = key; continue; }
     run = (prev && addDays(prev, 1) === key && run > 0) ? run + 1 : 1;
     longest = Math.max(longest, run);
     prev = key;
   }
-  return { total, month, cur, longest, today: Store.count(todayKey), n };
+  return { total, cur, longest, n, complete };
 }
 
 /* =========================================================
-   VIEW: PRAYERS
+   HEADER + VIEW: PRAYERS
    ========================================================= */
 const $ = (s) => document.querySelector(s);
 let lastSig = '';
+
+function setTitle() {
+  const now = nowInfo();
+  $('#page-title').textContent = {
+    prayers: 'Today, ' + fmt(now.key, { month: 'long', day: 'numeric' }),
+    calendar: fmt(cal.anchor || now.key, { month: 'long', year: 'numeric' }),
+    stats: 'Statistics',
+    settings: 'Settings',
+  }[currentView];
+}
 
 function currentPrayerId(min) {
   // whichever prayer's time most recently passed today (none before the first one)
@@ -480,21 +626,31 @@ function renderPrayers(force) {
   const sig = JSON.stringify([now.key, nowId, Store.day(now.key).done, Store.prayers()]);
   if (!force && sig === lastSig) return;
   lastSig = sig;
+  if (currentView === 'prayers') setTitle();
 
-  $('#today-label').textContent = 'Today, ' + fmt(now.key, { month: 'long', day: 'numeric' });
-  $('#prayer-list').classList.toggle('has-now', !!nowId);
-  $('#prayer-list').innerHTML = Store.prayers().map((p) => {
+  const c = Store.count(now.key), n = Store.prayers().length;
+  $('#today-ring').innerHTML = ring(c / n, 9) +
+    `<div class="num"><b>${c} <span>/ ${n}</span></b><small>completed</small></div>`;
+  $('#sum-line').textContent = c === n ? 'All five prayed. All glory to God.' : 'Keep going. All glory to God.';
+  // "Mark previous" box: ticked only when every prayer time that has passed today is marked
+  const due = Store.prayers().filter((p) => toMin(p.time) <= now.min);
+  const allPastDone = due.length > 0 && due.every((p) => Store.isDone(now.key, p.id));
+  $('#btn-mark').classList.toggle('on', allPastDone);
+  $('#btn-mark').setAttribute('aria-pressed', allPastDone);
+
+  const list = $('#prayer-list');
+  list.classList.toggle('has-now', !!nowId);
+  list.innerHTML = Store.prayers().map((p) => {
     const done = Store.isDone(now.key, p.id);
     return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}" data-id="${p.id}">
       <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
-      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON_CHECK}</button>
-      <span class="name">${p.name}${p.id === nowId ? '<span class="badge">Now</span>' : ''}</span>
+      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON.check}</button>
+      <span class="p-ico">${PRAYER_ICON[p.id]}</span>
+      <span class="name">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span>
       <span class="time">${p.time}</span>
-      <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON_BELL_ON : ICON_BELL_OFF}</button>
+      <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
-  const c = Store.count(now.key), n = Store.prayers().length;
-  $('#today-summary').textContent = c === n ? `All ${n} prayers done today.` : `${c} of ${n} done today.`;
 }
 
 $('#prayer-list').addEventListener('click', async (e) => {
@@ -509,64 +665,100 @@ $('#prayer-list').addEventListener('click', async (e) => {
   }
 });
 
+// "Mark previous as prayed": tick every prayer whose time has already passed today
+$('#btn-mark').addEventListener('click', () => {
+  const now = nowInfo();
+  const due = Store.prayers().filter((p) => toMin(p.time) <= now.min);
+  const todo = due.filter((p) => !Store.isDone(now.key, p.id));
+  if (!due.length) { toast('No prayer times have passed yet today.'); return; }
+  if (!todo.length) { toast('All past prayers are already marked.'); return; }
+  todo.forEach((p) => Store.setDone(now.key, p.id, true));
+  renderPrayers(true);
+  toast(`Marked ${todo.length} prayer${todo.length === 1 ? '' : 's'} as prayed`);
+});
+
 /* =========================================================
    VIEW: CALENDAR
    ========================================================= */
-const cal = { y: 0, m: 0, sel: null, edit: false };
+const cal = { mode: 'week', anchor: null, sel: null, edit: false }; // anchor = a date inside the shown week/month
 
-function dayStatus(key, todayKey) {
+function dayState(key, todayKey) {
   const c = Store.count(key), n = Store.prayers().length;
-  if (key > todayKey) return 'future';
-  if (c === n) return 'full';
-  if (c > 0) return 'partial';
-  if (key === todayKey) return 'open';
-  if (key < Store.data.meta.firstDay) return 'none';
-  return 'missed';
+  if (key > todayKey) return { c, st: 'future' };
+  if (c === n) return { c, st: 'full' };
+  if (c > 0) return { c, st: 'partial' };
+  if (key === todayKey || key < Store.data.meta.firstDay) return { c, st: 'empty' };
+  return { c, st: 'missed' };
 }
 
 function renderCalendar() {
-  const today = nowInfo();
-  if (!cal.y) { cal.y = today.y; cal.m = today.m; cal.sel = today.key; }
-  const first = `${cal.y}-${String(cal.m).padStart(2, '0')}-01`;
-  $('#cal-month').textContent = fmt(first, { month: 'long', year: 'numeric' });
-  $('#cal-next').disabled = cal.y > today.y || (cal.y === today.y && cal.m >= today.m);
+  const today = nowInfo().key;
+  if (!cal.anchor) { cal.anchor = today; cal.sel = today; }
+  const n = Store.prayers().length;
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === cal.mode));
+  let html = '';
 
-  const offset = (keyToDate(first).getUTCDay() + 6) % 7; // Monday first
-  const daysIn = new Date(Date.UTC(cal.y, cal.m, 0)).getUTCDate();
-  let html = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => `<div class="dow">${d}</div>`).join('');
-  html += '<div></div>'.repeat(offset);
-  for (let d = 1; d <= daysIn; d++) {
-    const key = first.slice(0, 8) + String(d).padStart(2, '0');
-    const st = dayStatus(key, today.key);
-    const c = Store.count(key);
-    const cls = ['day', st, key === today.key ? 'today' : '', key === cal.sel ? 'sel' : ''].join(' ');
-    const sub = st === 'partial' ? `<small>${c}/5</small>` : '';
-    html += `<button class="${cls}" data-key="${key}" ${st === 'future' ? 'disabled' : ''}><span>${d}</span>${sub}</button>`;
+  if (cal.mode === 'week') {
+    const start = mondayOf(cal.anchor), thisWeek = mondayOf(today);
+    $('#cal-title').textContent = start === thisWeek ? 'This week' : 'Week';
+    const end = addDays(start, 6);
+    $('#cal-range').textContent = `${fmt(start, { month: 'short', day: 'numeric' })} – ${fmt(end, { month: 'short', day: 'numeric' })}`;
+    $('#cal-next').disabled = start >= thisWeek;
+    html = '<div class="week">';
+    for (let i = 0; i < 7; i++) {
+      const k = addDays(start, i), { c, st } = dayState(k, today);
+      html += `<button class="wday ${st}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>
+        <span class="d1">${fmt(k, { weekday: 'short' })}</span><span class="d2">${fmt(k, { day: 'numeric' })}</span>${ring(c / n, 13, st === 'future')}</button>`;
+    }
+    html += '</div>';
+  } else {
+    const [y, m] = cal.anchor.split('-').map(Number);
+    const first = `${y}-${String(m).padStart(2, '0')}-01`;
+    $('#cal-title').textContent = first.slice(0, 7) === today.slice(0, 7) ? 'This month' : 'Month';
+    $('#cal-range').textContent = fmt(first, { month: 'long', year: 'numeric' });
+    $('#cal-next').disabled = first.slice(0, 7) >= today.slice(0, 7);
+    const start = mondayOf(first);
+    const daysIn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = Math.ceil(((keyToDate(first).getUTCDay() + 6) % 7 + daysIn) / 7) * 7;
+    html = '<div class="dows">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => `<span>${d}</span>`).join('') + '</div><div class="month">';
+    for (let i = 0; i < cells; i++) {
+      const k = addDays(start, i), { c, st } = dayState(k, today);
+      const out = k.slice(0, 7) !== first.slice(0, 7);
+      const mark = !out && c > 0 ? `<svg class="mr" viewBox="0 0 100 100">${ring(c / n, 8).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : '';
+      html += `<button class="mday ${st}${out ? ' out' : ''}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>${mark}<span>${fmt(k, { day: 'numeric' })}</span></button>`;
+    }
+    html += '</div>';
   }
-  $('#cal-grid').innerHTML = html;
+  $('#cal-body').innerHTML = html;
+  $('#cal-legend').innerHTML = `<span>${ring(1, 14)} All 5</span><span>${ring(.5, 14)} Partial</span>` +
+    (cal.mode === 'month' ? '<span><i></i> Missed</span>' : `<span>${ring(0, 14)} None</span>`);
+  if (currentView === 'calendar') setTitle();
   renderDetail();
 }
 
 function renderDetail() {
   const el = $('#cal-detail');
-  if (!cal.sel) { el.innerHTML = ''; return; }
+  if (!cal.sel) { el.style.display = 'none'; return; }
+  el.style.display = '';
   const k = cal.sel, n = Store.prayers().length;
   el.innerHTML = `<div class="detail-head">
-      <b>${fmt(k, { weekday: 'long', month: 'long', day: 'numeric' })}</b>
+      <div><b>${fmt(k, { weekday: 'long', month: 'long', day: 'numeric' })}</b><small>${Store.count(k)} of ${n} prayers done</small></div>
       <button class="link" id="btn-edit">${cal.edit ? 'Done' : 'Edit'}</button>
     </div>
-    <div class="box">${Store.prayers().map((p) => {
+    <div class="list">${Store.prayers().map((p) => {
       const done = Store.isDone(k, p.id);
       return `<div class="row${done ? ' done' : ''}" data-id="${p.id}">
-        <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON_CHECK}</button>
-        <span class="name">${p.name}</span><span class="time" style="padding-right:12px">${p.time}</span></div>`;
-    }).join('')}</div>
-    <p class="summary">${Store.count(k)} of ${n} prayers done.${cal.edit ? '' : ' Tap Edit to correct a day.'}</p>`;
+        <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
+        <span class="p-ico">${PRAYER_ICON[p.id]}</span>
+        <span class="name">${p.name}</span><span class="time">${p.time}</span></div>`;
+    }).join('')}</div>`;
 }
 
-$('#cal-grid').addEventListener('click', (e) => {
-  const b = e.target.closest('.day'); if (!b || b.disabled) return;
-  cal.sel = b.dataset.key; cal.edit = false; renderCalendar();
+$('#cal-body').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-key]'); if (!b || b.disabled) return;
+  cal.sel = b.dataset.key; cal.edit = false;
+  if (cal.mode === 'month' && b.classList.contains('out')) cal.anchor = cal.sel; // jump to that month
+  renderCalendar();
 });
 $('#cal-detail').addEventListener('click', (e) => {
   if (e.target.closest('#btn-edit')) { cal.edit = !cal.edit; renderDetail(); return; }
@@ -575,63 +767,91 @@ $('#cal-detail').addEventListener('click', (e) => {
   Store.setDone(cal.sel, id, !Store.isDone(cal.sel, id));
   renderCalendar(); renderPrayers(true);
 });
-$('#cal-prev').onclick = () => { if (--cal.m < 1) { cal.m = 12; cal.y--; } cal.sel = null; renderCalendar(); };
-$('#cal-next').onclick = () => { if (++cal.m > 12) { cal.m = 1; cal.y++; } cal.sel = null; renderCalendar(); };
+document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+  cal.mode = b.dataset.mode; cal.anchor = cal.sel || nowInfo().key; renderCalendar();
+}));
+function stepCal(dir) {
+  if (cal.mode === 'week') cal.anchor = addDays(mondayOf(cal.anchor), 7 * dir);
+  else { const d = keyToDate(cal.anchor.slice(0, 8) + '01'); d.setUTCMonth(d.getUTCMonth() + dir); cal.anchor = dateToKey(d); }
+  renderCalendar();
+}
+$('#cal-prev').onclick = () => stepCal(-1);
+$('#cal-next').onclick = () => stepCal(1);
 
 /* =========================================================
    VIEW: STATISTICS
    ========================================================= */
 function renderStats() {
-  const s = computeStats(nowInfo().key);
-  const tile = (v, l, cls = '') => `<div class="tile ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
-  $('#stats').innerHTML =
-    tile(s.cur, `Current streak · day${s.cur === 1 ? '' : 's'} with all 5`, 'hero') +
-    tile(s.longest, 'Longest streak') +
-    tile(s.total, 'Total prayers') +
-    tile(s.month, 'This month') +
-    tile(`${s.today}/${s.n}`, 'Today');
+  const today = nowInfo().key;
+  const s = computeStats(today);
+  // dotted row: 12 days, ending 3 days after today
+  const from = addDays(today, -8), to = addDays(today, 3);
+  let dots = '';
+  for (let i = 0; i < 12; i++) {
+    const k = addDays(from, i), on = k <= today && s.complete(k);
+    const nextOn = i < 11 && addDays(k, 1) <= today && on && s.complete(addDays(k, 1));
+    dots += `<i class="${on ? 'on' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"></i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
+  }
+  const d = (x) => `day${x === 1 ? '' : 's'}`;
+  $('#stats').innerHTML = `
+    <div class="card streak-card">
+      <h3>Current streak</h3>
+      <div class="streak-top">
+        <div class="big-ico">${ICON.flame}</div>
+        <div><div class="stat" style="padding:0;display:block"><div class="val"><b>${s.cur}</b><span>${d(s.cur)}</span></div>
+        <div class="sub">${s.cur ? 'Keep going!' : 'Pray all five today to start a streak.'}</div></div></div>
+      </div>
+      <div class="dots">${dots}</div>
+      <div class="dot-dates"><span>${fmt(from, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span>${fmt(to, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+    </div>
+    <div class="card stat"><div class="big-ico">${ICON.trophy}</div>
+      <div><h3>Longest streak</h3><div class="val"><b>${s.longest}</b><span>${d(s.longest)}</span></div><div class="sub">All time</div></div></div>
+    <div class="card stat"><div class="big-ico">${ICON.bars}</div>
+      <div><h3>Total prayers</h3><div class="val"><b>${s.total}</b></div><div class="sub">Since ${fmt(Store.data.meta.firstDay, { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div>`;
 }
 
 /* =========================================================
    VIEW: SETTINGS
    ========================================================= */
-const THEMES = [
-  { id: 'light', label: 'Light mode' },
-  { id: 'dark', label: 'Dark mode' },
-  { id: 'system', label: 'Same as System Settings' },
-];
 function applyTheme() {
   const t = Store.data.settings.theme;
   if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
   else delete document.documentElement.dataset.theme;
 }
 function renderSettings() {
-  $('#settings-theme').innerHTML = THEMES.map((t) =>
-    `<button class="set-row radio-row" role="radio" aria-checked="${Store.data.settings.theme === t.id}" data-theme="${t.id}">
-      <span class="name">${t.label}</span><span class="radio"></span></button>`).join('');
+  document.querySelectorAll('#theme-seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === Store.data.settings.theme));
   $('#settings-times').innerHTML = Store.prayers().map((p) =>
-    `<div class="set-row"><span class="name">${p.name}</span>
-     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></div>`).join('');
+    `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
+     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`).join('');
   $('#settings-notify').innerHTML = Store.prayers().map((p) =>
-    `<div class="set-row"><span class="name">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
+    `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
      <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('');
+  $('#app-version').textContent = APP_VERSION;
   renderNotifyStatus();
 }
-$('#settings-theme').addEventListener('click', (e) => {
+$('#theme-seg').addEventListener('click', (e) => {
   const b = e.target.closest('[data-theme]'); if (!b) return;
   Store.data.settings.theme = b.dataset.theme;
   Store.data.settings.updatedAt = new Date().toISOString();
   Store.save(); applyTheme(); renderSettings();
 });
+$('#settings-times').addEventListener('click', (e) => {
+  const inp = e.target.closest('.srow')?.querySelector('input');
+  if (inp && e.target !== inp && inp.showPicker) { try { inp.showPicker(); } catch (_) {} }
+});
 $('#settings-times').addEventListener('change', (e) => {
   const inp = e.target; if (!/^\d{2}:\d{2}$/.test(inp.value)) return;
   Store.updatePrayer(inp.dataset.id, { time: inp.value });
-  renderPrayers(true); toast('Time saved');
+  renderSettings(); renderPrayers(true); toast('Time saved');
 });
 $('#settings-notify').addEventListener('click', async (e) => {
   const sw = e.target.closest('.switch'); if (!sw) return;
   await toggleBell(sw.dataset.id);
 });
+$('#btn-reset').onclick = () => {
+  if (!confirm('Reset all data?\n\nThis deletes your whole prayer history, streaks and prayer times on this phone. It cannot be undone.')) return;
+  Store.reset(); cal.anchor = null; cal.sel = null; renderAll(); toast('All data has been reset');
+};
 
 /* =========================================================
    NOTIFICATIONS (phase 1: in-app timer — see notes in README)
@@ -652,10 +872,10 @@ function renderNotifyStatus() {
     install: 'Open this app from your <b>Home Screen icon</b> to use notifications (iOS only allows them there).',
     unsupported: 'This browser doesn’t support web notifications.',
     default: 'Notifications are <b>not allowed yet</b>.',
-    granted: 'Notifications are <b>allowed</b>.',
+    granted: 'Notifications are <b>allowed</b>. They fire while the app is open; reliable reminders with the app closed come in phase 2.',
     denied: 'Notifications are <b>blocked</b>. Turn them on in iOS Settings › Notifications › Prayers.',
   }[s];
-  $('#notify-status').innerHTML = `<span class="muted">${msg}</span>`;
+  $('#notify-status').innerHTML = msg;
   $('#btn-permission').style.display = s === 'default' ? '' : 'none';
   $('#btn-test').style.display = s === 'granted' ? '' : 'none';
 }
@@ -675,9 +895,7 @@ async function toggleBell(id) {
   const p = Store.prayers().find((x) => x.id === id);
   const turningOn = !p.notify;
   Store.updatePrayer(id, { notify: turningOn }); // the bell state is saved even before permission
-  if (turningOn && !(await askPermission())) {
-    // keep it on so it works once permission is granted; just inform
-  }
+  if (turningOn) await askPermission();
   renderPrayers(true); renderSettings();
   if (turningOn && notifSupport() === 'granted') toast(`${p.name} reminder on`);
 }
@@ -750,12 +968,14 @@ $('#file-import').onchange = async (e) => {
 let currentView = 'prayers';
 function show(view) {
   currentView = view;
+  document.body.classList.toggle('fit', view === 'prayers'); // Prayers page: one screen, no scrolling
   document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
-  if (view === 'calendar') { cal.y = 0; renderCalendar(); }
+  if (view === 'calendar') { cal.anchor = null; cal.edit = false; renderCalendar(); }
   if (view === 'stats') renderStats();
   if (view === 'settings') renderSettings();
   if (view === 'prayers') renderPrayers(true);
+  setTitle();
   window.scrollTo(0, 0);
 }
 document.querySelector('nav').addEventListener('click', (e) => {
@@ -785,16 +1005,32 @@ function renderAll() {
   if (currentView === 'calendar') renderCalendar();
   if (currentView === 'stats') renderStats();
   if (currentView === 'settings') renderSettings();
+  setTitle();
 }
+
+/* =========================================================
+   NO ZOOM (iOS ignores user-scalable=no in Safari, so block the gestures too)
+   ========================================================= */
+['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) =>
+  document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const t = Date.now();
+  // block double-tap zoom on non-interactive areas; buttons stay instant
+  if (t - lastTouchEnd < 320 && !e.target.closest('button, input, label, a')) e.preventDefault();
+  lastTouchEnd = t;
+}, { passive: false });
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 90), { passive: true });
 
 /* =========================================================
    SPLASH
    ========================================================= */
 function runSplash() {
   const s = $('#splash'), img = s.querySelector('img');
-  let done = false;
+  let done = false, started = false;
   const finish = () => { if (done) return; done = true; s.classList.add('hide'); setTimeout(() => s.remove(), 900); };
-  let started = false;
   const start = () => {
     if (started) return; started = true;
     requestAnimationFrame(() => s.classList.add('in'));   // fade in from black (1.4s)
@@ -812,6 +1048,8 @@ function runSplash() {
 /* =========================================================
    START
    ========================================================= */
+$('#ico-palette').innerHTML = ICON.palette; $('#ico-clock').innerHTML = ICON.clock;
+$('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
 Store.load(); Store.save(); applyTheme();
 runSplash();
 tick();
