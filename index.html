@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prayers</title>
+<meta name="description" content="Personal daily prayer tracker">
+<meta name="theme-color" content="#6F0B05">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prayers">
+<meta name="format-detection" content="telephone=no">
+<link rel="preload" as="image" href="splash.jpg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<script>
+  // Apply the saved appearance before the page paints
+  try {
+    var t = (JSON.parse(localStorage.getItem('prayerTracker.v1')) || {}).settings;
+    t = t && t.theme;
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+<style>
+  /* ===== Palette (from the painting) =====
+     Light is the default. Dark applies when chosen in Settings, or when
+     "Follow system" is chosen and the phone is in dark mode. */
+  :root {
+    color-scheme: light;
+    --cream: #F4EBDA;        /* tunic: page base */
+    --cream-hi: #FBF6EC;     /* container surface */
+    --line: #E6D6BA;         /* thin dividers */
+    --ink: #2B1608;          /* main text */
+    --ink-soft: #6E5440;     /* secondary text */
+    --ink-strong: #1A0B03;   /* "Now" row text */
+    --ink-dim: #7A6352;      /* non-active rows */
+    --red: #9A1B10;          /* robe / sash: buttons, checks */
+    --red-ui: #9A1B10;       /* red used for outlines and red text */
+    --red-deep: #6F0B05;     /* robe in shadow: nav, status bar */
+    --gold: #D4A04F;         /* warm sky: highlights */
+    --gold-hi: #FBDDA4;      /* glow behind the head */
+    --gold-soft: #F2DCAE;    /* partial days */
+    --now-bg: #FFF7E6;
+    --hero-bg: #FFF8E6;
+    --missed: #E8DFCF;
+    --missed-ink: #9C8C7C;
+    --missed-line: #B9A894;
+    --faint: #B7A897;        /* future days */
+    --switch-off: #D6C9B3;
+    --badge-ink: #2B1608;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --nav-h: 64px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --cream: #12100F;  --cream-hi: #1C1917;  --line: #352D28;
+      --ink: #EFE6D6;    --ink-soft: #A99A89;  --ink-strong: #FFF9EE;  --ink-dim: #9C8E7E;
+      --red-ui: #C5352A; --gold-soft: rgba(212,160,79,.24);
+      --now-bg: #2A2117; --hero-bg: #261E16;
+      --missed: #26211E; --missed-ink: #6F6459; --missed-line: #5A4F46;
+      --faint: #5C5249;  --switch-off: #4A403A;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --cream: #12100F;  --cream-hi: #1C1917;  --line: #352D28;
+    --ink: #EFE6D6;    --ink-soft: #A99A89;  --ink-strong: #FFF9EE;  --ink-dim: #9C8E7E;
+    --red-ui: #C5352A; --gold-soft: rgba(212,160,79,.24);
+    --now-bg: #2A2117; --hero-bg: #261E16;
+    --missed: #26211E; --missed-ink: #6F6459; --missed-line: #5A4F46;
+    --faint: #5C5249;  --switch-off: #4A403A;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: #000; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    background: var(--cream); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none; user-select: none;
+    overscroll-behavior-y: none;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  /* Red strip behind the iPhone status bar so the white clock/battery stay readable */
+  .statusbar { position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: var(--red-deep); z-index: 20; }
+
+  /* ===== Splash ===== */
+  #splash {
+    position: fixed; inset: 0; z-index: 100; background: #000;
+    display: grid; place-items: center; transition: opacity .8s ease;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  #splash img, #splash .glow {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: 50% 30%; opacity: 0; transition: opacity 1.4s ease;
+  }
+  #splash .glow {
+    display: none;
+    background: radial-gradient(circle at 50% 42%, var(--gold-hi) 0, var(--gold) 18%, var(--red-deep) 52%, #1a0806 85%);
+  }
+  #splash.in img, #splash.in .glow { opacity: 1; }
+
+  /* ===== Layout ===== */
+  main {
+    padding: calc(var(--safe-top) + 20px) 16px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+    max-width: 560px; margin: 0 auto;
+  }
+  .view { display: none; }
+  .view.active { display: block; animation: viewIn .25s ease; }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  h1 { font-size: 30px; line-height: 1.15; margin: 4px 0 4px; font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 26px; margin: 4px 0 16px; font-weight: 700; letter-spacing: -.02em; }
+  .loc { color: var(--ink-soft); font-size: 16px; margin: 0 0 22px; }
+  .muted { color: var(--ink-soft); }
+
+  /* ===== Prayer list: one square container ===== */
+  .box { background: var(--cream-hi); border: 1px solid var(--line); }
+  .row {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    min-height: 70px; padding: 0 6px 0 16px;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .name { flex: 1; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .row .time { font-size: 19px; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .row.done .name, .row.done .time { color: var(--ink-soft); }
+  /* When a prayer is "Now": dim the other rows, brighten the active one */
+  .box.has-now .row:not(.now) .name, .box.has-now .row:not(.now) .time { color: var(--ink-dim); font-weight: 500; }
+  .box.has-now .row:not(.now) .bell { opacity: .75; }
+  .row.now .name { color: var(--ink-strong); font-weight: 700; }
+  .row.now .time { color: var(--ink-strong); font-weight: 700; }
+
+  /* Square checkbox */
+  .check {
+    width: 28px; height: 28px; flex: none; border: 2px solid var(--red-ui);
+    background: var(--cream-hi); display: grid; place-items: center;
+    transition: background .15s ease;
+  }
+  .check svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .15s ease; }
+  .check[aria-checked="true"] { background: var(--red); border-color: var(--red); }
+  .check[aria-checked="true"] svg { opacity: 1; transform: none; }
+  .check:disabled { cursor: default; }
+  .row .hit { position: absolute; inset: 0; z-index: 0; } /* tapping the row name also toggles */
+  .row > *:not(.hit) { position: relative; z-index: 1; }
+  .row .name, .row .time { pointer-events: none; }
+
+  /* Bell */
+  .bell { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-soft); }
+  .bell svg { width: 22px; height: 22px; }
+  .bell.on { color: var(--red-ui); }
+
+  /* "Now" row: tracing gold outline */
+  @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  .row.now { background: var(--now-bg); }
+  .row.now::after {
+    content: ""; position: absolute; inset: -1px; z-index: 2; pointer-events: none; padding: 2px;
+    background: conic-gradient(from var(--a),
+      var(--gold-hi) 0deg, var(--gold) 25deg, rgba(212,160,79,.45) 70deg,
+      rgba(212,160,79,.45) 290deg, var(--gold) 335deg, var(--gold-hi) 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: trace 3.2s linear infinite;
+  }
+  @keyframes trace { to { --a: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .row.now::after { animation: none; background: var(--gold); } }
+  .badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    background: var(--gold); color: var(--badge-ink); padding: 3px 7px;
+  }
+  .summary { margin: 14px 2px 0; color: var(--ink-soft); font-size: 15px; }
+
+  /* ===== Calendar ===== */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-head .m { font-size: 20px; font-weight: 700; }
+  .iconbtn { width: 44px; height: 44px; display: grid; place-items: center; color: var(--red-ui); }
+  .iconbtn:disabled { color: var(--line); }
+  .iconbtn svg { width: 22px; height: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dow { text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-soft); padding: 4px 0; }
+  .day {
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;
+    border: 1px solid transparent; position: relative;
+  }
+  .day small { font-size: 10px; font-weight: 600; line-height: 1; margin-top: 2px; }
+  .day.full { background: var(--red); color: #fff; }
+  .day.partial { background: var(--gold-soft); color: var(--ink); border-color: var(--gold); }
+  .day.missed { background: var(--missed); color: var(--missed-ink); }
+  .day.missed::after { content: ""; position: absolute; left: 22%; right: 22%; top: 50%; height: 1.5px; background: var(--missed-line); transform: rotate(-35deg); }
+  .day.missed span { position: relative; z-index: 1; }
+  .day.open, .day.none { color: var(--ink); }
+  .day.future, .day.none { color: var(--faint); }
+  .day.today { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .day.sel { box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--gold); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 2px 18px; font-size: 13px; color: var(--ink-soft); }
+  .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-right: 6px; }
+  .detail-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 8px; }
+  .detail-head b { font-size: 17px; }
+  .link { color: var(--red-ui); font-weight: 600; font-size: 15px; padding: 6px 0; }
+  .detail .row { min-height: 56px; }
+  .detail .row .name, .detail .row .time { font-size: 17px; }
+
+  /* ===== Stats ===== */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); background: var(--cream-hi); }
+  .tile { padding: 18px 16px 16px; }
+  .tile.hero { grid-column: 1 / -1; background: linear-gradient(135deg, var(--hero-bg), var(--cream-hi)); }
+  .tile.hero .v { font-size: 56px; color: var(--red-ui); }
+  .tile:not(.hero):nth-child(even) { border-right: 1px solid var(--line); }
+  .tile:nth-child(n+2) { border-top: 1px solid var(--line); }
+
+  /* ===== Settings ===== */
+  .section-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 24px 2px 8px; }
+  .section-label:first-of-type { margin-top: 0; }
+  .set-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px 8px 16px; }
+  .set-row + .set-row { border-top: 1px solid var(--line); }
+  .set-row .name { flex: 1; font-size: 17px; font-weight: 600; }
+  .set-row .name small { display: block; font-weight: 400; font-size: 13px; color: var(--ink-soft); }
+  input[type="time"] {
+    font: inherit; font-size: 17px; font-variant-numeric: tabular-nums; color: var(--ink);
+    background: var(--cream); border: 1px solid var(--line); border-radius: 0; padding: 6px 8px; min-width: 92px;
+    -webkit-appearance: none; appearance: none; text-align: center;
+  }
+  .switch { width: 50px; height: 30px; flex: none; background: var(--switch-off); position: relative; transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; background: #fff; transition: transform .2s; }
+  .switch[aria-checked="true"] { background: var(--red); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .btn {
+    display: block; width: 100%; padding: 14px; font-weight: 600; font-size: 16px; text-align: center;
+    background: var(--red); color: #fff;
+  }
+  .btn.ghost { background: transparent; color: var(--red-ui); border: 1.5px solid var(--red-ui); }
+  .btn + .btn { margin-top: 10px; }
+  .note { font-size: 14px; color: var(--ink-soft); margin: 10px 2px 0; line-height: 1.45; }
+  .status { padding: 14px 16px; font-size: 15px; }
+  .status b { color: var(--ink); }
+  /* Appearance: square radio rows */
+  .radio-row { width: 100%; text-align: left; }
+  .radio { width: 24px; height: 24px; flex: none; border: 2px solid var(--red-ui); display: grid; place-items: center; }
+  .radio::after { content: ""; width: 12px; height: 12px; background: var(--red-ui); transform: scale(0); transition: transform .15s ease; }
+  .radio-row[aria-checked="true"] .radio::after { transform: none; }
+
+  /* ===== Bottom nav ===== */
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: var(--red-deep); padding-bottom: var(--safe-bottom);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 2px solid var(--gold);
+  }
+  nav button {
+    height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: rgba(255, 244, 225, .7); font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  }
+  nav button svg { width: 24px; height: 24px; }
+  nav button[aria-selected="true"] { color: var(--gold-hi); }
+
+  /* ===== Toast ===== */
+  #toast {
+    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 30;
+    background: var(--ink); color: var(--cream); padding: 12px 14px; font-size: 15px;
+    opacity: 0; transform: translateY(8px); transition: .25s ease; pointer-events: none;
+    max-width: 528px; margin: 0 auto;
+  }
+  #toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="statusbar"></div>
+
+<!-- Splash: fades from black into the painting, then into the app -->
+<div id="splash" aria-hidden="true">
+  <img src="splash.jpg" alt="">
+  <div class="glow"></div>
+</div>
+
+<main>
+  <!-- PRAYERS -->
+  <section class="view active" id="view-prayers">
+    <h1 id="today-label">Today</h1>
+    <p class="loc">🇸🇪 Västerås, Sverige</p>
+    <div class="box" id="prayer-list"></div>
+    <p class="summary" id="today-summary"></p>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="view" id="view-calendar">
+    <h2>Calendar</h2>
+    <div class="cal-head">
+      <button class="iconbtn" id="cal-prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="m" id="cal-month"></div>
+      <button class="iconbtn" id="cal-next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="grid" id="cal-grid"></div>
+    <div class="legend">
+      <span><i style="background:var(--red)"></i>All 5</span>
+      <span><i style="background:var(--gold-soft);border:1px solid var(--gold)"></i>Partial</span>
+      <span><i style="background:var(--missed)"></i>Missed</span>
+    </div>
+    <div class="detail" id="cal-detail"></div>
+  </section>
+
+  <!-- STATISTICS -->
+  <section class="view" id="view-stats">
+    <h2>Statistics</h2>
+    <div class="tiles" id="stats"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="view-settings">
+    <h2>Settings</h2>
+    <div class="section-label">Appearance</div>
+    <div class="box" id="settings-theme" role="radiogroup" aria-label="Appearance"></div>
+
+    <div class="section-label">Prayer times</div>
+    <div class="box" id="settings-times"></div>
+    <p class="note">Fixed clock times in Swedish local time. They don't shift with daylight saving.</p>
+
+    <div class="section-label">Reminders</div>
+    <div class="box" id="settings-notify"></div>
+    <div class="box status" id="notify-status" style="border-top:0"></div>
+    <div style="margin-top:12px">
+      <button class="btn" id="btn-permission">Allow notifications</button>
+      <button class="btn ghost" id="btn-test">Send a test notification</button>
+    </div>
+    <p class="note">Phase 1: reminders only fire while the app is open (or was recently open) on your phone. Reliable reminders with the app closed come in phase 2.</p>
+
+    <div class="section-label">Your data</div>
+    <button class="btn ghost" id="btn-export">Export backup</button>
+    <button class="btn ghost" id="btn-import">Import backup</button>
+    <input type="file" id="file-import" accept="application/json,.json" hidden>
+    <p class="note">Everything is saved on this phone only. Export a backup now and then until phase 2 sync is set up.</p>
+  </section>
+</main>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-view="prayers">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17"/><path d="M8 12.5l3 3 5.5-6.5" stroke-linecap="square"/></svg>Prayers</button>
+  <button role="tab" aria-selected="false" data-view="calendar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 10h17M8 2.5v5M16 2.5v5"/></svg>Calendar</button>
+  <button role="tab" aria-selected="false" data-view="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 20V12M12 20V5M19 20v-5M3 20.5h18"/></svg>Statistics</button>
+  <button role="tab" aria-selected="false" data-view="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+</nav>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const TZ = 'Europe/Stockholm';
+const STORAGE_KEY = 'prayerTracker.v1';
+const DEFAULT_PRAYERS = [
+  { id: 'morning',   name: 'Morning',   time: '06:00', notify: false },
+  { id: 'midday',    name: 'Midday',    time: '12:00', notify: false },
+  { id: 'afternoon', name: 'Afternoon', time: '15:00', notify: false },
+  { id: 'sunset',    name: 'Sunset',    time: '19:00', notify: false },
+  { id: 'night',     name: 'Night',     time: '21:00', notify: false },
+];
+const SILENT_IDS = ['morning']; // banner only: no sound, no vibration
+
+const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="square"><path d="M4.5 12.5l5 5 10-11"/></svg>';
+const ICON_BELL_ON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a6 6 0 0 0-6 6v4.2L4.2 16.5h15.6L18 12.7V8.5a6 6 0 0 0-6-6zM9.5 18.5a2.5 2.5 0 0 0 5 0z"/></svg>';
+const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5.5 5.5 0 0 0-5.5 5.5v4.3L4.8 16h14.4l-1.7-3.2V8.5A5.5 5.5 0 0 0 12 3zM9.8 18.5a2.2 2.2 0 0 0 4.4 0"/><path d="M3.5 3.5l17 17" stroke-linecap="round"/></svg>';
+
+/* =========================================================
+   TIME HELPERS (always Europe/Stockholm, independent of phone settings)
+   ========================================================= */
+const partsFmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+});
+function nowInfo(date = new Date()) {
+  const o = {};
+  for (const p of partsFmt.formatToParts(date)) o[p.type] = p.value;
+  const hour = (+o.hour) % 24;
+  return { key: `${o.year}-${o.month}-${o.day}`, y: +o.year, m: +o.month, min: hour * 60 + (+o.minute) };
+}
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const keyToDate = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const dateToKey = (d) => d.toISOString().slice(0, 10);
+const addDays = (k, n) => { const d = keyToDate(k); d.setUTCDate(d.getUTCDate() + n); return dateToKey(d); };
+const fmt = (k, opts) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', ...opts }).format(keyToDate(k));
+
+/* =========================================================
+   STORE — the only place that touches storage.
+   Phase 2: keep this interface, add a sync step that pushes/pulls
+   `days[*]` and `settings` (each carries updatedAt for last-write-wins).
+   ========================================================= */
+const Store = {
+  data: null,
+  load() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (_) {}
+    if (!d || d.version !== 1) {
+      d = { version: 1, settings: { prayers: DEFAULT_PRAYERS, updatedAt: new Date().toISOString() },
+            days: {}, meta: { firstDay: nowInfo().key, notified: {} } };
+    }
+    // make sure all five prayers exist (keeps old data valid if defaults change)
+    d.settings.prayers = DEFAULT_PRAYERS.map((def) => ({ ...def, ...(d.settings.prayers.find((p) => p.id === def.id) || {}) }));
+    d.settings.theme = d.settings.theme || 'system';
+    d.meta = d.meta || { firstDay: nowInfo().key, notified: {} };
+    d.meta.notified = d.meta.notified || {};
+    this.data = d;
+  },
+  save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); }
+    catch (e) { toast('Could not save — storage is full or blocked.'); }
+  },
+  prayers() { return this.data.settings.prayers; },
+  updatePrayer(id, patch) {
+    Object.assign(this.prayers().find((p) => p.id === id), patch);
+    this.data.settings.updatedAt = new Date().toISOString();
+    this.save();
+  },
+  day(key) { return this.data.days[key] || { done: {} }; },
+  isDone(key, id) { return !!this.day(key).done[id]; },
+  setDone(key, id, done) {
+    const day = this.data.days[key] || (this.data.days[key] = { done: {} });
+    if (done) day.done[id] = new Date().toISOString(); else delete day.done[id];
+    day.updatedAt = new Date().toISOString();
+    if (key < this.data.meta.firstDay) this.data.meta.firstDay = key;
+    this.save();
+  },
+  count(key) { return this.prayers().filter((p) => this.isDone(key, p.id)).length; },
+};
+
+/* =========================================================
+   STATS
+   ========================================================= */
+function computeStats(todayKey) {
+  const n = Store.prayers().length;
+  const complete = (k) => Store.count(k) === n;
+  let total = 0, month = 0;
+  const monthPrefix = todayKey.slice(0, 7);
+  for (const k of Object.keys(Store.data.days)) {
+    const c = Store.count(k);
+    total += c;
+    if (k.startsWith(monthPrefix)) month += c;
+  }
+  // current streak: today counts if complete; an unfinished today doesn't break it yet
+  let cur = 0, k = complete(todayKey) ? todayKey : addDays(todayKey, -1);
+  while (complete(k)) { cur++; k = addDays(k, -1); }
+  // longest streak
+  let longest = 0, run = 0;
+  const keys = Object.keys(Store.data.days).sort();
+  let prev = null;
+  for (const key of keys) {
+    if (!complete(key)) { run = 0; prev = key; continue; }
+    run = (prev && addDays(prev, 1) === key && run > 0) ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    prev = key;
+  }
+  return { total, month, cur, longest, today: Store.count(todayKey), n };
+}
+
+/* =========================================================
+   VIEW: PRAYERS
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+let lastSig = '';
+
+function currentPrayerId(min) {
+  // whichever prayer's time most recently passed today (none before the first one)
+  let best = null;
+  for (const p of Store.prayers()) {
+    const t = toMin(p.time);
+    if (t <= min && (!best || t >= toMin(best.time))) best = p;
+  }
+  return best ? best.id : null;
+}
+
+function renderPrayers(force) {
+  const now = nowInfo();
+  const nowId = currentPrayerId(now.min);
+  const sig = JSON.stringify([now.key, nowId, Store.day(now.key).done, Store.prayers()]);
+  if (!force && sig === lastSig) return;
+  lastSig = sig;
+
+  $('#today-label').textContent = 'Today, ' + fmt(now.key, { month: 'long', day: 'numeric' });
+  $('#prayer-list').classList.toggle('has-now', !!nowId);
+  $('#prayer-list').innerHTML = Store.prayers().map((p) => {
+    const done = Store.isDone(now.key, p.id);
+    return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}" data-id="${p.id}">
+      <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
+      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON_CHECK}</button>
+      <span class="name">${p.name}${p.id === nowId ? '<span class="badge">Now</span>' : ''}</span>
+      <span class="time">${p.time}</span>
+      <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON_BELL_ON : ICON_BELL_OFF}</button>
+    </div>`;
+  }).join('');
+  const c = Store.count(now.key), n = Store.prayers().length;
+  $('#today-summary').textContent = c === n ? `All ${n} prayers done today.` : `${c} of ${n} done today.`;
+}
+
+$('#prayer-list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const id = btn.closest('.row').dataset.id;
+  if (btn.dataset.act === 'toggle') {
+    const key = nowInfo().key;
+    Store.setDone(key, id, !Store.isDone(key, id));
+    renderPrayers(true);
+  } else {
+    await toggleBell(id);
+  }
+});
+
+/* =========================================================
+   VIEW: CALENDAR
+   ========================================================= */
+const cal = { y: 0, m: 0, sel: null, edit: false };
+
+function dayStatus(key, todayKey) {
+  const c = Store.count(key), n = Store.prayers().length;
+  if (key > todayKey) return 'future';
+  if (c === n) return 'full';
+  if (c > 0) return 'partial';
+  if (key === todayKey) return 'open';
+  if (key < Store.data.meta.firstDay) return 'none';
+  return 'missed';
+}
+
+function renderCalendar() {
+  const today = nowInfo();
+  if (!cal.y) { cal.y = today.y; cal.m = today.m; cal.sel = today.key; }
+  const first = `${cal.y}-${String(cal.m).padStart(2, '0')}-01`;
+  $('#cal-month').textContent = fmt(first, { month: 'long', year: 'numeric' });
+  $('#cal-next').disabled = cal.y > today.y || (cal.y === today.y && cal.m >= today.m);
+
+  const offset = (keyToDate(first).getUTCDay() + 6) % 7; // Monday first
+  const daysIn = new Date(Date.UTC(cal.y, cal.m, 0)).getUTCDate();
+  let html = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => `<div class="dow">${d}</div>`).join('');
+  html += '<div></div>'.repeat(offset);
+  for (let d = 1; d <= daysIn; d++) {
+    const key = first.slice(0, 8) + String(d).padStart(2, '0');
+    const st = dayStatus(key, today.key);
+    const c = Store.count(key);
+    const cls = ['day', st, key === today.key ? 'today' : '', key === cal.sel ? 'sel' : ''].join(' ');
+    const sub = st === 'partial' ? `<small>${c}/5</small>` : '';
+    html += `<button class="${cls}" data-key="${key}" ${st === 'future' ? 'disabled' : ''}><span>${d}</span>${sub}</button>`;
+  }
+  $('#cal-grid').innerHTML = html;
+  renderDetail();
+}
+
+function renderDetail() {
+  const el = $('#cal-detail');
+  if (!cal.sel) { el.innerHTML = ''; return; }
+  const k = cal.sel, n = Store.prayers().length;
+  el.innerHTML = `<div class="detail-head">
+      <b>${fmt(k, { weekday: 'long', month: 'long', day: 'numeric' })}</b>
+      <button class="link" id="btn-edit">${cal.edit ? 'Done' : 'Edit'}</button>
+    </div>
+    <div class="box">${Store.prayers().map((p) => {
+      const done = Store.isDone(k, p.id);
+      return `<div class="row${done ? ' done' : ''}" data-id="${p.id}">
+        <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON_CHECK}</button>
+        <span class="name">${p.name}</span><span class="time" style="padding-right:12px">${p.time}</span></div>`;
+    }).join('')}</div>
+    <p class="summary">${Store.count(k)} of ${n} prayers done.${cal.edit ? '' : ' Tap Edit to correct a day.'}</p>`;
+}
+
+$('#cal-grid').addEventListener('click', (e) => {
+  const b = e.target.closest('.day'); if (!b || b.disabled) return;
+  cal.sel = b.dataset.key; cal.edit = false; renderCalendar();
+});
+$('#cal-detail').addEventListener('click', (e) => {
+  if (e.target.closest('#btn-edit')) { cal.edit = !cal.edit; renderDetail(); return; }
+  const c = e.target.closest('.check'); if (!c || !cal.edit) return;
+  const id = c.closest('.row').dataset.id;
+  Store.setDone(cal.sel, id, !Store.isDone(cal.sel, id));
+  renderCalendar(); renderPrayers(true);
+});
+$('#cal-prev').onclick = () => { if (--cal.m < 1) { cal.m = 12; cal.y--; } cal.sel = null; renderCalendar(); };
+$('#cal-next').onclick = () => { if (++cal.m > 12) { cal.m = 1; cal.y++; } cal.sel = null; renderCalendar(); };
+
+/* =========================================================
+   VIEW: STATISTICS
+   ========================================================= */
+function renderStats() {
+  const s = computeStats(nowInfo().key);
+  const tile = (v, l, cls = '') => `<div class="tile ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  $('#stats').innerHTML =
+    tile(s.cur, `Current streak · day${s.cur === 1 ? '' : 's'} with all 5`, 'hero') +
+    tile(s.longest, 'Longest streak') +
+    tile(s.total, 'Total prayers') +
+    tile(s.month, 'This month') +
+    tile(`${s.today}/${s.n}`, 'Today');
+}
+
+/* =========================================================
+   VIEW: SETTINGS
+   ========================================================= */
+const THEMES = [
+  { id: 'light', label: 'Light mode' },
+  { id: 'dark', label: 'Dark mode' },
+  { id: 'system', label: 'Same as System Settings' },
+];
+function applyTheme() {
+  const t = Store.data.settings.theme;
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+}
+function renderSettings() {
+  $('#settings-theme').innerHTML = THEMES.map((t) =>
+    `<button class="set-row radio-row" role="radio" aria-checked="${Store.data.settings.theme === t.id}" data-theme="${t.id}">
+      <span class="name">${t.label}</span><span class="radio"></span></button>`).join('');
+  $('#settings-times').innerHTML = Store.prayers().map((p) =>
+    `<div class="set-row"><span class="name">${p.name}</span>
+     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></div>`).join('');
+  $('#settings-notify').innerHTML = Store.prayers().map((p) =>
+    `<div class="set-row"><span class="name">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
+     <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('');
+  renderNotifyStatus();
+}
+$('#settings-theme').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-theme]'); if (!b) return;
+  Store.data.settings.theme = b.dataset.theme;
+  Store.data.settings.updatedAt = new Date().toISOString();
+  Store.save(); applyTheme(); renderSettings();
+});
+$('#settings-times').addEventListener('change', (e) => {
+  const inp = e.target; if (!/^\d{2}:\d{2}$/.test(inp.value)) return;
+  Store.updatePrayer(inp.dataset.id, { time: inp.value });
+  renderPrayers(true); toast('Time saved');
+});
+$('#settings-notify').addEventListener('click', async (e) => {
+  const sw = e.target.closest('.switch'); if (!sw) return;
+  await toggleBell(sw.dataset.id);
+});
+
+/* =========================================================
+   NOTIFICATIONS (phase 1: in-app timer — see notes in README)
+   ========================================================= */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isStandalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+
+function notifSupport() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    return isIOS && !isStandalone ? 'install' : 'unsupported';
+  }
+  return Notification.permission; // 'default' | 'granted' | 'denied'
+}
+
+function renderNotifyStatus() {
+  const s = notifSupport();
+  const msg = {
+    install: 'Open this app from your <b>Home Screen icon</b> to use notifications (iOS only allows them there).',
+    unsupported: 'This browser doesn’t support web notifications.',
+    default: 'Notifications are <b>not allowed yet</b>.',
+    granted: 'Notifications are <b>allowed</b>.',
+    denied: 'Notifications are <b>blocked</b>. Turn them on in iOS Settings › Notifications › Prayers.',
+  }[s];
+  $('#notify-status').innerHTML = `<span class="muted">${msg}</span>`;
+  $('#btn-permission').style.display = s === 'default' ? '' : 'none';
+  $('#btn-test').style.display = s === 'granted' ? '' : 'none';
+}
+
+async function askPermission() {
+  const s = notifSupport();
+  if (s === 'granted') return true;
+  if (s === 'install') { toast('Add to Home Screen first, then open it from the icon.'); return false; }
+  if (s === 'unsupported') { toast('Notifications aren’t supported here.'); return false; }
+  if (s === 'denied') { toast('Blocked — enable in iOS Settings › Notifications.'); return false; }
+  const r = await Notification.requestPermission();
+  renderNotifyStatus();
+  return r === 'granted';
+}
+
+async function toggleBell(id) {
+  const p = Store.prayers().find((x) => x.id === id);
+  const turningOn = !p.notify;
+  Store.updatePrayer(id, { notify: turningOn }); // the bell state is saved even before permission
+  if (turningOn && !(await askPermission())) {
+    // keep it on so it works once permission is granted; just inform
+  }
+  renderPrayers(true); renderSettings();
+  if (turningOn && notifSupport() === 'granted') toast(`${p.name} reminder on`);
+}
+
+async function showNotification(p, test) {
+  const silent = SILENT_IDS.includes(p.id);
+  const opts = {
+    body: test ? 'Test notification' : `${p.time} · Time for ${p.name.toLowerCase()} prayer`,
+    tag: 'prayer-' + p.id, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+    silent,                          // honoured on Android/desktop; iOS decides on its own
+    vibrate: silent ? [] : [80],     // single short buzz (ignored by iOS)
+  };
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(p.name, opts);
+  } catch (_) {
+    try { new Notification(p.name, opts); } catch (__) {}
+  }
+  if (!silent && navigator.vibrate) navigator.vibrate(80); // no-op on iPhone
+}
+
+function checkReminders() {
+  if (notifSupport() !== 'granted') return;
+  const now = nowInfo();
+  const sent = Store.data.meta.notified;
+  for (const key of Object.keys(sent)) if (key !== now.key) delete sent[key];
+  const list = sent[now.key] || (sent[now.key] = []);
+  for (const p of Store.prayers()) {
+    const t = toMin(p.time);
+    // fire if within 3 minutes after the time and not sent yet today
+    if (p.notify && now.min >= t && now.min < t + 3 && !list.includes(p.id) && !Store.isDone(now.key, p.id)) {
+      list.push(p.id); Store.save(); showNotification(p);
+    }
+  }
+}
+
+$('#btn-permission').onclick = askPermission;
+$('#btn-test').onclick = () => showNotification(Store.prayers()[1], true);
+
+/* =========================================================
+   BACKUP
+   ========================================================= */
+$('#btn-export').onclick = async () => {
+  const name = `prayers-backup-${nowInfo().key}.json`;
+  const blob = new Blob([JSON.stringify(Store.data, null, 2)], { type: 'application/json' });
+  const file = new File([blob], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (_) { return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('#btn-import').onclick = () => $('#file-import').click();
+$('#file-import').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.version !== 1 || !d.days || !d.settings) throw 0;
+    if (!confirm('Replace all data on this phone with the backup?')) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    Store.load(); applyTheme(); renderAll(); toast('Backup restored');
+  } catch (_) { toast('That file isn’t a valid backup.'); }
+  e.target.value = '';
+};
+
+/* =========================================================
+   NAV, TOAST, CLOCK
+   ========================================================= */
+let currentView = 'prayers';
+function show(view) {
+  currentView = view;
+  document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
+  if (view === 'calendar') { cal.y = 0; renderCalendar(); }
+  if (view === 'stats') renderStats();
+  if (view === 'settings') renderSettings();
+  if (view === 'prayers') renderPrayers(true);
+  window.scrollTo(0, 0);
+}
+document.querySelector('nav').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (b) show(b.dataset.view);
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+let lastDayKey = null;
+function tick() {
+  const k = nowInfo().key;
+  if (k !== lastDayKey) {           // new day (midnight) → fresh checkboxes everywhere
+    lastDayKey = k;
+    renderAll();
+  } else {
+    renderPrayers();
+  }
+  checkReminders();
+}
+function renderAll() {
+  lastSig = '';
+  renderPrayers(true);
+  if (currentView === 'calendar') renderCalendar();
+  if (currentView === 'stats') renderStats();
+  if (currentView === 'settings') renderSettings();
+}
+
+/* =========================================================
+   SPLASH
+   ========================================================= */
+function runSplash() {
+  const s = $('#splash'), img = s.querySelector('img');
+  let done = false;
+  const finish = () => { if (done) return; done = true; s.classList.add('hide'); setTimeout(() => s.remove(), 900); };
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    requestAnimationFrame(() => s.classList.add('in'));   // fade in from black (1.4s)
+    setTimeout(finish, 1400 + 1800);                      // hold ~1.8s, then fade into the app
+  };
+  if (img.complete && img.naturalWidth) start();
+  else {
+    img.onload = start;
+    img.onerror = () => { img.remove(); s.querySelector('.glow').style.display = 'block'; start(); };
+  }
+  setTimeout(() => { if (!started && img.onerror) img.onerror(); }, 2500); // slow network fallback
+  s.addEventListener('click', finish);                    // tap to skip
+}
+
+/* =========================================================
+   START
+   ========================================================= */
+Store.load(); Store.save(); applyTheme();
+runSplash();
+tick();
+setInterval(tick, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+window.addEventListener('focus', tick);
+window.addEventListener('pageshow', tick);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
