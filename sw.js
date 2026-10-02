@@ -1,6 +1,6 @@
 // Service worker: offline support + showing notifications.
 // Bump VERSION whenever you upload new files so phones pick up changes.
-const VERSION = 'prayers-v15';
+const VERSION = 'prayers-v17';
 const ASSETS = ['./', './index.html', './manifest.json', './splash.jpg', './header.jpg',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 

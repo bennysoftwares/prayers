@@ -32,6 +32,8 @@
     var t = (JSON.parse(localStorage.getItem('prayerTracker.v1')) || {}).settings;
     t = t && t.theme;
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    var z = (JSON.parse(localStorage.getItem('prayerTracker.v1')) || {}).settings;
+    z = z && z.textSize; if (z === 'small' || z === 'large') document.documentElement.dataset.size = z;
   } catch (e) {}
 </script>
 <style>
@@ -358,7 +360,7 @@
   /* ===== Bottom nav ===== */
   nav {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
     background: var(--nav-bg); border-top: 1.5px solid var(--gold);
     padding-bottom: var(--safe-bottom);
   }
@@ -367,7 +369,8 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
     color: var(--nav-ink); font-size: 14px; text-align: center;
   }
-  nav button svg { width: 28px; height: 28px; }
+  nav button svg { width: 27px; height: 27px; }
+  nav button { font-size: 13px; letter-spacing: 0; white-space: nowrap; }
   nav button[aria-selected="true"] { color: var(--nav-active); font-weight: 700; }
   nav button[aria-selected="true"] svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--nav-active) 55%, transparent)); }
 
@@ -435,6 +438,82 @@
   .wday, .mday { position: relative; }
   .wday.note::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--gold); }
   .mday.note .nd { position: absolute; top: 4px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+
+  /* ===== Journal page ===== */
+  .jp-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .jp-h h3 { margin: 0; font-size: 21px; color: var(--ink-strong); }
+  .jp-h small { font-size: 14px; color: var(--ink-dim); }
+  #jp-note textarea { min-height: 120px; }
+  #jp-verse .full-verse { font-size: 19px; margin: 0 0 10px; }
+  .past { width: 100%; text-align: left; display: block; padding: 12px 0; border-top: 1px solid var(--divider); }
+  .past b { display: block; font-size: 15px; color: var(--gold-text); font-weight: 600; }
+  .past span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; color: var(--ink); margin-top: 2px; }
+  .more { display: block; width: 100%; padding: 12px 0 2px; color: var(--gold-text); font-weight: 600; font-size: 15px; border-top: 1px solid var(--divider); }
+
+  /* ===== Text size (Settings → Appearance) ===== */
+  :root { --zoom: 1; } :root[data-size="small"] { --zoom: .9; } :root[data-size="large"] { --zoom: 1.13; }
+  main, #sheet .panel, #welcome .wl-body { zoom: var(--zoom); }
+  /* Large text: keep all prayers on one screen (one-line verse, slightly tighter rows) */
+  :root[data-size="large"] body.fit .verse .vt { -webkit-line-clamp: 1; }
+  :root[data-size="large"] body.fit .verse { padding: 7px 16px 8px; }
+  :root[data-size="large"] body.fit .summary { padding-top: 10px; padding-bottom: 10px; }
+  :root[data-size="large"] body.fit #prayer-list .row { min-height: 40px; }
+  @media (max-height: 820px) {   /* Large text on smaller iPhones: the verse stays on the Journal tab */
+    :root[data-size="large"] body.fit .verse { display: none !important; }
+  }
+  @media (max-height: 700px) {   /* Large text on the SE: drop the two smallest lines of the summary */
+    :root[data-size="large"] body.fit #sum-line, :root[data-size="large"] body.fit .mark-btn small { display: none; }
+    :root[data-size="large"] body.fit .sum-head { margin-bottom: 8px; }
+  }
+  .s-row2 { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0 6px; border-top: 1px solid var(--divider); }
+  .s-row2 span { font-size: 17px; }
+  .s-row2 .seg button { padding: 6px 10px; font-size: 15px; }
+
+  /* ===== Share verse ===== */
+  .share-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 14px; border-radius: 12px; border: 1.5px solid var(--gold); color: var(--gold-text); font-weight: 600; font-size: 15px; }
+  .share-btn svg { width: 18px; height: 18px; }
+
+  /* ===== Journal search ===== */
+  .search { position: relative; }
+  .search svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; margin-top: -9px; color: var(--ink-dim); pointer-events: none; }
+  .search input { padding-left: 38px; }
+  .search .clear { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; color: var(--ink-dim); font-size: 22px; }
+  #view-journal.searching > .card:not(#jp-search):not(#jp-results) { display: none; }
+  #jp-results { display: none; } #view-journal.searching #jp-results { display: block; }
+  mark { background: color-mix(in srgb, var(--gold) 38%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .res { width: 100%; text-align: left; display: block; padding: 12px 0; border-top: 1px solid var(--divider); }
+  .res b { display: block; font-size: 14px; color: var(--gold-text); font-weight: 600; }
+  .res span { display: block; font-size: 16px; color: var(--ink); margin-top: 2px; }
+
+  /* ===== Custom prayers ===== */
+  .cp .cp-name { flex: 1; text-align: left; }
+  .cp .cp-time { position: relative; }
+  .cp .cp-time input { position: absolute; inset: 0; opacity: 0; width: 100%; }
+  .cp .del { width: 30px; height: 30px; color: var(--ink-dim); font-size: 22px; flex: none; }
+  .add-row { width: 100%; text-align: left; color: var(--gold-text); font-weight: 600; }
+
+  /* ===== First-launch welcome ===== */
+  #welcome { position: fixed; inset: 0; z-index: 80; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; }
+  #welcome .wl-hero { position: relative; flex: none; height: calc(var(--safe-top) + 26vh); background: #2a1406 url(header.jpg) 75% 50% / cover no-repeat; }
+  #welcome .wl-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,10,7,.45), rgba(0,0,0,.05) 40%, var(--bg)); }
+  #welcome .wl-body { flex: 1; overflow-y: auto; padding: 0 22px calc(var(--safe-bottom) + 24px); margin-top: -26px; position: relative; z-index: 1; }
+  .wl-dots { display: flex; gap: 6px; margin-bottom: 14px; }
+  .wl-dots i { width: 22px; height: 4px; border-radius: 2px; background: var(--ring-track); }
+  .wl-dots i.on { background: var(--gold); }
+  #welcome h2 { font-size: 32px; line-height: 1.1; margin: 0 0 8px; color: var(--ink-strong); }
+  #welcome p.lead { font-size: 18px; color: var(--ink-dim); margin: 0 0 18px; line-height: 1.4; }
+  .wl-list { list-style: none; margin: 0 0 20px; padding: 0; }
+  .wl-list li { display: flex; gap: 12px; align-items: center; padding: 10px 0; font-size: 17px; border-top: 1px solid var(--divider); }
+  .wl-list li span.i { width: 30px; height: 30px; color: var(--icon); flex: none; }
+  .wl-list li span.i svg { width: 100%; height: 100%; }
+  .btn-main { display: block; width: 100%; padding: 15px; border-radius: 14px; background: var(--gold); color: #1A1206; font-weight: 700; font-size: 17px; text-align: center; margin-top: 10px; }
+  .btn-alt { display: block; width: 100%; padding: 13px; border-radius: 14px; border: 1.5px solid var(--gold); color: var(--gold-text); font-weight: 600; font-size: 16px; text-align: center; margin-top: 10px; }
+  .wl-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+  .wl-nav button { color: var(--ink-dim); font-size: 16px; padding: 8px 2px; }
+  .wl-box { border: 1px solid var(--card-line); background: var(--card); border-radius: 14px; padding: 4px 14px; margin-bottom: 8px; }
+  .wl-box .srow:first-child { border-top: 0; }
+  .wl-small { font-size: 14px; color: var(--ink-dim); margin: 10px 0 0; line-height: 1.4; }
+  .wl-place { font-size: 18px; color: var(--ink-strong); margin: 8px 0 2px; min-height: 24px; }
 
   /* ===== Year view ===== */
   .year-head { display: flex; align-items: center; justify-content: space-between; margin: -6px -8px 8px; }
@@ -516,6 +595,20 @@
   </section>
 
   <!-- STATISTICS -->
+  <!-- JOURNAL -->
+  <section class="view" id="view-journal">
+    <div class="card pad" id="jp-search"><div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+      <input class="j-input" id="jp-q" type="search" placeholder="Search notes and intentions" enterkeyhint="search" autocomplete="off">
+      <button class="clear" id="jp-q-clear" aria-label="Clear search" style="display:none">×</button></div></div>
+    <div class="card pad" id="jp-results"></div>
+    <div class="card pad" id="jp-note"></div>
+    <div class="card pad" id="jp-verse"></div>
+    <div class="card pad" id="jp-int"></div>
+    <div class="card pad" id="jp-ans"></div>
+    <div class="card pad" id="jp-past"></div>
+  </section>
+
   <section class="view" id="view-stats"><div id="stats"></div></section>
 
   <!-- SETTINGS -->
@@ -529,6 +622,10 @@
             <button data-theme="light">Light</button><button data-theme="dark">Dark</button><button data-theme="system">System</button>
           </div>
         </div>
+        <div class="s-row2"><span>Text size</span>
+          <div class="seg" id="size-seg" role="group" aria-label="Text size">
+            <button data-size="small">Small</button><button data-size="normal">Normal</button><button data-size="large">Large</button>
+          </div></div>
       </div>
     </div>
 
@@ -588,6 +685,8 @@
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2v5M12 4h4M8.5 13L14 7.5l5.5 5.5M9 12.5V24h10V12.5M4 24V16l5-2.5M24 24V16l-5-2.5M3 24h22M12 24v-4a2 2 0 0 1 4 0v4"/></svg>Prayers</button>
   <button role="tab" aria-selected="false" data-view="calendar">
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><rect x="4" y="6" width="20" height="18" rx="2.5"/><path d="M4 11h20M9.5 3.5v5M18.5 3.5v5M11 17.5h6"/></svg>Calendar</button>
+  <button role="tab" aria-selected="false" data-view="journal">
+    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 23V6a2.5 2.5 0 0 1 2.5-2.5H22v17H7.5A2.5 2.5 0 0 0 5 23zm0 0a2.5 2.5 0 0 0 2.5 2.5H22"/><path d="M13.5 7.5v7M10 10.5h7"/></svg>Journal</button>
   <button role="tab" aria-selected="false" data-view="stats">
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 22v-7M14 22V5M20 22v-10M4 24.5h20"/></svg>Statistics</button>
   <button role="tab" aria-selected="false" data-view="settings">
@@ -595,6 +694,7 @@
 </nav>
 
 <div id="toast" role="status"></div>
+<div id="welcome" style="display:none"><div class="wl-hero"></div><div class="wl-body"></div></div>
 <div id="sheet" aria-hidden="true"><div class="backdrop"></div><div class="panel" role="dialog" aria-modal="true"></div></div>
 <!-- Verse of the day: 365 verses from the World English Bible (public domain), each checked by hand.
      "Yahweh" is shown as "the LORD", as in the WEB British Edition. -->
@@ -606,7 +706,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.5.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -646,6 +746,8 @@ const ICON = {
   chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
 const PRAYER_ICON = { morning: ICON.sunrise, midday: ICON.sun, afternoon: ICON.sun, sunset: ICON.sunset, night: ICON.moon };
+// Custom prayers get an icon from their time of day
+const iconFor = (p) => PRAYER_ICON[p.id] || (() => { const m = toMin(p.time); return m < 540 ? ICON.sunrise : m < 1020 ? ICON.sun : m < 1230 ? ICON.sunset : ICON.moon; })();
 
 /* Ring: fraction 0..1, drawn in a 100x100 box (callers rotate it -90deg) */
 function ring(frac, stroke = 10, dim = false) {
@@ -693,9 +795,10 @@ const Store = {
   load() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (_) {}
-    if (!d || d.version !== 1) {
+    const fresh = !d || d.version !== 1;
+    if (fresh) {
       d = { version: 1, settings: { prayers: DEFAULT_PRAYERS, updatedAt: new Date().toISOString() },
-            days: {}, meta: { firstDay: nowInfo().key, notified: {} } };
+            days: {}, meta: { firstDay: nowInfo().key, notified: {}, onboarded: false } };
     }
     // make sure all five prayers exist (keeps old data valid if defaults change)
     d.settings.prayers = DEFAULT_PRAYERS.map((def) => ({ ...def, ...(d.settings.prayers.find((p) => p.id === def.id) || {}) }));
@@ -707,6 +810,10 @@ const Store = {
     d.settings.showVerse = d.settings.showVerse !== false;
     d.notes = d.notes || {};            // { 'YYYY-MM-DD': { text, updatedAt } }
     d.intentions = d.intentions || [];  // [{ id, text, created, answered, updatedAt }]
+    if (d.meta.onboarded === undefined) d.meta.onboarded = true;   // people already using the app skip the welcome
+    d.settings.textSize = d.settings.textSize || 'normal';
+    d.settings.customOn = !!d.settings.customOn;                   // "Customize prayers" (off = the normal five)
+    d.settings.custom = d.settings.custom || null;
     this.data = d;
   },
   save() {
@@ -714,16 +821,16 @@ const Store = {
     catch (e) { toast('Could not save — storage is full or blocked.'); }
   },
   reset() {
-    const { theme, location } = this.data.settings; // keep the chosen look and place
+    const { theme, location, textSize } = this.data.settings; // keep the chosen look, place and text size
     try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-    this.load(); this.data.settings.theme = theme; this.data.settings.location = location; this.save();
+    this.load(); Object.assign(this.data.settings, { theme, location, textSize }); this.data.meta.onboarded = true; this.save();
   },
   snapshot(key) { return JSON.stringify(this.day(key).done); },
   restore(key, snap) {
     const day = this.data.days[key] || (this.data.days[key] = { done: {} });
     day.done = JSON.parse(snap); day.updatedAt = new Date().toISOString(); this.save();
   },
-  prayers() { return this.data.settings.prayers; },
+  prayers() { const S = this.data.settings; return S.customOn && S.custom && S.custom.length ? S.custom : S.prayers; },
   updatePrayer(id, patch) {
     Object.assign(this.prayers().find((p) => p.id === id), patch);
     this.data.settings.updatedAt = new Date().toISOString();
@@ -834,8 +941,7 @@ function openSheet(html, onClose) {
 function closeSheet() {
   const sh = $('#sheet'); if (!sh.classList.contains('open')) return;
   const ta = $('#j-text');
-  if (ta) { clearTimeout(noteTimer); const t = ta.value.trim();
-    if (t) Store.data.notes[journalKey] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[journalKey]; Store.save(); }
+  if (ta) { clearTimeout(noteTimer); saveNote(journalKey, ta.value); }
   document.activeElement?.blur?.();
   sh.classList.remove('open'); sh.setAttribute('aria-hidden', 'true');
   if (sh._onClose) sh._onClose(); sh._onClose = null;
@@ -844,73 +950,174 @@ $('#sheet').addEventListener('click', (e) => { if (e.target.classList.contains('
 const sheetHead = (title) => `<div class="sh-head"><h3>${title}</h3><button class="sh-close" aria-label="Close">×</button></div>`;
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
+const shareBtn = () => `<button class="share-btn" data-share>${SHARE_ICON}Share verse</button>`;
 $('#verse-strip').addEventListener('click', () => {
   const v = verseFor(nowInfo().key);
   openSheet(`${sheetHead('Verse of the day')}<p class="full-verse">“${esc(v.text)}”</p>
-    <div class="full-ref">${esc(v.ref)}<small>World English Bible · ${fmt(nowInfo().key, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>`);
+    <div class="full-ref">${esc(v.ref)}<small>World English Bible · ${fmt(nowInfo().key, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>${shareBtn()}`);
 });
-
-/* ===== Journal: a note per day + prayer intentions ===== */
-let journalTab = 'note', journalKey = null;
-function openJournal(key, tab) {
-  journalKey = key || nowInfo().key; journalTab = tab || 'note';
-  openSheet('', () => { renderPrayers(true); if (currentView === 'calendar') renderCalendar(); if (currentView === 'stats') renderStats(); });
-  renderJournal();
+// Picture of the verse on the sunset photo, shared through the iPhone share sheet.
+// Built synchronously inside the tap so iOS allows the share sheet to open.
+const shareBg = new Image(); shareBg.src = 'header.jpg';
+function verseImage(v) {
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#1a0f08'; x.fillRect(0, 0, W, H);
+  if (shareBg.complete && shareBg.naturalWidth) {               // photo, cropped to keep the church and sun
+    const iw = shareBg.naturalWidth, ih = shareBg.naturalHeight, sc = Math.max(W / iw, H / ih);
+    const dw = iw * sc, dh = ih * sc; x.drawImage(shareBg, (W - dw) * 0.75, (H - dh) / 2, dw, dh);
+  }
+  let g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(10,7,4,.35)'); g.addColorStop(.45, 'rgba(10,7,4,.62)'); g.addColorStop(1, 'rgba(10,7,4,.9)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const serif = '"New York", "Iowan Old Style", Georgia, "Times New Roman", serif';
+  const text = `“${v.text}”`, maxW = 880;
+  let size = 66, lines;
+  const wrap = () => { x.font = `italic ${size}px ${serif}`; const out = []; let line = '';
+    for (const w of text.split(' ')) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+    out.push(line); return out; };
+  do { lines = wrap(); } while (lines.length * size * 1.38 > 760 && (size -= 2) > 34);
+  const lh = size * 1.38, block = lines.length * lh + 40 + 52;
+  let y = Math.max(220, (H - block) / 2 + 40);
+  x.textAlign = 'center'; x.fillStyle = '#FFF8EC'; x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 18;
+  for (const l of lines) { x.fillText(l, W / 2, y + size); y += lh; }
+  x.shadowBlur = 0;
+  x.fillStyle = '#F5BF4F'; x.fillRect(W / 2 - 40, y + 30, 80, 3);
+  x.font = `600 46px ${serif}`; x.fillText(v.ref, W / 2, y + 100);
+  x.font = `30px ${serif}`; x.fillStyle = 'rgba(255,248,236,.7)'; x.fillText('Verse of the day · World English Bible', W / 2, H - 70);
+  const bin = atob(c.toDataURL('image/jpeg', .9).split(',')[1]), arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], 'verse-of-the-day.jpg', { type: 'image/jpeg' });
 }
-function renderJournal() {
-  const panel = $('#sheet .panel'), isToday = journalKey === nowInfo().key;
-  const tabs = `<div class="seg jtabs"><button data-jtab="note" aria-pressed="${journalTab === 'note'}">${isToday ? 'Today’s note' : 'Note'}</button>
-    <button data-jtab="int" aria-pressed="${journalTab === 'int'}">Intentions</button></div>`;
-  if (journalTab === 'note') {
-    const n = Store.data.notes[journalKey];
-    panel.innerHTML = `${sheetHead('Journal')}${tabs}
-      <p class="j-date">${fmt(journalKey, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
-      <textarea id="j-text" placeholder="What are you praying for, or thankful for, today?">${n ? esc(n.text) : ''}</textarea>
-      <div class="j-saved" id="j-saved">${n ? 'Saved' : ''}</div>`;
-  } else {
-    const open = Store.data.intentions.filter((x) => !x.answered), done = Store.data.intentions.filter((x) => x.answered)
-      .sort((a, b) => b.answered.localeCompare(a.answered));
-    const item = (x) => `<div class="intent${x.answered ? ' answered' : ''}" data-iid="${x.id}">
-        <div class="it">${esc(x.text)}<small>${x.answered ? `Answered ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : `Since ${fmt(x.created, { month: 'long', day: 'numeric' })}`}</small></div>
-        ${x.answered ? '<button class="ans" data-act="reopen">Undo</button>' : '<button class="ans" data-act="answer">Answered</button>'}
-        <button class="del" data-act="del" aria-label="Delete">×</button></div>`;
-    panel.innerHTML = `${sheetHead('Journal')}${tabs}
-      <div class="j-add"><input class="j-input" id="j-new" placeholder="Add a prayer intention" maxlength="200" enterkeyhint="done"><button class="sbtn" id="j-add">Add</button></div>
-      ${open.length ? open.map(item).join('') : '<div class="j-empty">Things you are praying for will appear here. Mark them answered when they are.</div>'}
-      <div class="j-sub">Answered prayers · ${done.length}</div>
-      ${done.length ? done.map(item).join('') : '<div class="j-empty">None yet.</div>'}`;
+function shareVerse() {
+  const v = verseFor(nowInfo().key), file = verseImage(v);
+  const text = `“${v.text}” ${v.ref}`;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], text }).catch(() => {});
+  } else {                                                      // fallback: show the picture to save
+    const url = URL.createObjectURL(file);
+    openSheet(`${sheetHead('Share verse')}<img src="${url}" alt="Verse picture" style="width:100%;border-radius:12px;display:block">
+      <p class="wl-small">Press and hold the picture to save or share it.</p>`);
   }
 }
-let noteTimer;
-$('#sheet').addEventListener('input', (e) => {
-  if (e.target.id !== 'j-text') return;
-  clearTimeout(noteTimer); $('#j-saved').textContent = 'Saving…';
-  noteTimer = setTimeout(() => {
-    const t = e.target.value.trim();
-    if (t) Store.data.notes[journalKey] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[journalKey];
-    Store.save(); const el = $('#j-saved'); if (el) el.textContent = t ? 'Saved' : '';
-  }, 400);
+document.addEventListener('click', (e) => { if (e.target.closest('[data-share]')) shareVerse(); });
+
+/* ===== Journal: notes per day + prayer intentions =====
+   The Journal tab holds everything; a small pop-up is used to write a note for another day. */
+function saveNote(key, text) {
+  const t = text.trim();
+  if (t) Store.data.notes[key] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[key];
+  Store.save();
+}
+const intentItem = (x) => `<div class="intent${x.answered ? ' answered' : ''}" data-iid="${x.id}">
+    <div class="it">${esc(x.text)}<small>${x.answered ? `Answered ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : `Since ${fmt(x.created, { month: 'long', day: 'numeric' })}`}</small></div>
+    ${x.answered ? '<button class="ans" data-act="reopen">Undo</button>' : '<button class="ans" data-act="answer">Answered</button>'}
+    <button class="del" data-act="del" aria-label="Delete">×</button></div>`;
+
+let pastLimit = 10;
+function renderJournalPage(full = true) {
+  const today = nowInfo().key;
+  if (full) {
+    const n = Store.data.notes[today];
+    $('#jp-note').innerHTML = `<div class="jp-h"><h3>Today’s note</h3><small>${fmt(today, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>
+      <textarea id="jp-text" placeholder="What are you praying for, or thankful for, today?">${n ? esc(n.text) : ''}</textarea>
+      <div class="j-saved" id="jp-saved">${n ? 'Saved' : ''}</div>`;
+    const v = verseFor(today);
+    $('#jp-verse').innerHTML = `<div class="jp-h"><h3>Verse of the day</h3></div>
+      <p class="full-verse">“${esc(v.text)}”</p><div class="full-ref">${esc(v.ref)}<small>World English Bible</small></div>${shareBtn()}`;
+  }
+  const open = Store.data.intentions.filter((x) => !x.answered);
+  const done = Store.data.intentions.filter((x) => x.answered).sort((a, b) => b.answered.localeCompare(a.answered));
+  $('#jp-int').innerHTML = `<div class="jp-h"><h3>Prayer intentions</h3><small>${open.length || ''}</small></div>
+    <div class="j-add"><input class="j-input" id="j-new" placeholder="What are you praying for?" maxlength="200" enterkeyhint="done"><button class="sbtn" id="j-add">Add</button></div>
+    ${open.length ? open.map(intentItem).join('') : '<div class="j-empty">Add the things you are praying for. Mark them answered when they are.</div>'}`;
+  $('#jp-ans').innerHTML = `<div class="jp-h"><h3>Answered prayers</h3><small>${done.length}</small></div>
+    ${done.length ? done.map(intentItem).join('') : '<div class="j-empty">Answered prayers will be kept here, with the date.</div>'}`;
+  const past = Object.keys(Store.data.notes).filter((k) => k !== today).sort().reverse();
+  $('#jp-past').innerHTML = `<div class="jp-h"><h3>Past notes</h3><small>${past.length}</small></div>
+    ${past.length ? past.slice(0, pastLimit).map((k) => `<button class="past" data-note="${k}"><b>${fmt(k, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</b><span>${esc(Store.data.notes[k].text)}</span></button>`).join('') : '<div class="j-empty">Notes from earlier days will appear here.</div>'}
+    ${past.length > pastLimit ? `<button class="more" id="jp-more">Show more (${past.length - pastLimit})</button>` : ''}`;
+}
+
+// ----- Search notes and intentions -----
+function highlight(text, q) {
+  const t = esc(text); if (!q) return t;
+  const re = new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return t.replace(re, (m) => `<mark>${m}</mark>`);
+}
+function snippet(text, q) {                 // show the part of a long note around the match
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (text.length <= 160 || i < 60) return text.length > 220 ? text.slice(0, 220) + '…' : text;
+  const start = Math.max(0, i - 60); return '…' + text.slice(start, start + 200) + (start + 200 < text.length ? '…' : '');
+}
+function renderSearch() {
+  const q = $('#jp-q').value.trim(), view = $('#view-journal');
+  $('#jp-q-clear').style.display = q ? '' : 'none';
+  view.classList.toggle('searching', !!q); if (!q) return;
+  const ql = q.toLowerCase();
+  const notes = Object.keys(Store.data.notes).filter((k) => Store.data.notes[k].text.toLowerCase().includes(ql)).sort().reverse();
+  const ints = Store.data.intentions.filter((x) => x.text.toLowerCase().includes(ql));
+  const count = notes.length + ints.length;
+  $('#jp-results').innerHTML = `<div class="jp-h"><h3>Results</h3><small>${count}</small></div>
+    ${notes.map((k) => `<button class="res" data-note="${k}"><b>${fmt(k, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</b><span>${highlight(snippet(Store.data.notes[k].text, q), q)}</span></button>`).join('')}
+    ${ints.map((x) => `<div class="res"><b>${x.answered ? `Answered prayer · ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : 'Prayer intention'}</b><span>${highlight(x.text, q)}</span></div>`).join('')}
+    ${count ? '' : `<div class="j-empty">Nothing found for “${esc(q)}”.</div>`}`;
+}
+$('#jp-q').addEventListener('input', renderSearch);
+$('#jp-q-clear').addEventListener('click', () => { $('#jp-q').value = ''; renderSearch(); $('#jp-q').focus(); });
+$('#jp-results').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-note]'); if (!r) return;
+  if (r.dataset.note === nowInfo().key) { $('#jp-q').value = ''; renderSearch(); $('#jp-text')?.focus(); } else openNote(r.dataset.note);
 });
+
+// Today's note on the page: saves as you type
+let notePageTimer;
+$('#view-journal').addEventListener('input', (e) => {
+  if (e.target.id !== 'jp-text') return;
+  clearTimeout(notePageTimer); $('#jp-saved').textContent = 'Saving…';
+  notePageTimer = setTimeout(() => { saveNote(nowInfo().key, e.target.value); const el = $('#jp-saved'); if (el) el.textContent = e.target.value.trim() ? 'Saved' : ''; }, 400);
+});
+$('#view-journal').addEventListener('focusout', (e) => { if (e.target.id === 'jp-text') { clearTimeout(notePageTimer); saveNote(nowInfo().key, e.target.value); } });
+
 function addIntention() {
   const inp = $('#j-new'), t = inp.value.trim(); if (!t) return;
   Store.data.intentions.push({ id: Date.now().toString(36), text: t, created: nowInfo().key, answered: null, updatedAt: new Date().toISOString() });
-  Store.save(); renderJournal(); $('#j-new')?.focus();
+  Store.save(); renderJournalPage(false); $('#j-new')?.focus();
 }
-$('#sheet').addEventListener('keydown', (e) => { if (e.target.id === 'j-new' && e.key === 'Enter') { e.preventDefault(); addIntention(); } });
-$('#sheet').addEventListener('click', (e) => {
-  const tab = e.target.closest('[data-jtab]');
-  if (tab) { $('#j-text') && $('#j-text').dispatchEvent(new Event('input', { bubbles: true })); journalTab = tab.dataset.jtab; renderJournal(); return; }
+$('#view-journal').addEventListener('keydown', (e) => { if (e.target.id === 'j-new' && e.key === 'Enter') { e.preventDefault(); addIntention(); } });
+$('#view-journal').addEventListener('click', (e) => {
   if (e.target.closest('#j-add')) { addIntention(); return; }
+  if (e.target.closest('#jp-more')) { pastLimit += 20; renderJournalPage(false); return; }
+  const pn = e.target.closest('[data-note]'); if (pn) { openNote(pn.dataset.note); return; }
   const act = e.target.closest('[data-act]'); if (!act) return;
   const id = act.closest('[data-iid]')?.dataset.iid, list = Store.data.intentions, x = list.find((i) => i.id === id); if (!x) return;
-  if (act.dataset.act === 'answer') { x.answered = nowInfo().key; x.updatedAt = new Date().toISOString(); Store.save(); renderJournal(); toast('Praise God! Marked as answered', () => { x.answered = null; Store.save(); renderJournal(); }); }
-  if (act.dataset.act === 'reopen') { x.answered = null; x.updatedAt = new Date().toISOString(); Store.save(); renderJournal(); }
+  const stamp = () => { x.updatedAt = new Date().toISOString(); Store.save(); renderJournalPage(false); };
+  if (act.dataset.act === 'answer') { x.answered = nowInfo().key; stamp(); toast('Praise God! Marked as answered', () => { x.answered = null; stamp(); }); }
+  if (act.dataset.act === 'reopen') { x.answered = null; stamp(); }
   if (act.dataset.act === 'del') {
-    const i = list.indexOf(x); list.splice(i, 1); Store.save(); renderJournal();
-    toast('Intention deleted', () => { list.splice(i, 0, x); Store.save(); renderJournal(); });
+    const i = list.indexOf(x); list.splice(i, 1); Store.save(); renderJournalPage(false);
+    toast('Intention deleted', () => { list.splice(i, 0, x); Store.save(); renderJournalPage(false); });
   }
 });
-$('#btn-journal').addEventListener('click', () => openJournal(nowInfo().key));
+
+// Pop-up note editor for any day (from the Calendar or Past notes)
+let journalKey = null, noteTimer;
+function openNote(key) {
+  journalKey = key;
+  const n = Store.data.notes[key];
+  openSheet(`${sheetHead('Note')}<p class="j-date">${fmt(key, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+    <textarea id="j-text" placeholder="What were you praying for, or thankful for?">${n ? esc(n.text) : ''}</textarea>
+    <div class="j-saved" id="j-saved">${n ? 'Saved' : ''}</div>`,
+    () => { renderPrayers(true); if (currentView === 'calendar') renderCalendar(); if (currentView === 'journal') { renderJournalPage(); renderSearch(); } });
+}
+const openJournal = (key) => key && key !== nowInfo().key ? openNote(key) : show('journal');
+$('#sheet').addEventListener('input', (e) => {
+  if (e.target.id !== 'j-text') return;
+  clearTimeout(noteTimer); $('#j-saved').textContent = 'Saving…';
+  noteTimer = setTimeout(() => { saveNote(journalKey, e.target.value); const el = $('#j-saved'); if (el) el.textContent = e.target.value.trim() ? 'Saved' : ''; }, 400);
+});
+$('#btn-journal').addEventListener('click', () => show('journal'));
 
 /* =========================================================
    HEADER + VIEW: PRAYERS
@@ -927,6 +1134,7 @@ function setTitle() {
   $('#page-title').textContent = {
     prayers: 'Today, ' + fmt(now.key, { month: 'long', day: 'numeric' }),
     calendar: fmt(cal.anchor || now.key, { month: 'long', year: 'numeric' }),
+    journal: 'Journal',
     stats: 'Statistics',
     settings: 'Settings',
   }[currentView];
@@ -955,7 +1163,7 @@ function renderPrayers(force) {
   const c = Store.count(now.key), n = Store.prayers().length;
   $('#today-ring').innerHTML = ring(c / n, 7) +
     `<div class="num"><b>${c} <span>/ ${n}</span></b><small>completed</small></div>`;
-  $('#sum-line').textContent = c === n ? 'All five prayed. All glory to God.' : 'Keep going. All glory to God.';
+  $('#sum-line').textContent = c === n ? `All ${n === 5 ? 'five' : n} prayed. All glory to God.` : 'Keep going. All glory to God.';
   // "Mark previous" box: ticked only when every prayer time that has passed today is marked
   const due = Store.prayers().filter((p) => toMin(timeOf(p)) <= now.min);
   const allPastDone = due.length > 0 && due.every((p) => Store.isDone(now.key, p.id));
@@ -969,7 +1177,7 @@ function renderPrayers(force) {
     return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}" data-id="${p.id}">
       <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON.check}</button>
-      <span class="p-ico">${PRAYER_ICON[p.id]}</span>
+      <span class="p-ico">${iconFor(p)}</span>
       <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
       <span class="time">${timeOf(p)}</span>
       <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
@@ -1086,7 +1294,7 @@ function renderCalendar() {
     html += '</div>';
   }
   $('#cal-body').innerHTML = html;
-  $('#cal-legend').innerHTML = `<span>${ring(1, 14)} All 5</span><span>${ring(.5, 14)} Partial</span>` +
+  $('#cal-legend').innerHTML = `<span>${ring(1, 14)} All ${Store.prayers().length}</span><span>${ring(.5, 14)} Partial</span>` +
     (cal.mode === 'month' ? '<span><i></i> Missed</span>' : `<span>${ring(0, 14)} None</span>`);
   if (currentView === 'calendar') setTitle();
   renderDetail();
@@ -1105,7 +1313,7 @@ function renderDetail() {
       const done = Store.isDone(k, p.id);
       return `<div class="row${done ? ' done' : ''}" data-id="${p.id}">
         <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
-        <span class="p-ico">${PRAYER_ICON[p.id]}</span>
+        <span class="p-ico">${iconFor(p)}</span>
         <span class="name">${p.name}</span><span class="time">${timeOf(p, k)}</span></div>`;
     }).join('')}</div>
     <div class="detail-head" style="padding-top:10px"><b style="font-size:16px">Note</b>
@@ -1121,7 +1329,7 @@ $('#cal-body').addEventListener('click', (e) => {
 });
 $('#cal-detail').addEventListener('click', (e) => {
   if (e.target.closest('#btn-edit')) { cal.edit = !cal.edit; renderDetail(); return; }
-  if (e.target.closest('#btn-note')) { openJournal(cal.sel, 'note'); return; }
+  if (e.target.closest('#btn-note')) { openNote(cal.sel); return; }
   const c = e.target.closest('.check'); if (!c || !cal.edit) return;
   const id = c.closest('.row').dataset.id, key = cal.sel, on = !Store.isDone(key, id);
   const name = Store.prayers().find((p) => p.id === id).name;
@@ -1159,7 +1367,7 @@ function renderStats() {
       <div class="streak-top">
         <div class="big-ico">${ICON.flame}</div>
         <div><div class="stat" style="padding:0;display:block"><div class="val"><b>${s.cur}</b><span>${d(s.cur)}</span></div>
-        <div class="sub">${s.cur ? 'Keep going!' : 'Pray all five today to start a streak.'}</div></div></div>
+        <div class="sub">${s.cur ? 'Keep going!' : 'Pray all of today’s prayers to start a streak.'}</div></div></div>
       </div>
       <div class="dots">${dots}</div>
       <div class="dot-dates"><span>${fmt(from, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span>${fmt(to, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
@@ -1171,7 +1379,7 @@ function renderStats() {
     <div class="card stat"><div class="big-ico">${ICON.calDays}</div>
       <div><h3>Days prayed</h3><div class="val"><b>${s.daysPrayed}</b><span>${d(s.daysPrayed)}</span></div><div class="sub">Days with at least one prayer</div></div></div>
     <button class="card stat" id="stat-answered" style="width:100%;text-align:left"><div class="big-ico">${ICON.dove}</div>
-      <div><h3>Answered prayers</h3><div class="val"><b>${s.answered}</b></div><div class="sub">${s.openInt ? `${s.openInt} still praying for · tap to open` : 'Tap to open your journal'}</div></div></button>
+      <div><h3>Answered prayers</h3><div class="val"><b>${s.answered}</b></div><div class="sub">${s.openInt ? `${s.openInt} still praying for · tap to open` : 'Tap to open the Journal'}</div></div></button>
     <div class="card pad" id="year-card"></div>`;
   renderYear();
 }
@@ -1202,12 +1410,12 @@ function renderYear() {
       <button class="arrow" id="yr-next" aria-label="Next year" ${y >= thisYear ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
     <div class="yr">${html}</div>
-    <div class="yr-legend"><span><i style="background:var(--accent)"></i>All 5</span><span><i style="background:color-mix(in srgb, var(--accent) 45%, var(--ring-track))"></i>Partial</span><span><i style="background:var(--missed-dot);opacity:.55"></i>Missed</span></div>
-    <div class="yr-sum">${prayed} ${prayed === 1 ? 'day' : 'days'} prayed · ${full} with all five</div>`;
+    <div class="yr-legend"><span><i style="background:var(--accent)"></i>All ${n}</span><span><i style="background:color-mix(in srgb, var(--accent) 45%, var(--ring-track))"></i>Partial</span><span><i style="background:var(--missed-dot);opacity:.55"></i>Missed</span></div>
+    <div class="yr-sum">${prayed} ${prayed === 1 ? 'day' : 'days'} prayed · ${full} with all ${n === 5 ? 'five' : n}</div>`;
   $('#yr-prev').onclick = () => { statsYear = y - 1; renderYear(); };
   $('#yr-next').onclick = () => { statsYear = Math.min(thisYear, y + 1); renderYear(); };
 }
-document.addEventListener('click', (e) => { if (e.target.closest('#stat-answered')) openJournal(nowInfo().key, 'int'); });
+document.addEventListener('click', (e) => { if (e.target.closest('#stat-answered')) show('journal'); });
 // Tap a day in the year view to open it in the Calendar
 document.addEventListener('click', (e) => {
   const i = e.target.closest('#year-card .yr i[data-key]'); if (!i || i.classList.contains('future')) return;
@@ -1224,15 +1432,30 @@ function applyTheme() {
 }
 function renderSettings() {
   document.querySelectorAll('#theme-seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === Store.data.settings.theme));
+  document.querySelectorAll('#size-seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.size === Store.data.settings.textSize));
   const S = Store.data.settings, today = nowInfo().key, realSunset = sunsetTime(today);
-  $('#settings-times').innerHTML = Store.prayers().map((p) => {
+  const customRow = `<div class="srow"><span class="label">Customize prayers<small>Rename, add or remove prayers</small></span>
+     <button class="switch" role="switch" id="sw-custom" aria-checked="${S.customOn}" aria-label="Customize prayers"></button></div>`;
+  const hasSunset = Store.prayers().some((p) => p.id === 'sunset');
+  const sunsetRow = !hasSunset ? '' : `<div class="srow"><span class="label">Use real sunset time<small>${
+      realSunset ? `Today in ${S.location.name ? S.location.name.split(',')[0] : 'your location'}: ${realSunset}` : 'Set your location below first'}</small></span>
+     <button class="switch" role="switch" id="sw-sunset" aria-checked="${S.autoSunset}" ${realSunset || S.autoSunset ? '' : 'disabled'} aria-label="Use real sunset time"></button></div>`;
+  if (S.customOn) {
+    const list = Store.prayers();
+    $('#settings-times').innerHTML = customRow + list.map((p) => {
+      const auto = p.id === 'sunset' && S.autoSunset && realSunset;
+      return `<div class="srow cp" data-id="${p.id}">
+        <button class="label cp-name" data-rename="${p.id}">${esc(p.name)}<small>${auto ? 'Real sunset today' : 'Tap to rename'}</small></button>
+        ${auto ? `<span class="value">${realSunset}</span>` : `<label class="value cp-time">${p.time}<input type="time" value="${p.time}" data-id="${p.id}" aria-label="${esc(p.name)} time"></label>`}
+        <button class="del" data-remove="${p.id}" aria-label="Remove ${esc(p.name)}" ${list.length <= 1 ? 'disabled style="opacity:.3"' : ''}>×</button></div>`;
+    }).join('') + (list.length < 8 ? `<button class="srow btnrow add-row" id="cp-add"><span class="label">＋ Add a prayer</span></button>` : '') + sunsetRow;
+  } else
+  $('#settings-times').innerHTML = customRow + Store.prayers().map((p) => {
     if (p.id === 'sunset' && S.autoSunset && realSunset)
       return `<div class="srow"><span class="label">${p.name}<small>Real sunset today</small></span><span class="value">${realSunset}</span></div>`;
     return `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
      <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`;
-  }).join('') + `<div class="srow"><span class="label">Use real sunset time<small>${
-      realSunset ? `Today in ${S.location.name ? S.location.name.split(',')[0] : 'your location'}: ${realSunset}` : 'Set your location below first'}</small></span>
-     <button class="switch" role="switch" id="sw-sunset" aria-checked="${S.autoSunset}" ${realSunset || S.autoSunset ? '' : 'disabled'} aria-label="Use real sunset time"></button></div>`;
+  }).join('') + sunsetRow;
   renderLocationSettings();
   $('#settings-notify').innerHTML = Store.prayers().map((p) =>
     `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
@@ -1254,8 +1477,46 @@ $('#settings-times').addEventListener('click', (e) => {
 $('#settings-times').addEventListener('change', (e) => {
   const inp = e.target; if (!/^\d{2}:\d{2}$/.test(inp.value)) return;
   Store.updatePrayer(inp.dataset.id, { time: inp.value });
-  renderSettings(); renderPrayers(true); toast('Time saved');
+  sortCustom(); renderSettings(); renderPrayers(true); toast('Time saved');
 });
+// ----- Custom prayers -----
+function sortCustom() { const S = Store.data.settings; if (S.customOn && S.custom) S.custom.sort((a, b) => toMin(a.time) - toMin(b.time)); Store.save(); }
+$('#settings-times').addEventListener('click', (e) => {
+  const S = Store.data.settings, stamp = () => { S.updatedAt = new Date().toISOString(); Store.save(); renderSettings(); renderAll(); };
+  if (e.target.closest('#sw-custom')) {
+    if (!S.customOn && !S.custom) S.custom = S.prayers.map((p) => ({ ...p }));   // start from your current five
+    S.customOn = !S.customOn; stamp();
+    toast(S.customOn ? 'Custom prayers on. Rename, add or remove below.' : 'Back to the normal five prayers');
+    return;
+  }
+  const rn = e.target.closest('[data-rename]');
+  if (rn) {
+    const p = S.custom.find((x) => x.id === rn.dataset.rename);
+    const v = prompt('Prayer name', p.name); if (v && v.trim()) { p.name = v.trim().slice(0, 24); stamp(); }
+    return;
+  }
+  const rm = e.target.closest('[data-remove]');
+  if (rm && S.custom.length > 1) {
+    const i = S.custom.findIndex((x) => x.id === rm.dataset.remove), p = S.custom[i];
+    if (!confirm(`Remove “${p.name}”?\n\nYour past ticks for it are kept and come back if you add it again or turn custom prayers off.`)) return;
+    S.custom.splice(i, 1); stamp(); toast(`${p.name} removed`, () => { S.custom.splice(i, 0, p); stamp(); });
+    return;
+  }
+  if (e.target.closest('#cp-add')) {
+    const v = prompt('Name of the new prayer (for example “Evening”)'); if (!v || !v.trim()) return;
+    const np = { id: 'c' + Date.now().toString(36), name: v.trim().slice(0, 24), time: '18:00', notify: false };
+    S.custom.push(np); sortCustom(); stamp(); toast(`${np.name} added at 18:00. Tap the time to change it.`);
+  }
+});
+// ----- Text size -----
+$('#size-seg').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-size]'); if (!b) return;
+  Store.data.settings.textSize = b.dataset.size; Store.save(); applyTextSize(); renderSettings(); relayout();
+});
+function applyTextSize() {
+  const z = Store.data.settings.textSize;
+  if (z === 'small' || z === 'large') document.documentElement.dataset.size = z; else delete document.documentElement.dataset.size;
+}
 $('#sw-verse').addEventListener('click', () => {
   const S = Store.data.settings; S.showVerse = !S.showVerse; S.updatedAt = new Date().toISOString(); Store.save();
   renderSettings(); renderPrayers(true);
@@ -1284,7 +1545,9 @@ $('#settings-location').addEventListener('click', (e) => {
     const v = prompt('Place name shown at the top of the app (for example "Västerås, Sverige")', Store.data.settings.location.name || '');
     if (v !== null) saveLocation({ name: v.trim() });
   }
-  if (e.target.closest('#loc-gps')) {
+  if (e.target.closest('#loc-gps')) useMyLocation();
+});
+function useMyLocation(done) {
     if (!navigator.geolocation) { toast('Location isn’t available on this device.'); return; }
     toast('Finding your location…');
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -1299,9 +1562,9 @@ $('#settings-location').addEventListener('click', (e) => {
       } catch (_) {}
       saveLocation(patch);
       toast(patch.name ? `Location set to ${patch.name}` : 'Location saved. Tap the name to type your place.');
+      if (done) done();
     }, () => toast('Couldn’t get your location. Allow it in iOS Settings › Privacy › Location Services.'), { timeout: 15000, maximumAge: 600000 });
-  }
-});
+}
 
 $('#settings-notify').addEventListener('click', async (e) => {
   const sw = e.target.closest('.switch'); if (!sw) return;
@@ -1451,12 +1714,14 @@ $('#file-import').onchange = async (e) => {
    ========================================================= */
 let currentView = 'prayers';
 function show(view) {
+  const jt = $('#jp-text'); if (jt && currentView === 'journal') { clearTimeout(notePageTimer); saveNote(nowInfo().key, jt.value); }
   currentView = view;
   document.body.classList.toggle('fit', view === 'prayers'); // Prayers page: one screen, no scrolling
   document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
   if (view === 'calendar') { cal.anchor = null; cal.edit = false; renderCalendar(); }
   if (view === 'stats') renderStats();
+  if (view === 'journal') { pastLimit = 10; renderJournalPage(); }
   if (view === 'settings') renderSettings();
   if (view === 'prayers') renderPrayers(true);
   setTitle();
@@ -1497,6 +1762,7 @@ function renderAll() {
   if (currentView === 'calendar') renderCalendar();
   if (currentView === 'stats') renderStats();
   if (currentView === 'settings') renderSettings();
+  if (currentView === 'journal' && !document.activeElement?.closest?.('#view-journal')) renderJournalPage();
   setTitle();
 }
 
@@ -1613,12 +1879,89 @@ function runSplash() {
 }
 
 /* =========================================================
+   FIRST-LAUNCH WELCOME (new users only)
+   ========================================================= */
+let wlStep = 0;
+function showWelcome() { $('#welcome').style.display = ''; wlStep = 0; renderWelcome(); }
+function finishWelcome() {
+  Store.data.meta.onboarded = true; Store.save();
+  const w = $('#welcome'); w.style.transition = 'opacity .4s'; w.style.opacity = '0';
+  setTimeout(() => { w.style.display = 'none'; w.style.opacity = ''; }, 420);
+  renderAll();
+}
+function renderWelcome() {
+  const S = Store.data.settings, L = S.location, dots = `<div class="wl-dots">${[0, 1, 2, 3].map((i) => `<i class="${i <= wlStep ? 'on' : ''}"></i>`).join('')}</div>`;
+  const nav = (next = 'Next') => `<button class="btn-main" data-wl="next">${next}</button>
+    <div class="wl-nav">${wlStep ? '<button data-wl="back">‹ Back</button>' : '<span></span>'}<button data-wl="skip">${wlStep < 3 ? 'Skip' : ''}</button></div>`;
+  const body = $('#welcome .wl-body');
+  if (wlStep === 0) body.innerHTML = `${dots}<h2>Welcome</h2>
+    <p class="lead">A quiet place to keep your daily prayers.</p>
+    <ul class="wl-list">
+      <li><span class="i">${ICON.sun}</span>Tick off each prayer as you pray</li>
+      <li><span class="i">${ICON.flame}</span>See your streaks, calendar and year</li>
+      <li><span class="i">${ICON.book}</span>A verse a day, notes and prayer intentions</li>
+    </ul>
+    <button class="btn-main" data-wl="next">Get started</button>
+    <p class="wl-small">Everything you enter stays on this phone.</p>`;
+  if (wlStep === 1) body.innerHTML = `${dots}<h2>Where are you?</h2>
+    <p class="lead">Used for your local time, the real sunset time and the name at the top.</p>
+    <div class="wl-place">${L.name ? `${L.flag ? L.flag + ' ' : ''}${esc(L.name)}` : '<span style="color:var(--ink-dim)">No place set yet</span>'}</div>
+    <button class="btn-alt" data-wl="gps">Use my current location</button>
+    <button class="btn-alt" data-wl="type">Type a place name</button>
+    ${nav()}`;
+  if (wlStep === 2) {
+    const rs = sunsetTime(nowInfo().key);
+    body.innerHTML = `${dots}<h2>Your prayer times</h2>
+    <p class="lead">Tap a time to change it.</p>
+    <div class="wl-box" id="wl-times">${S.prayers.map((p) => `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
+      <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`).join('')}
+      ${rs ? `<div class="srow"><span class="label">Use real sunset time<small>Today: ${rs}</small></span><button class="switch" role="switch" data-wl="sunset" aria-checked="${S.autoSunset}"></button></div>` : ''}</div>
+    <p class="wl-small">You can rename, add or remove prayers later in Settings.</p>
+    ${nav()}`;
+  }
+  if (wlStep === 3) {
+    const st = notifSupport();
+    body.innerHTML = `${dots}<h2>Reminders</h2>
+    <p class="lead">Get a gentle reminder at each prayer time.</p>
+    ${st === 'install' ? '<p class="wl-small">Add this app to your Home Screen (Share › Add to Home Screen) and open it from there to turn on reminders. You can do it later in Settings.</p>'
+      : st === 'granted' ? '<div class="wl-place">✓ Reminders are on</div>'
+      : st === 'denied' ? '<p class="wl-small">Notifications are blocked. You can allow them in iOS Settings › Notifications.</p>'
+      : '<button class="btn-alt" data-wl="notify">Turn on reminders</button>'}
+    <p class="wl-small">You can choose which prayers remind you in Settings.</p>
+    ${nav('Start praying')}`;
+  }
+}
+$('#welcome').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-wl]'); if (!b) return;
+  const a = b.dataset.wl;
+  if (a === 'next') { if (wlStep >= 3) finishWelcome(); else { wlStep++; renderWelcome(); } }
+  if (a === 'back') { wlStep = Math.max(0, wlStep - 1); renderWelcome(); }
+  if (a === 'skip') finishWelcome();
+  if (a === 'gps') useMyLocation(renderWelcome);
+  if (a === 'type') { const v = prompt('Place name (for example "Västerås, Sverige")', Store.data.settings.location.name || ''); if (v !== null) { saveLocation({ name: v.trim() }); renderWelcome(); } }
+  if (a === 'sunset') { const S = Store.data.settings; S.autoSunset = !S.autoSunset; Store.save(); renderWelcome(); }
+  if (a === 'notify') {
+    if (await askPermission()) { Store.prayers().forEach((p) => { p.notify = true; }); Store.save(); }
+    renderWelcome();
+  }
+});
+$('#welcome').addEventListener('change', (e) => {
+  const inp = e.target; if (!inp.dataset.id || !/^\d{2}:\d{2}$/.test(inp.value)) return;
+  Store.updatePrayer(inp.dataset.id, { time: inp.value }); renderWelcome();
+});
+$('#welcome').addEventListener('click', (e) => {
+  const inp = e.target.closest('#wl-times .srow')?.querySelector('input');
+  if (inp && e.target !== inp && inp.showPicker) { try { inp.showPicker(); } catch (_) {} }
+});
+
+/* =========================================================
    START
    ========================================================= */
 $('#ico-palette').innerHTML = ICON.palette; $('#ico-book').innerHTML = ICON.book; $('#ico-clock').innerHTML = ICON.clock;
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
-Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); renderLocation();
+Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
 if (!restoreAfterRefresh()) runSplash();
+if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
 { const id = new URLSearchParams(location.search).get('prayer');
   if (id) { history.replaceState(null, '', location.pathname); focusPrayer(id); } }
 tick();
