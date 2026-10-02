@@ -1,6 +1,6 @@
 // Service worker: offline support + showing notifications.
 // Bump VERSION whenever you upload new files so phones pick up changes.
-const VERSION = 'prayers-v12';
+const VERSION = 'prayers-v15';
 const ASSETS = ['./', './index.html', './manifest.json', './splash.jpg', './header.jpg',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
@@ -23,8 +23,9 @@ self.addEventListener('activate', (e) => {
 // version instead of reusing its 10-minute browser copy.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  const own = new URL(e.request.url).origin === self.location.origin;
-  const net = own ? fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(e.request);
+  // Only handle the app's own files; anything else (like the place-name lookup) goes straight to the network.
+  if (new URL(e.request.url).origin !== self.location.origin) return;
+  const net = fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' });
   e.respondWith(
     net.then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); }

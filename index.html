@@ -20,10 +20,10 @@
   // App height. On a Home Screen app iOS sometimes reports a too-short height at launch, which left
   // a gap under the nav bar. In standalone portrait the app always fills the whole screen, so use the
   // larger of the reported height and the screen height. Re-measured later on resize/launch.
+  // App height = the area the app can actually use. Re-measured after launch and on every resize,
+  // which fixes iOS reporting a too-short height for a moment at launch.
   window.appHeight = function () {
-    var standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
     var h = window.innerHeight;
-    if (standalone) h = Math.max(h, matchMedia('(orientation: portrait)').matches ? screen.height : screen.width);
     document.documentElement.style.setProperty('--app-h', h + 'px');
   };
   appHeight();
@@ -62,6 +62,7 @@
     --nav-active: #A8741C;
     --danger: #A3271B;
     --missed-dot: #C9A79E;
+    --undo: #F5BF4F;         /* Undo on the dark message bar (light mode) */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --nav-h: 66px;
@@ -74,7 +75,7 @@
       --ink: #EFE6D6; --ink-strong: #FFFFFF; --ink-dim: #9C9083; --ink-faint: #4E453C;
       --accent: #F5BF4F; --on-accent: #1A1206; --gold: #F5BF4F; --gold-hi: #FFE3A0; --gold-text: #F5BF4F;
       --icon: #F5BF4F; --now-bg: rgba(245,191,79,.07); --ring-track: #2A231B; --seg-bg: #1F1912;
-      --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31;
+      --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31; --undo: #8E5F0E;
     }
   }
   :root[data-theme="dark"] {
@@ -83,7 +84,7 @@
     --ink: #EFE6D6; --ink-strong: #FFFFFF; --ink-dim: #9C9083; --ink-faint: #4E453C;
     --accent: #F5BF4F; --on-accent: #1A1206; --gold: #F5BF4F; --gold-hi: #FFE3A0; --gold-text: #F5BF4F;
     --icon: #F5BF4F; --now-bg: rgba(245,191,79,.07); --ring-track: #2A231B; --seg-bg: #1F1912;
-    --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31;
+    --nav-bg: #0D0A07; --nav-ink: #A39789; --nav-active: #F5BF4F; --danger: #E0533F; --missed-dot: #6B3A31; --undo: #8E5F0E;
   }
 
   /* ===== Base, full-screen sizing, no zoom ===== */
@@ -179,16 +180,16 @@
   body.fit #view-prayers.active { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   body.fit #view-prayers .card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
   body.fit #prayer-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: none; }
-  body.fit #prayer-list .row { flex: 1 1 72px; min-height: 50px; }   /* rows share all the space down to the nav bar */
+  body.fit #prayer-list .row { flex: 1 1 72px; min-height: 46px; }   /* rows share all the space down to the nav bar */
 
   /* ===== Prayers: summary card ===== */
   .summary { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 14px; border-bottom: 1px solid var(--divider); }
-  .ring-wrap { position: relative; flex: none; width: 94px; height: 94px; }
+  .ring-wrap { position: relative; flex: none; width: 102px; height: 102px; }
   .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
   .ring-wrap .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .ring-wrap .num b { font-size: 30px; line-height: 1; color: var(--ink-strong); }
-  .ring-wrap .num b span { font-size: 18px; font-weight: 400; color: var(--ink); }
-  .ring-wrap .num small { font-size: 13px; color: var(--ink-dim); margin-top: 3px; }
+  .ring-wrap .num b { font-size: 28px; line-height: 1; color: var(--ink-strong); }
+  .ring-wrap .num b span { font-size: 17px; font-weight: 400; color: var(--ink); }
+  .ring-wrap .num small { font-size: 11.5px; letter-spacing: .01em; color: var(--ink-dim); margin-top: 3px; }
   .ring-prog { transition: stroke-dashoffset .5s ease; }
   .sum-text { flex: 1; min-width: 0; }
   .sum-text h2 { margin: 0; font-size: 20px; color: var(--ink-strong); }
@@ -213,7 +214,22 @@
   .row .p-ico, .row .name, .row .time { pointer-events: none; }
   .p-ico { width: 30px; height: 30px; flex: none; color: var(--icon); }
   .p-ico svg { width: 100%; height: 100%; }
-  .row .name { flex: 1; font-size: 19px; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+  .row .name { flex: 1; font-size: 19px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; white-space: nowrap; }
+  .row .name .nm { display: flex; align-items: center; gap: 8px; }
+  .row .cd { font-size: 13px; font-weight: 400; color: var(--gold-text); letter-spacing: .01em; }
+  .list.has-now .row:not(.now) .cd { color: var(--gold-text); }
+  /* current prayer's icon lights up */
+  .row.now .p-ico { color: var(--gold); animation: icoglow 3.2s ease-in-out infinite; }
+  @keyframes icoglow { 0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 50%, transparent)); }
+                       50% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--gold) 85%, transparent)); } }
+  /* all five done: gold glow + sparkles */
+  .card.celebrate { animation: celebrate 1.9s ease; }
+  @keyframes celebrate { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 2px var(--gold), 0 0 46px rgba(245,191,79,.55); } }
+  .ring-wrap.celebrate svg { animation: ringpop 1.2s ease; }
+  @keyframes ringpop { 0%, 100% { filter: none; } 40% { filter: drop-shadow(0 0 10px var(--gold)); } }
+  .spark { position: absolute; color: var(--gold); font-size: 14px; pointer-events: none; animation: spark 1.5s ease-out forwards; z-index: 3; }
+  @keyframes spark { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 25% { opacity: 1; }
+                     100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
   .row .time { flex: none; font-size: 19px; font-variant-numeric: tabular-nums; }
   /* Square checkbox */
   .check { width: 28px; height: 28px; flex: none; border: 2px solid var(--ink-dim); border-radius: 3px; display: grid; place-items: center; transition: background .15s, border-color .15s; }
@@ -357,11 +373,85 @@
 
   /* ===== Toast ===== */
   #toast {
-    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 30;
+    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); z-index: 70;  /* above pop-ups, so Undo can be tapped */
     background: var(--ink); color: var(--bg); padding: 12px 14px; font-size: 16px; border-radius: 12px;
     opacity: 0; transform: translateY(8px); transition: .25s ease; pointer-events: none; max-width: 528px; margin: 0 auto;
   }
   #toast.show { opacity: 1; transform: none; }
+  #toast { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #toast .undo { pointer-events: auto; font-weight: 700; color: var(--undo); padding: 4px 2px 4px 10px; font-size: 16px; flex: none; }
+  /* ===== Verse of the day ===== */
+  .verse { display: block; width: 100%; text-align: left; padding: 10px 16px 12px; border-bottom: 1px solid var(--divider);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 9%, transparent), transparent 70%); }
+  .verse .vt { font-style: italic; font-size: 15.5px; line-height: 1.35; color: var(--ink);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .verse .vr { display: block; margin-top: 3px; font-size: 13px; color: var(--gold-text); letter-spacing: .02em; }
+  @media (max-height: 700px) {   /* small iPhones (SE): a slightly tighter summary so all five prayers still fit */
+    .verse .vt { -webkit-line-clamp: 1; } .verse { padding: 7px 16px 8px; }
+    .summary { padding: 10px 14px; gap: 12px; } .ring-wrap { width: 90px; height: 90px; }
+    .sum-text p { margin: 1px 0 6px; } .mark-btn { padding: 5px 9px; }
+    body.fit #prayer-list .row { min-height: 44px; }
+  }
+  .sum-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .jbtn { position: relative; width: 36px; height: 36px; margin: -6px -4px -6px 0; display: grid; place-items: center; color: var(--gold); flex: none; }
+  .jbtn svg { width: 24px; height: 24px; }
+  .jbtn.has::after { content: ""; position: absolute; top: 5px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--card); }
+  /* ===== Sheet (verse + journal) ===== */
+  #sheet { position: fixed; inset: 0; z-index: 60; display: none; }
+  #sheet.open { display: block; }
+  #sheet .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); animation: fadein .2s ease; }
+  #sheet .panel { position: absolute; left: 12px; right: 12px; top: calc(var(--safe-top) + 18px); max-width: 540px; margin: 0 auto;
+    max-height: calc(var(--app-h, 100vh) - var(--safe-top) - 40px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    background: var(--card); border: 1px solid var(--card-line); border-radius: 18px; padding: 18px 18px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    animation: sheetin .25s cubic-bezier(.2,.8,.2,1); }
+  @keyframes fadein { from { opacity: 0; } }
+  @keyframes sheetin { from { opacity: 0; transform: translateY(-12px) scale(.98); } }
+  .sh-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sh-head h3 { margin: 0; font-size: 22px; color: var(--ink-strong); }
+  .sh-close { width: 36px; height: 36px; margin: -6px -8px -6px 0; display: grid; place-items: center; color: var(--ink-dim); font-size: 28px; line-height: 1; }
+  .full-verse { font-style: italic; font-size: 21px; line-height: 1.45; color: var(--ink-strong); margin: 4px 0 14px; }
+  .full-ref { font-size: 16px; color: var(--gold-text); }
+  .full-ref small { display: block; color: var(--ink-dim); font-size: 13px; margin-top: 4px; }
+  .jtabs { display: flex; margin-bottom: 14px; }
+  .jtabs.seg { width: 100%; } .jtabs.seg button { flex: 1; }
+  textarea, .j-input { width: 100%; font: 17px/1.4 var(--serif); color: var(--ink); background: var(--bg); border: 1px solid var(--card-line);
+    border-radius: 12px; padding: 12px; -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none; }
+  textarea { min-height: 150px; resize: vertical; }
+  textarea:focus, .j-input:focus { outline: none; border-color: var(--gold); }
+  .j-date { font-size: 15px; color: var(--ink-dim); margin: 0 0 8px; }
+  .j-saved { font-size: 13px; color: var(--ink-dim); margin-top: 6px; min-height: 18px; }
+  .j-add { display: flex; gap: 8px; margin-bottom: 14px; }
+  .j-add .sbtn { width: auto; margin: 0; padding: 10px 16px; flex: none; }
+  .intent { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-top: 1px solid var(--divider); }
+  .intent .it { flex: 1; font-size: 17px; color: var(--ink); -webkit-user-select: text; user-select: text; }
+  .intent .it small { display: block; font-size: 13px; color: var(--ink-dim); margin-top: 2px; }
+  .intent .ans { flex: none; font-size: 14px; font-weight: 600; color: var(--gold-text); border: 1.5px solid var(--gold); border-radius: 10px; padding: 5px 9px; }
+  .intent .del { flex: none; width: 28px; height: 28px; color: var(--ink-dim); font-size: 22px; line-height: 1; }
+  .intent.answered .it { color: var(--ink-dim); }
+  .j-sub { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-dim); margin: 18px 0 2px; }
+  .j-empty { font-size: 15px; color: var(--ink-dim); padding: 6px 0; }
+  .note-box { padding: 4px 16px 16px; }
+  .note-box p { margin: 0; font-size: 16px; line-height: 1.4; color: var(--ink); white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
+  .wday, .mday { position: relative; }
+  .wday.note::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--gold); }
+  .mday.note .nd { position: absolute; top: 4px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+
+  /* ===== Year view ===== */
+  .year-head { display: flex; align-items: center; justify-content: space-between; margin: -6px -8px 8px; }
+  .year-head b { font-size: 18px; color: var(--ink-strong); font-weight: 600; }
+  .yr { display: grid; grid-template-columns: 26px repeat(31, minmax(0, 1fr)); gap: 2px; align-items: center; }
+  .yr .ml { font-size: 11px; color: var(--ink-dim); }
+  .yr i { aspect-ratio: 1; border-radius: 2px; background: var(--ring-track); display: block; }
+  .yr i.full { background: var(--accent); }
+  .yr i.partial { background: color-mix(in srgb, var(--accent) 45%, var(--ring-track)); }
+  .yr i.missed { background: var(--missed-dot); opacity: .55; }
+  .yr i.future, .yr i.none { opacity: .45; }
+  .yr i.x { visibility: hidden; }
+  .yr i.today { outline: 1.5px solid var(--gold); outline-offset: 1px; }
+  .yr-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--ink-dim); }
+  .yr-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .yr-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .yr-sum { margin-top: 8px; font-size: 15px; color: var(--ink); }
 </style>
 </head>
 <body class="fit">
@@ -379,7 +469,7 @@
   <img src="header.jpg" alt="" onerror="this.remove()">
   <div class="hero-text">
     <h1 id="page-title">Today</h1>
-    <p>🇸🇪 Västerås, Sverige</p>
+    <p id="loc-line"></p>
   </div>
 </header>
 
@@ -390,7 +480,8 @@
       <div class="summary">
         <div class="ring-wrap" id="today-ring"></div>
         <div class="sum-text">
-          <h2>Today’s prayers</h2>
+          <div class="sum-head"><h2>Today’s prayers</h2>
+            <button class="jbtn" id="btn-journal" aria-label="Journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h11v14H6a2 2 0 0 0-2 2.5zM4 19.5A2 2 0 0 0 6 21h11"/><path d="M14.5 6.5l-5 5-.6 2.1 2.1-.6 5-5z"/></svg></button></div>
           <p id="sum-line">Keep going. All glory to God.</p>
           <button class="mark-btn" id="btn-mark" aria-pressed="false">
             <span class="mb-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -398,6 +489,7 @@
           </button>
         </div>
       </div>
+      <button class="verse" id="verse-strip" aria-label="Verse of the day"><span class="vt"></span><span class="vr"></span></button>
       <div class="list" id="prayer-list"></div>
     </div>
   </section>
@@ -441,6 +533,15 @@
     </div>
 
     <div class="card scard">
+      <div class="s-ico" id="ico-book"></div>
+      <div>
+        <div class="s-head"><div><h3>Verse of the day</h3><p>A new Bible verse every day</p></div></div>
+        <div class="srow"><span class="label">Show verse of the day<small>World English Bible · public domain</small></span>
+          <button class="switch" role="switch" id="sw-verse" aria-label="Show verse of the day"></button></div>
+      </div>
+    </div>
+
+    <div class="card scard">
       <div class="s-ico" id="ico-clock"></div>
       <div>
         <div class="s-head"><div><h3>Prayer times</h3><p>Tap a time to change it</p></div></div>
@@ -462,8 +563,8 @@
     <div class="card scard">
       <div class="s-ico" id="ico-pin"></div>
       <div>
-        <div class="s-head"><div><h3>Location</h3><p>Used for your local time and display</p></div></div>
-        <div class="srow"><span class="label">Västerås, Sverige</span><span class="value muted">🇸🇪</span></div>
+        <div class="s-head"><div><h3>Location</h3><p>Used for your local time, sunset and display</p></div></div>
+        <div id="settings-location"></div>
       </div>
     </div>
 
@@ -494,14 +595,23 @@
 </nav>
 
 <div id="toast" role="status"></div>
+<div id="sheet" aria-hidden="true"><div class="backdrop"></div><div class="panel" role="dialog" aria-modal="true"></div></div>
+<!-- Verse of the day: 365 verses from the World English Bible (public domain), each checked by hand.
+     "Yahweh" is shown as "the LORD", as in the WEB British Edition. -->
+<script type="application/json" id="verses-data">[["Romans 5:8","But God commends his own love toward us, in that while we were yet sinners, Christ died for us."],["John 3:17","For God didn’t send his Son into the world to judge the world, but that the world should be saved through him."],["Isaiah 41:13","For I, the LORD your God, will hold your right hand, saying to you, ‘Don’t be afraid. I will help you.’"],["Jeremiah 32:17","Ah Lord GOD! Behold, you have made the heavens and the earth by your great power and by your outstretched arm. There is nothing too hard for you."],["Isaiah 9:6","For a child is born to us. A son is given to us; and the government will be on his shoulders. His name will be called Wonderful Counselor, Mighty God, Everlasting Father, Prince of Peace."],["Genesis 1:31","God saw everything that he had made, and, behold, it was very good. There was evening and there was morning, a sixth day."],["Acts 4:12","There is salvation in no one else, for there is no other name under heaven that is given among men, by which we must be saved!"],["Psalms 113:3","From the rising of the sun to its going down, the LORD’s name is to be praised."],["Proverbs 18:10","The LORD’s name is a strong tower: the righteous run to him, and are safe."],["Isaiah 30:18","Therefore the LORD will wait, that he may be gracious to you; and therefore he will be exalted, that he may have mercy on you, for the LORD is a God of justice. Blessed are all those who wait for him."],["John 1:16","From his fullness we all received grace upon grace."],["Isaiah 64:8","But now, LORD, you are our Father. We are the clay and you our potter. We all are the work of your hand."],["Psalms 150:6","Let everything that has breath praise Yah! Praise Yah!"],["Exodus 14:14","The LORD will fight for you, and you shall be still."],["Exodus 20:12","Honor your father and your mother, that your days may be long in the land which the LORD your God gives you."],["Zephaniah 3:17","The LORD, your God, is among you, a mighty one who will save. He will rejoice over you with joy. He will calm you in his love. He will rejoice over you with singing."],["John 11:25","Jesus said to her, “I am the resurrection and the life. He who believes in me will still live, even if he dies.”"],["Psalms 62:1","My soul rests in God alone. My salvation is from him."],["Psalms 145:18","The LORD is near to all those who call on him, to all who call on him in truth."],["Hebrews 11:6","Without faith it is impossible to be well pleasing to him, for he who comes to God must believe that he exists, and that he is a rewarder of those who seek him."],["2 Chronicles 15:7","But you be strong, and don’t let your hands be slack; for your work will be rewarded."],["Psalms 103:1","Praise the LORD, my soul! All that is within me, praise his holy name!"],["Luke 12:7","But the very hairs of your head are all counted. Therefore don’t be afraid. You are of more value than many sparrows."],["John 1:5","The light shines in the darkness, and the darkness hasn’t overcome it."],["1 Corinthians 2:9","But as it is written, “Things which an eye didn’t see, and an ear didn’t hear, which didn’t enter into the heart of man, these God has prepared for those who love him.”"],["Psalms 56:3","When I am afraid, I will put my trust in you."],["Hosea 10:12","Sow to yourselves in righteousness, reap according to kindness. Break up your fallow ground; for it is time to seek the LORD, until he comes and rains righteousness on you."],["Matthew 4:4","But he answered, “It is written, ‘Man shall not live by bread alone, but by every word that proceeds out of God’s mouth.’”"],["Psalms 119:165","Those who love your law have great peace. Nothing causes them to stumble."],["Matthew 7:12","Therefore whatever you desire for men to do to you, you shall also do to them; for this is the law and the prophets."],["1 Thessalonians 5:16","Always rejoice."],["Ruth 1:16","Ruth said, “Don’t urge me to leave you, and to return from following you, for where you go, I will go; and where you stay, I will stay. Your people will be my people, and your God my God.”"],["Matthew 5:6","Blessed are those who hunger and thirst after righteousness, for they shall be filled."],["Psalms 143:8","Cause me to hear your loving kindness in the morning, for I trust in you. Cause me to know the way in which I should walk, for I lift up my soul to you."],["Psalms 119:11","I have hidden your word in my heart, that I might not sin against you."],["Hebrews 12:2","Looking to Jesus, the author and perfecter of faith, who for the joy that was set before him endured the cross, despising its shame, and has sat down at the right hand of the throne of God."],["Ephesians 4:29","Let no corrupt speech proceed out of your mouth, but only what is good for building others up as the need may be, that it may give grace to those who hear."],["Galatians 2:20","I have been crucified with Christ, and it is no longer I who live, but Christ lives in me. That life which I now live in the flesh, I live by faith in the Son of God, who loved me, and gave himself up for me."],["Proverbs 14:29","He who is slow to anger has great understanding, but he who has a quick temper displays folly."],["1 Chronicles 29:11","Yours, LORD, is the greatness, the power, the glory, the victory, and the majesty! For all that is in the heavens and in the earth is yours. Yours is the kingdom, LORD, and you are exalted as head above all."],["1 Corinthians 16:14","Let all that you do be done in love."],["Psalms 27:1","The LORD is my light and my salvation. Whom shall I fear? The LORD is the strength of my life. Of whom shall I be afraid?"],["Philippians 4:19","My God will supply every need of yours according to his riches in glory in Christ Jesus."],["Romans 11:36","For of him, and through him, and to him are all things. To him be the glory for ever! Amen."],["Psalms 89:1","I will sing of the loving kindness of the LORD forever. With my mouth, I will make known your faithfulness to all generations."],["John 16:33","I have told you these things, that in me you may have peace. In the world you have trouble; but cheer up! I have overcome the world."],["Isaiah 43:2","When you pass through the waters, I will be with you, and through the rivers, they will not overflow you. When you walk through the fire, you will not be burned, and flame will not scorch you."],["John 15:13","Greater love has no one than this, that someone lay down his life for his friends."],["Psalms 84:11","For the LORD God is a sun and a shield. The LORD will give grace and glory. He withholds no good thing from those who walk blamelessly."],["Proverbs 27:17","Iron sharpens iron; so a man sharpens his friend’s countenance."],["Romans 12:21","Don’t be overcome by evil, but overcome evil with good."],["Job 42:2","I know that you can do all things, and that no purpose of yours can be restrained."],["1 Timothy 6:12","Fight the good fight of faith. Take hold of the eternal life to which you were called, and you confessed the good confession in the sight of many witnesses."],["Jeremiah 29:13","You shall seek me, and find me, when you search for me with all your heart."],["Psalms 3:3","But you, LORD, are a shield around me, my glory, and the one who lifts up my head."],["Psalms 121:8","The LORD will keep your going out and your coming in, from this time forward, and forever more."],["Psalms 30:5","For his anger is but for a moment. His favor is for a lifetime. Weeping may stay for the night, but joy comes in the morning."],["Luke 18:27","But he said, “The things which are impossible with men are possible with God.”"],["Mark 16:15","He said to them, “Go into all the world, and preach the Good News to the whole creation.”"],["Romans 8:37","No, in all these things, we are more than conquerors through him who loved us."],["Psalms 119:114","You are my hiding place and my shield. I hope in your word."],["Matthew 5:3","Blessed are the poor in spirit, for theirs is the Kingdom of Heaven."],["Philippians 1:21","For to me to live is Christ, and to die is gain."],["Philippians 4:4","Rejoice in the Lord always! Again I will say, “Rejoice!”"],["2 Thessalonians 3:13","But you, brothers, don’t be weary in doing what is right."],["Psalms 139:14","I will give thanks to you, for I am fearfully and wonderfully made. Your works are wonderful. My soul knows that very well."],["Psalms 46:7","The LORD of Armies is with us. The God of Jacob is our refuge."],["Psalms 136:1","Give thanks to the LORD, for he is good; for his loving kindness endures forever."],["Luke 6:38","Give, and it will be given to you: good measure, pressed down, shaken together, and running over, will be given to you. For with the same measure you measure it will be measured back to you."],["Matthew 7:7","Ask, and it will be given you. Seek, and you will find. Knock, and it will be opened for you."],["Mark 10:45","For the Son of Man also came not to be served, but to serve, and to give his life as a ransom for many."],["Psalms 91:11","For he will put his angels in charge of you, to guard you in all your ways."],["Nahum 1:7","The LORD is good, a stronghold in the day of trouble; and he knows those who take refuge in him."],["Luke 1:37","For nothing spoken by God is impossible."],["Deuteronomy 6:5","You shall love the LORD your God with all your heart, with all your soul, and with all your might."],["Psalms 133:1","See how good and how pleasant it is for brothers to live together in unity!"],["Ecclesiastes 4:9","Two are better than one, because they have a good reward for their labor."],["Psalms 91:1","He who dwells in the secret place of the Most High will rest in the shadow of the Almighty."],["Psalms 86:5","For you, Lord, are good, and ready to forgive, abundant in loving kindness to all those who call on you."],["Psalms 107:1","Give thanks to the LORD, for he is good, for his loving kindness endures forever."],["Psalms 130:5","I wait for the LORD. My soul waits. I hope in his word."],["Ephesians 2:10","For we are his workmanship, created in Christ Jesus for good works, which God prepared before that we would walk in them."],["Isaiah 54:10","“For the mountains may depart, and the hills be removed; but my loving kindness will not depart from you, and my covenant of peace will not be removed,” says the LORD who has mercy on you."],["Psalms 61:2","From the end of the earth, I will call to you when my heart is overwhelmed. Lead me to the rock that is higher than I."],["Psalms 73:26","My flesh and my heart fails, but God is the strength of my heart and my portion forever."],["Lamentations 3:25","The LORD is good to those who wait for him, to the soul who seeks him."],["Psalms 19:14","Let the words of my mouth and the meditation of my heart be acceptable in your sight, LORD, my rock, and my redeemer."],["Psalms 112:7","He will not be afraid of evil news. His heart is steadfast, trusting in the LORD."],["Psalms 40:1","I waited patiently for the LORD. He turned to me, and heard my cry."],["Proverbs 16:9","A man’s heart plans his course, but the LORD directs his steps."],["1 Corinthians 10:13","No temptation has taken you except what is common to man. God is faithful, who will not allow you to be tempted above what you are able, but will with the temptation also make the way of escape, that you may be able to endure it."],["Job 1:21","He said, “Naked I came out of my mother’s womb, and naked will I return there. The LORD gave, and the LORD has taken away. Blessed be the LORD’s name.”"],["Isaiah 53:5","But he was pierced for our transgressions. He was crushed for our iniquities. The punishment that brought our peace was on him; and by his wounds we are healed."],["Proverbs 16:3","Commit your deeds to the LORD, and your plans shall succeed."],["Ecclesiastes 12:13","This is the end of the matter. All has been heard. Fear God and keep his commandments; for this is the whole duty of man."],["Isaiah 55:6","Seek the LORD while he may be found. Call on him while he is near."],["Psalms 63:1","God, you are my God. I will earnestly seek you. My soul thirsts for you. My flesh longs for you, in a dry and weary land, where there is no water."],["Deuteronomy 31:6","Be strong and courageous. Don’t be afraid or scared of them; for the LORD your God himself is who goes with you. He will not fail you nor forsake you."],["Colossians 3:17","Whatever you do, in word or in deed, do all in the name of the Lord Jesus, giving thanks to God the Father, through him."],["Psalms 46:10","Be still, and know that I am God. I will be exalted among the nations. I will be exalted in the earth."],["John 8:36","If therefore the Son makes you free, you will be free indeed."],["1 Thessalonians 5:11","Therefore exhort one another, and build each other up, even as you also do."],["Proverbs 3:27","Don’t withhold good from those to whom it is due, when it is in the power of your hand to do it."],["Psalms 40:8","I delight to do your will, my God. Yes, your law is within my heart."],["Psalms 9:1","I will give thanks to the LORD with my whole heart. I will tell of all your marvelous works."],["Psalms 97:10","You who love the LORD, hate evil! He preserves the souls of his saints. He delivers them out of the hand of the wicked."],["Psalms 22:28","For the kingdom is the LORD’s. He is the ruler over the nations."],["Luke 19:10","For the Son of Man came to seek and to save that which was lost."],["Matthew 11:28","Come to me, all you who labor and are heavily burdened, and I will give you rest."],["Proverbs 31:25","Strength and dignity are her clothing. She laughs at the time to come."],["Isaiah 50:4","The Lord GOD has given me the tongue of those who are taught, that I may know how to sustain with words him who is weary. He awakens morning by morning, he awakens my ear to hear as those who are taught."],["1 Samuel 16:7","But the LORD said to Samuel, “Don’t look on his face, or on the height of his stature, because I have rejected him; for I don’t see as man sees. For man looks at the outward appearance, but the LORD looks at the heart.”"],["Proverbs 17:17","A friend loves at all times; and a brother is born for adversity."],["Luke 21:33","Heaven and earth will pass away, but my words will by no means pass away."],["Matthew 6:14","For if you forgive men their trespasses, your heavenly Father will also forgive you."],["John 13:34","A new commandment I give to you, that you love one another. Just as I have loved you, you also love one another."],["Exodus 33:14","He said, “My presence will go with you, and I will give you rest.”"],["Proverbs 15:3","The LORD’s eyes are everywhere, keeping watch on the evil and the good."],["Psalms 32:8","I will instruct you and teach you in the way which you shall go. I will counsel you with my eye on you."],["John 4:24","God is spirit, and those who worship him must worship in spirit and truth."],["Psalms 34:1","I will bless the LORD at all times. His praise will always be in my mouth."],["Philippians 4:6","In nothing be anxious, but in everything, by prayer and petition with thanksgiving, let your requests be made known to God."],["Colossians 3:2","Set your mind on the things that are above, not on the things that are on the earth."],["Matthew 21:22","All things, whatever you ask in prayer, believing, you will receive."],["Luke 15:7","I tell you that even so there will be more joy in heaven over one sinner who repents, than over ninety-nine righteous people who need no repentance."],["Psalms 118:24","This is the day that the LORD has made. We will rejoice and be glad in it!"],["1 Samuel 2:2","There is no one as holy as the LORD, for there is no one besides you, nor is there any rock like our God."],["Psalms 5:3","LORD, in the morning you will hear my voice. In the morning I will lay my requests before you, and will watch expectantly."],["Psalms 34:8","Oh taste and see that the LORD is good. Blessed is the man who takes refuge in him."],["Ezekiel 36:26","I will also give you a new heart, and I will put a new spirit within you. I will take away the stony heart out of your flesh, and I will give you a heart of flesh."],["Philippians 4:5","Let your gentleness be known to all men. The Lord is at hand."],["Psalms 119:68","You are good, and do good. Teach me your statutes."],["Psalms 27:14","Wait for the LORD. Be strong, and let your heart take courage. Yes, wait for the LORD."],["Isaiah 12:2","Behold, God is my salvation. I will trust, and will not be afraid; for Yah, the LORD, is my strength and song; and he has become my salvation."],["Romans 12:2","Don’t be conformed to this world, but be transformed by the renewing of your mind, so that you may prove what is the good, well-pleasing, and perfect will of God."],["Matthew 6:34","Therefore don’t be anxious for tomorrow, for tomorrow will be anxious for itself. Each day’s own evil is sufficient."],["Psalms 23:4","Even though I walk through the valley of the shadow of death, I will fear no evil, for you are with me. Your rod and your staff, they comfort me."],["Matthew 5:4","Blessed are those who mourn, for they shall be comforted."],["Exodus 15:2","Yah is my strength and song. He has become my salvation. This is my God, and I will praise him; my father’s God, and I will exalt him."],["John 14:6","Jesus said to him, “I am the way, the truth, and the life. No one comes to the Father, except through me.”"],["Proverbs 22:6","Train up a child in the way he should go, and when he is old he will not depart from it."],["John 10:11","I am the good shepherd. The good shepherd lays down his life for the sheep."],["1 Corinthians 13:13","But now faith, hope, and love remain—these three. The greatest of these is love."],["Ephesians 6:10","Finally, be strong in the Lord, and in the strength of his might."],["Psalms 119:105","Your word is a lamp to my feet, and a light for my path."],["Psalms 54:4","Behold, God is my helper. The Lord is the one who sustains my soul."],["Romans 8:18","For I consider that the sufferings of this present time are not worthy to be compared with the glory which will be revealed toward us."],["Jeremiah 31:3","The LORD appeared of old to me, saying, “Yes, I have loved you with an everlasting love. Therefore I have drawn you with loving kindness.”"],["Matthew 5:7","Blessed are the merciful, for they shall obtain mercy."],["Psalms 23:1","The LORD is my shepherd: I shall lack nothing."],["Proverbs 16:24","Pleasant words are a honeycomb, sweet to the soul, and health to the bones."],["Psalms 103:8","The LORD is merciful and gracious, slow to anger, and abundant in loving kindness."],["1 Corinthians 15:58","Therefore, my beloved brothers, be steadfast, immovable, always abounding in the Lord’s work, because you know that your labor is not in vain in the Lord."],["Job 23:10","But he knows the way that I take. When he has tried me, I will come out like gold."],["John 15:16","You didn’t choose me, but I chose you and appointed you, that you should go and bear fruit, and that your fruit should remain; that whatever you will ask of the Father in my name, he may give it to you."],["John 6:37","All those whom the Father gives me will come to me. He who comes to me I will in no way throw out."],["Psalms 100:4","Enter into his gates with thanksgiving, and into his courts with praise. Give thanks to him, and bless his name."],["Psalms 115:1","Not to us, LORD, not to us, but to your name give glory, for your loving kindness, and for your truth’s sake."],["Hosea 6:3","Let’s acknowledge the LORD. Let’s press on to know the LORD. As surely as the sun rises, the LORD will appear. He will come to us like the rain, like the spring rain that waters the earth."],["Proverbs 4:23","Keep your heart with all diligence, for out of it is the wellspring of life."],["Isaiah 40:29","He gives power to the weak. He increases the strength of him who has no might."],["Genesis 50:20","As for you, you meant evil against me, but God meant it for good, to save many people alive, as is happening today."],["Psalms 126:3","The LORD has done great things for us, and we are glad."],["Psalms 121:1-2","I will lift up my eyes to the hills. Where does my help come from? My help comes from the LORD, who made heaven and earth."],["Numbers 23:19","God is not a man, that he should lie, nor a son of man, that he should repent. Has he said, and will he not do it? Or has he spoken, and will he not make it good?"],["Joshua 24:15","If it seems evil to you to serve the LORD, choose today whom you will serve; whether the gods which your fathers served that were beyond the River, or the gods of the Amorites, in whose land you dwell; but as for me and my house, we will serve the LORD."],["Isaiah 43:1","But now the LORD who created you, Jacob, and he who formed you, Israel, says: “Don’t be afraid, for I have redeemed you. I have called you by your name. You are mine.”"],["2 Chronicles 7:14","If my people, who are called by my name, will humble themselves, pray, seek my face, and turn from their wicked ways; then I will hear from heaven, will forgive their sin, and will heal their land."],["Mark 9:23","Jesus said to him, “If you can believe, all things are possible to him who believes.”"],["Psalms 139:23","Search me, God, and know my heart. Try me, and know my thoughts."],["Matthew 24:35","Heaven and earth will pass away, but my words will not pass away."],["John 14:1","Don’t let your heart be troubled. Believe in God. Believe also in me."],["Psalms 16:8","I have set the LORD always before me. Because he is at my right hand, I shall not be moved."],["Psalms 147:3","He heals the broken in heart, and binds up their wounds."],["Mark 11:24","Therefore I tell you, all things whatever you pray and ask for, believe that you have received them, and you shall have them."],["Galatians 3:28","There is neither Jew nor Greek, there is neither slave nor free man, there is neither male nor female; for you are all one in Christ Jesus."],["Psalms 100:5","For the LORD is good. His loving kindness endures forever, his faithfulness to all generations."],["2 Corinthians 9:7","Let each man give according as he has determined in his heart, not grudgingly or under compulsion, for God loves a cheerful giver."],["Matthew 6:33","But seek first God’s Kingdom, and his righteousness; and all these things will be given to you as well."],["Psalms 18:2","The LORD is my rock, my fortress, and my deliverer; my God, my rock, in whom I take refuge; my shield, and the horn of my salvation, my high tower."],["Matthew 5:16","Even so, let your light shine before men; that they may see your good works, and glorify your Father who is in heaven."],["Psalms 31:14","But I trust in you, LORD. I said, “You are my God.”"],["2 Timothy 4:7","I have fought the good fight. I have finished the course. I have kept the faith."],["Psalms 91:2","I will say of the LORD, “He is my refuge and my fortress; my God, in whom I trust.”"],["Proverbs 3:5-6","Trust in the LORD with all your heart, and don’t lean on your own understanding. In all your ways acknowledge him, and he will make your paths straight."],["Jeremiah 17:7","Blessed is the man who trusts in the LORD, and whose confidence is in the LORD."],["Isaiah 6:8","I heard the Lord’s voice, saying, “Whom shall I send, and who will go for us?” Then I said, “Here I am. Send me!”"],["Psalms 1:6","For the LORD knows the way of the righteous, but the way of the wicked shall perish."],["John 20:29","Jesus said to him, “Because you have seen me, you have believed. Blessed are those who have not seen, and have believed.”"],["Psalms 116:1","I love the LORD, because he listens to my voice, and my cries for mercy."],["Psalms 37:7","Rest in the LORD, and wait patiently for him. Don’t fret because of him who prospers in his way, because of the man who makes wicked plots happen."],["Matthew 6:21","For where your treasure is, there your heart will be also."],["Psalms 4:8","In peace I will both lay myself down and sleep, for you, LORD alone, make me live in safety."],["Romans 12:9","Let love be without hypocrisy. Abhor that which is evil. Cling to that which is good."],["John 14:27","Peace I leave with you. My peace I give to you; not as the world gives, I give to you. Don’t let your heart be troubled, neither let it be fearful."],["Psalms 128:1","Blessed is everyone who fears the LORD, who walks in his ways."],["Malachi 3:6","For I, the LORD, don’t change; therefore you, sons of Jacob, are not consumed."],["Galatians 6:2","Bear one another’s burdens, and so fulfill the law of Christ."],["Galatians 6:9","Let’s not be weary in doing good, for we will reap in due season, if we don’t give up."],["Isaiah 55:8","“For my thoughts are not your thoughts, and your ways are not my ways,” says the LORD."],["Psalms 103:12","As far as the east is from the west, so far has he removed our transgressions from us."],["1 Thessalonians 5:17","Pray without ceasing."],["Ephesians 5:2","Walk in love, even as Christ also loved us and gave himself up for us, an offering and a sacrifice to God for a sweet-smelling fragrance."],["Psalms 127:1","Unless the LORD builds the house, they who build it labor in vain. Unless the LORD watches over the city, the watchman guards it in vain."],["John 14:13","Whatever you will ask in my name, I will do it, that the Father may be glorified in the Son."],["Micah 7:7","But as for me, I will look to the LORD. I will wait for the God of my salvation. My God will hear me."],["Isaiah 60:1","Arise, shine; for your light has come, and the LORD’s glory has risen on you."],["Luke 6:31","As you would like people to do to you, do exactly so to them."],["Mark 12:30","You shall love the Lord your God with all your heart, and with all your soul, and with all your mind, and with all your strength. This is the first commandment."],["Philippians 3:14","I press on toward the goal for the prize of the high calling of God in Christ Jesus."],["Leviticus 19:18","You shall not take vengeance, nor bear any grudge against the children of your people; but you shall love your neighbor as yourself. I am the LORD."],["2 Corinthians 3:17","Now the Lord is the Spirit and where the Spirit of the Lord is, there is liberty."],["Job 19:25","But as for me, I know that my Redeemer lives. In the end, he will stand upon the earth."],["Psalms 55:22","Cast your burden on the LORD and he will sustain you. He will never allow the righteous to be moved."],["Colossians 3:14","Above all these things, walk in love, which is the bond of perfection."],["Romans 14:8","For if we live, we live to the Lord. Or if we die, we die to the Lord. If therefore we live or die, we are the Lord’s."],["Isaiah 25:1","LORD, you are my God. I will exalt you! I will praise your name, for you have done wonderful things, things planned long ago, in complete faithfulness and truth."],["1 Samuel 12:24","Only fear the LORD, and serve him in truth with all your heart; for consider what great things he has done for you."],["Matthew 11:29","Take my yoke upon you, and learn from me, for I am gentle and humble in heart; and you will find rest for your souls."],["Proverbs 19:21","There are many plans in a man’s heart, but the LORD’s counsel will prevail."],["Hebrews 11:1","Now faith is assurance of things hoped for, proof of things not seen."],["1 Thessalonians 5:15","See that no one returns evil for evil to anyone, but always follow after that which is good for one another and for all."],["Genesis 1:1","In the beginning, God created the heavens and the earth."],["2 Samuel 22:31","As for God, his way is perfect. The LORD’s word is tested. He is a shield to all those who take refuge in him."],["Genesis 9:13","I set my rainbow in the cloud, and it will be a sign of a covenant between me and the earth."],["Luke 2:14","Glory to God in the highest, on earth peace, good will toward men."],["Psalms 9:10","Those who know your name will put their trust in you, for you, LORD, have not forsaken those who seek you."],["Psalms 24:1","The earth is the LORD’s, with its fullness; the world, and those who dwell in it."],["Romans 8:1","There is therefore now no condemnation to those who are in Christ Jesus, who don’t walk according to the flesh, but according to the Spirit."],["Joel 2:13","Tear your heart, and not your garments, and turn to the LORD, your God; for he is gracious and merciful, slow to anger, and abundant in loving kindness, and relents from sending calamity."],["Psalms 28:7","The LORD is my strength and my shield. My heart has trusted in him, and I am helped. Therefore my heart greatly rejoices. With my song I will thank him."],["1 Chronicles 16:11","Seek the LORD and his strength. Seek his face forever more."],["Psalms 138:8","The LORD will fulfill that which concerns me. Your loving kindness, LORD, endures forever. Don’t forsake the works of your own hands."],["Psalms 145:9","The LORD is good to all. His tender mercies are over all his works."],["Mark 11:25","Whenever you stand praying, forgive, if you have anything against anyone; so that your Father, who is in heaven, may also forgive you your transgressions."],["Psalms 68:19","Blessed be the Lord, who daily bears our burdens, even the God who is our salvation."],["Isaiah 43:19","Behold, I will do a new thing. It springs out now. Don’t you know it? I will even make a way in the wilderness, and rivers in the desert."],["John 15:12","This is my commandment, that you love one another, even as I have loved you."],["1 Thessalonians 5:18","In everything give thanks, for this is the will of God in Christ Jesus toward you."],["2 Corinthians 5:17","Therefore if anyone is in Christ, he is a new creation. The old things have passed away. Behold, all things have become new."],["Romans 15:13","Now may the God of hope fill you with all joy and peace in believing, that you may abound in hope, in the power of the Holy Spirit."],["Psalms 36:5","Your loving kindness, LORD, is in the heavens. Your faithfulness reaches to the skies."],["1 Corinthians 3:16","Don’t you know that you are a temple of God, and that God’s Spirit lives in you?"],["2 Corinthians 5:7","For we walk by faith, not by sight."],["Psalms 86:11","Teach me your way, LORD. I will walk in your truth. Make my heart undivided to fear your name."],["1 Timothy 4:12","Let no man despise your youth; but be an example to those who believe, in word, in your way of life, in love, in spirit, in faith, and in purity."],["Proverbs 10:12","Hatred stirs up strife, but love covers all wrongs."],["Romans 1:16","For I am not ashamed of the Good News of Christ, because it is the power of God for salvation for everyone who believes, for the Jew first, and also for the Greek."],["Matthew 5:5","Blessed are the gentle, for they shall inherit the earth."],["Jeremiah 15:16","Your words were found, and I ate them. Your words were to me a joy and the rejoicing of my heart, for I am called by your name, LORD, God of Armies."],["Isaiah 57:15","For the high and lofty One who inhabits eternity, whose name is Holy, says: “I dwell in the high and holy place, with him also who is of a contrite and humble spirit, to revive the spirit of the humble, and to revive the heart of the contrite.”"],["Psalms 59:16","But I will sing of your strength. Yes, I will sing aloud of your loving kindness in the morning. For you have been my high tower, a refuge in the day of my distress."],["Romans 8:31","What then shall we say about these things? If God is for us, who can be against us?"],["Matthew 6:6","But you, when you pray, enter into your inner room, and having shut your door, pray to your Father who is in secret, and your Father who sees in secret will reward you openly."],["1 Corinthians 15:57","But thanks be to God, who gives us the victory through our Lord Jesus Christ."],["Romans 8:28","We know that all things work together for good for those who love God, for those who are called according to his purpose."],["Isaiah 40:31","But those who wait for the LORD will renew their strength. They will mount up with wings like eagles. They will run, and not be weary. They will walk, and not faint."],["Proverbs 21:21","He who follows after righteousness and kindness finds life, righteousness, and honor."],["Joshua 1:9","Haven’t I commanded you? Be strong and courageous. Don’t be afraid. Don’t be dismayed, for the LORD your God is with you wherever you go."],["Matthew 17:20","He said to them, “Because of your unbelief. For most certainly I tell you, if you have faith as a grain of mustard seed, you will tell this mountain, ‘Move from here to there,’ and it will move; and nothing will be impossible for you.”"],["John 6:35","Jesus said to them, “I am the bread of life. Whoever comes to me will not be hungry, and whoever believes in me will never be thirsty.”"],["Luke 11:9","I tell you, keep asking, and it will be given you. Keep seeking, and you will find. Keep knocking, and it will be opened to you."],["John 1:1","In the beginning was the Word, and the Word was with God, and the Word was God."],["Proverbs 15:1","A gentle answer turns away wrath, but a harsh word stirs up anger."],["Psalms 18:28","For you will light my lamp, LORD. My God will light up my darkness."],["Lamentations 3:22-23","It is because of the LORD’s loving kindnesses that we are not consumed, because his compassion doesn’t fail. They are new every morning. Great is your faithfulness."],["John 1:14","The Word became flesh, and lived among us. We saw his glory, such glory as of the one and only Son of the Father, full of grace and truth."],["Galatians 5:22-23","But the fruit of the Spirit is love, joy, peace, patience, kindness, goodness, faith, gentleness, and self-control. Against such things there is no law."],["Psalms 94:19","In the multitude of my thoughts within me, your comforts delight my soul."],["Deuteronomy 31:8","The LORD himself is who goes before you. He will be with you. He will not fail you nor forsake you. Don’t be afraid. Don’t be discouraged."],["Genesis 18:14","Is anything too hard for the LORD? At the set time I will return to you, when the season comes round, and Sarah will have a son."],["Proverbs 17:22","A cheerful heart makes good medicine, but a crushed spirit dries up the bones."],["Ecclesiastes 3:11","He has made everything beautiful in its time. He has also set eternity in their hearts, yet so that man can’t find out the work that God has done from the beginning even to the end."],["Psalms 20:4","May he grant you your heart’s desire, and fulfill all your counsel."],["Matthew 10:31","Therefore don’t be afraid. You are of more value than many sparrows."],["Acts 2:21","It will be that whoever will call on the name of the Lord will be saved."],["1 Corinthians 16:13","Watch! Stand firm in the faith! Be courageous! Be strong!"],["John 8:32","You will know the truth, and the truth will make you free."],["Isaiah 26:3","You will keep whoever’s mind is steadfast in perfect peace, because he trusts in you."],["Matthew 5:14","You are the light of the world. A city located on a hill can’t be hidden."],["Philippians 4:8","Finally, brothers, whatever things are true, whatever things are honorable, whatever things are just, whatever things are pure, whatever things are lovely, whatever things are of good report: if there is any virtue and if there is any praise, think about these things."],["John 17:3","This is eternal life, that they should know you, the only true God, and him whom you sent, Jesus Christ."],["2 Thessalonians 3:3","But the Lord is faithful, who will establish you and guard you from the evil one."],["Luke 1:45","Blessed is she who believed, for there will be a fulfillment of the things which have been spoken to her from the Lord!"],["Psalms 51:10","Create in me a clean heart, O God. Renew a right spirit within me."],["Psalms 96:1","Sing to the LORD a new song! Sing to the LORD, all the earth."],["Luke 12:32","Don’t be afraid, little flock, for it is your Father’s good pleasure to give you the Kingdom."],["Galatians 5:1","Stand firm therefore in the liberty by which Christ has made us free, and don’t be entangled again with a yoke of bondage."],["Luke 12:34","For where your treasure is, there will your heart be also."],["Matthew 25:40","The King will answer them, ‘Most certainly I tell you, because you did it to one of the least of these my brothers, you did it to me.’"],["Hebrews 4:12","For the word of God is living and active, and sharper than any two-edged sword, piercing even to the dividing of soul and spirit, of both joints and marrow, and is able to discern the thoughts and intentions of the heart."],["John 15:5","I am the vine. You are the branches. He who remains in me and I in him bears much fruit, for apart from me you can do nothing."],["1 Chronicles 16:34","Oh give thanks to the LORD, for he is good, for his loving kindness endures forever."],["Psalms 62:8","Trust in him at all times, you people. Pour out your heart before him. God is a refuge for us."],["2 Timothy 2:13","If we are faithless, he remains faithful; for he can’t deny himself."],["Romans 10:13","For, “Whoever will call on the name of the Lord will be saved.”"],["2 Timothy 1:7","For God didn’t give us a spirit of fear, but of power, love, and self-control."],["John 14:15","If you love me, keep my commandments."],["Hebrews 4:16","Let’s therefore draw near with boldness to the throne of grace, that we may receive mercy and may find grace for help in time of need."],["Luke 11:28","But he said, “On the contrary, blessed are those who hear the word of God, and keep it.”"],["Romans 6:23","For the wages of sin is death, but the free gift of God is eternal life in Christ Jesus our Lord."],["1 Timothy 6:6","But godliness with contentment is great gain."],["Proverbs 12:25","Anxiety in a man’s heart weighs it down, but a kind word makes it glad."],["John 15:9","Even as the Father has loved me, I also have loved you. Remain in my love."],["Philippians 4:13","I can do all things through Christ, who strengthens me."],["Philippians 2:13","For it is God who works in you both to will and to work, for his good pleasure."],["John 10:27","My sheep hear my voice, and I know them, and they follow me."],["Matthew 22:37","Jesus said to him, “‘You shall love the Lord your God with all your heart, with all your soul, and with all your mind.’”"],["Psalms 42:11","Why are you in despair, my soul? Why are you disturbed within me? Hope in God! For I shall still praise him, the saving help of my countenance, and my God."],["John 8:12","Again, therefore, Jesus spoke to them, saying, “I am the light of the world. He who follows me will not walk in the darkness, but will have the light of life.”"],["Acts 16:31","They said, “Believe in the Lord Jesus Christ, and you will be saved, you and your household.”"],["Romans 13:10","Love doesn’t harm a neighbor. Love therefore is the fulfillment of the law."],["Matthew 5:9","Blessed are the peacemakers, for they shall be called children of God."],["Psalms 25:4","Show me your ways, LORD. Teach me your paths."],["Matthew 19:26","Looking at them, Jesus said, “With men this is impossible, but with God all things are possible.”"],["Luke 6:36","Therefore be merciful, even as your Father is also merciful."],["Lamentations 3:41","Let’s lift up our heart with our hands to God in the heavens."],["Daniel 2:20","Daniel answered, “Blessed be the name of God forever and ever; for wisdom and might are his.”"],["Numbers 6:24-26","The LORD bless you, and keep you. The LORD make his face to shine on you, and be gracious to you. The LORD lift up his face toward you, and give you peace."],["Isaiah 26:4","Trust in the LORD forever; for in Yah, the LORD, is an everlasting Rock."],["Romans 10:17","So faith comes by hearing, and hearing by the word of God."],["Psalms 90:12","So teach us to count our days, that we may gain a heart of wisdom."],["Luke 2:11","For there is born to you today, in David’s city, a Savior, who is Christ the Lord."],["Colossians 1:17","He is before all things, and in him all things are held together."],["Proverbs 28:13","He who conceals his sins doesn’t prosper, but whoever confesses and renounces them finds mercy."],["John 7:38","He who believes in me, as the Scripture has said, from within him will flow rivers of living water."],["Acts 10:43","All the prophets testify about him, that through his name everyone who believes in him will receive remission of sins."],["Psalms 23:6","Surely goodness and loving kindness shall follow me all the days of my life, and I will dwell in the LORD’s house forever."],["Isaiah 49:15","Can a woman forget her nursing child, that she should not have compassion on the son of her womb? Yes, these may forget, yet I will not forget you!"],["Psalms 16:11","You will show me the path of life. In your presence is fullness of joy. In your right hand there are pleasures forever more."],["Galatians 5:13","For you, brothers, were called for freedom. Only don’t use your freedom for gain to the flesh, but through love be servants to one another."],["Hebrews 10:23","Let’s hold fast the confession of our hope without wavering; for he who promised is faithful."],["Micah 6:8","He has shown you, O man, what is good. What does the LORD require of you, but to act justly, to love mercy, and to walk humbly with your God?"],["Jeremiah 33:3","Call to me, and I will answer you, and will show you great and difficult things, which you don’t know."],["Jeremiah 29:11","“For I know the thoughts that I think toward you,” says the LORD, “thoughts of peace, and not of evil, to give you hope and a future.”"],["Psalms 147:5","Great is our Lord, and mighty in power. His understanding is infinite."],["Matthew 5:8","Blessed are the pure in heart, for they shall see God."],["Psalms 33:20","Our soul has waited for the LORD. He is our help and our shield."],["Isaiah 40:8","The grass withers, the flower fades; but the word of our God stands forever."],["2 Thessalonians 3:16","Now may the Lord of peace himself give you peace at all times in all ways. The Lord be with you all."],["Genesis 28:15","Behold, I am with you, and will keep you, wherever you go, and will bring you again into this land. For I will not leave you, until I have done that which I have spoken of to you."],["Mark 1:35","Early in the morning, while it was still dark, he rose up and went out, and departed into a deserted place, and prayed there."],["Psalms 29:11","The LORD will give strength to his people. The LORD will bless his people with peace."],["Proverbs 19:17","He who has pity on the poor lends to the LORD; he will reward him."],["Psalms 34:18","The LORD is near to those who have a broken heart, and saves those who have a crushed spirit."],["Psalms 19:1","The heavens declare the glory of God. The expanse shows his handiwork."],["2 Corinthians 4:16","Therefore we don’t faint, but though our outward man is decaying, yet our inward man is renewed day by day."],["Genesis 1:27","God created man in his own image. In God’s image he created him; male and female he created them."],["Psalms 119:50","This is my comfort in my affliction, for your word has revived me."],["Mark 10:27","Jesus, looking at them, said, “With men it is impossible, but not with God, for all things are possible with God.”"],["Romans 15:4","For whatever things were written before were written for our learning, that through perseverance and through encouragement of the Scriptures we might have hope."],["John 3:16","For God so loved the world, that he gave his one and only Son, that whoever believes in him should not perish, but have eternal life."],["Acts 1:8","But you will receive power when the Holy Spirit has come upon you. You will be witnesses to me in Jerusalem, in all Judea and Samaria, and to the uttermost parts of the earth."],["Romans 8:38-39","For I am persuaded that neither death, nor life, nor angels, nor principalities, nor things present, nor things to come, nor powers, nor height, nor depth, nor any other created thing will be able to separate us from God’s love which is in Christ Jesus our Lord."],["Matthew 18:20","For where two or three are gathered together in my name, there I am in the middle of them."],["Acts 20:35","In all things I gave you an example, that so laboring you ought to help the weak, and to remember the words of the Lord Jesus, that he himself said, ‘It is more blessed to give than to receive.’"],["2 Corinthians 12:9","He has said to me, “My grace is sufficient for you, for my power is made perfect in weakness.” Most gladly therefore I will rather glory in my weaknesses, that the power of Christ may rest on me."],["1 Corinthians 10:31","Whether therefore you eat, or drink, or whatever you do, do all to the glory of God."],["Psalms 71:5","For you are my hope, Lord GOD, my confidence from my youth."],["Psalms 31:24","Be strong, and let your heart take courage, all you who hope in the LORD."],["Philippians 1:6","Being confident of this very thing, that he who began a good work in you will complete it until the day of Jesus Christ."],["John 13:35","By this everyone will know that you are my disciples, if you have love for one another."],["John 10:10","The thief only comes to steal, kill, and destroy. I came that they may have life, and may have it abundantly."],["Isaiah 41:10","Don’t you be afraid, for I am with you. Don’t be dismayed, for I am your God. I will strengthen you. Yes, I will help you. Yes, I will uphold you with the right hand of my righteousness."],["Psalms 46:1","God is our refuge and strength, a very present help in trouble."]]</script>
 
 <script>
 'use strict';
 /* =========================================================
    CONFIG
    ========================================================= */
-const APP_VERSION = '1.1.7';
-const TZ = 'Europe/Stockholm';
+const $ = (s) => document.querySelector(s);
+const APP_VERSION = '1.3.0';
+const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
+const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
+// New users outside Sweden start with their phone's time zone and no place name until they set one.
+const defaultLocation = () => DEVICE_TZ === 'Europe/Stockholm' ? { ...VASTERAS } : { name: '', flag: '', tz: DEVICE_TZ, lat: null, lon: null };
+let TZ = 'Europe/Stockholm';
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
   { id: 'morning',   name: 'Morning',   time: '06:00', notify: false },
@@ -530,6 +640,9 @@ const ICON = {
   bell: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2a6.3 6.3 0 0 0-6.3 6.3v4.3L3.6 16.6h16.8l-2.1-3.8V8.5A6.3 6.3 0 0 0 12 2.2zM9.3 18.3a2.7 2.7 0 0 0 5.4 0z"/></svg>',
   pin: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 1.8a7.4 7.4 0 0 0-7.4 7.4c0 5.4 7.4 13 7.4 13s7.4-7.6 7.4-13A7.4 7.4 0 0 0 12 1.8zm0 10.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M10.3 1.8h3.4l.5 2.6c.7.3 1.4.6 2 1.1l2.5-.9 1.7 2.9-2 1.7a8 8 0 0 1 0 2.4l2 1.7-1.7 2.9-2.5-.9c-.6.5-1.3.9-2 1.1l-.5 2.6h-3.4l-.5-2.6c-.7-.3-1.4-.6-2-1.1l-2.5.9-1.7-2.9 2-1.7a8 8 0 0 1 0-2.4l-2-1.7 1.7-2.9 2.5.9c.6-.5 1.3-.9 2-1.1zM12 15.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8z" transform="translate(0 1)"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5a1 1 0 0 0 0 2H20v2H6.5A2.5 2.5 0 0 1 4 19.5zM11 5v2.5H8.5v2H11V15h2V9.5h2.5v-2H13V5z" fill-rule="evenodd"/></svg>',
+  dove: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.5c-2.6.2-4.7 1.4-6.1 3.5-.6-1.9-2.1-3.6-4.4-4.5.4 2 .3 3.8-.4 5.3C8.3 8 6 7.6 3 8c2 1.3 3.3 2.9 3.8 4.6L2.5 15c2.2.8 4.4.9 6.4.3 1 1.9 2.8 3.4 5.2 4.2-.6-1.2-.8-2.4-.6-3.6 3.6-1.3 5.8-4.5 6.1-8.6l1.9-2.8z"/></svg>',
+  calDays: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M7 2.5a1 1 0 0 1 1 1V5h8V3.5a1 1 0 1 1 2 0V5h1a2.5 2.5 0 0 1 2.5 2.5v11A2.5 2.5 0 0 1 19 21H5a2.5 2.5 0 0 1-2.5-2.5v-11A2.5 2.5 0 0 1 5 5h1V3.5a1 1 0 0 1 1-1zM4.5 10v8.5c0 .3.2.5.5.5h14c.3 0 .5-.2.5-.5V10zm11.7 1.8a1 1 0 0 1 0 1.4l-4.5 4.5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.8 3.8-3.8a1 1 0 0 1 1.4 0z"/></svg>',
   chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
 const PRAYER_ICON = { morning: ICON.sunrise, midday: ICON.sun, afternoon: ICON.sun, sunset: ICON.sunset, night: ICON.moon };
@@ -547,10 +660,16 @@ function ring(frac, stroke = 10, dim = false) {
 /* =========================================================
    TIME HELPERS (always Europe/Stockholm, independent of phone settings)
    ========================================================= */
-const partsFmt = new Intl.DateTimeFormat('en-GB', {
+let partsFmt = new Intl.DateTimeFormat('en-GB', {
   timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
 });
+function setTZ(tz) {
+  try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); } catch (_) { tz = 'Europe/Stockholm'; }
+  TZ = tz;
+  partsFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  sunsetCache.clear();
+}
 function nowInfo(date = new Date()) {
   const o = {};
   for (const p of partsFmt.formatToParts(date)) o[p.type] = p.value;
@@ -581,8 +700,13 @@ const Store = {
     // make sure all five prayers exist (keeps old data valid if defaults change)
     d.settings.prayers = DEFAULT_PRAYERS.map((def) => ({ ...def, ...(d.settings.prayers.find((p) => p.id === def.id) || {}) }));
     d.settings.theme = d.settings.theme || 'system';
+    d.settings.location = d.settings.location || defaultLocation();
+    d.settings.autoSunset = !!d.settings.autoSunset;
     d.meta = d.meta || { firstDay: nowInfo().key, notified: {} };
     d.meta.notified = d.meta.notified || {};
+    d.settings.showVerse = d.settings.showVerse !== false;
+    d.notes = d.notes || {};            // { 'YYYY-MM-DD': { text, updatedAt } }
+    d.intentions = d.intentions || [];  // [{ id, text, created, answered, updatedAt }]
     this.data = d;
   },
   save() {
@@ -590,9 +714,14 @@ const Store = {
     catch (e) { toast('Could not save — storage is full or blocked.'); }
   },
   reset() {
-    const theme = this.data.settings.theme; // keep the chosen look
+    const { theme, location } = this.data.settings; // keep the chosen look and place
     try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-    this.load(); this.data.settings.theme = theme; this.save();
+    this.load(); this.data.settings.theme = theme; this.data.settings.location = location; this.save();
+  },
+  snapshot(key) { return JSON.stringify(this.day(key).done); },
+  restore(key, snap) {
+    const day = this.data.days[key] || (this.data.days[key] = { done: {} });
+    day.done = JSON.parse(snap); day.updatedAt = new Date().toISOString(); this.save();
   },
   prayers() { return this.data.settings.prayers; },
   updatePrayer(id, patch) {
@@ -631,15 +760,168 @@ function computeStats(todayKey) {
     longest = Math.max(longest, run);
     prev = key;
   }
-  return { total, cur, longest, n, complete };
+  const daysPrayed = Object.keys(Store.data.days).filter((k) => Store.count(k) > 0).length;
+  const answered = Store.data.intentions.filter((x) => x.answered).length, openInt = Store.data.intentions.length - answered;
+  return { total, cur, longest, n, complete, daysPrayed, answered, openInt };
 }
+
+/* =========================================================
+   REAL SUNSET (calculated on the phone, no internet needed)
+   Standard sunrise-equation; accurate to about a minute.
+   ========================================================= */
+const sunsetCache = new Map();
+function sunsetTime(key) {
+  const L = Store.data.settings.location;
+  if (L.lat == null || L.lon == null) return null;
+  if (sunsetCache.has(key)) return sunsetCache.get(key);
+  const rad = Math.PI / 180, [y, m, d] = key.split('-').map(Number);
+  const n = Math.round(Date.UTC(y, m - 1, d, 12) / 864e5 + 2440587.5 - 2451545.0 + 0.0008);
+  const Js = n - L.lon / 360;
+  const M = (357.5291 + 0.98560028 * Js) % 360;
+  const C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+  const lam = (M + C + 180 + 102.9372) % 360;
+  const Jt = 2451545 + Js + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * lam * rad);
+  const dec = Math.asin(Math.sin(lam * rad) * Math.sin(23.4397 * rad));
+  const cosw = (Math.sin(-0.833 * rad) - Math.sin(L.lat * rad) * Math.sin(dec)) / (Math.cos(L.lat * rad) * Math.cos(dec));
+  let out = null;
+  if (cosw >= -1 && cosw <= 1) {                                   // (no sunset during midnight sun / polar night)
+    const when = new Date((Jt + Math.acos(cosw) / rad / 360 - 2440587.5) * 864e5);
+    const o = {}; for (const pt of partsFmt.formatToParts(when)) o[pt.type] = pt.value;
+    out = `${String((+o.hour) % 24).padStart(2, '0')}:${o.minute}`;
+  }
+  sunsetCache.set(key, out);
+  return out;
+}
+// The time a prayer is at on a given day (Sunset can follow the real sunset)
+function timeOf(p, key = nowInfo().key) {
+  if (p.id === 'sunset' && Store.data.settings.autoSunset) { const t = sunsetTime(key); if (t) return t; }
+  return p.time;
+}
+// Next prayer after now (today, or tomorrow's first) and minutes until it
+function nextPrayer() {
+  const now = nowInfo();
+  const list = Store.prayers().map((p) => ({ p, t: toMin(timeOf(p, now.key)) })).sort((a, b) => a.t - b.t);
+  const up = list.find((x) => x.t > now.min);
+  if (up) return { p: up.p, mins: up.t - now.min };
+  const tmr = addDays(now.key, 1);
+  const first = Store.prayers().map((p) => ({ p, t: toMin(timeOf(p, tmr)) })).sort((a, b) => a.t - b.t)[0];
+  return { p: first.p, mins: 1440 - now.min + first.t };
+}
+const fmtMins = (m) => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}`;
+
+/* =========================================================
+   VERSE OF THE DAY (same verse for everyone on the same date)
+   ========================================================= */
+const VERSES = JSON.parse(document.getElementById('verses-data').textContent);
+function verseFor(key) {
+  const d = keyToDate(key), start = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const day = Math.round((d - start) / 864e5);           // 0 = Jan 1
+  const [ref, text] = VERSES[day % VERSES.length];
+  return { ref: ref.replace(/^Psalms /, 'Psalm '), text };
+}
+function renderVerse() {
+  const el = $('#verse-strip'), on = Store.data.settings.showVerse;
+  el.style.display = on ? '' : 'none'; if (!on) return;
+  const v = verseFor(nowInfo().key);
+  el.querySelector('.vt').textContent = v.text; el.querySelector('.vr').textContent = v.ref;
+}
+
+/* ===== Sheet (pop-up card) ===== */
+function openSheet(html, onClose) {
+  const sh = $('#sheet'); sh.querySelector('.panel').innerHTML = html;
+  sh.classList.add('open'); sh.setAttribute('aria-hidden', 'false'); sh._onClose = onClose;
+}
+function closeSheet() {
+  const sh = $('#sheet'); if (!sh.classList.contains('open')) return;
+  const ta = $('#j-text');
+  if (ta) { clearTimeout(noteTimer); const t = ta.value.trim();
+    if (t) Store.data.notes[journalKey] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[journalKey]; Store.save(); }
+  document.activeElement?.blur?.();
+  sh.classList.remove('open'); sh.setAttribute('aria-hidden', 'true');
+  if (sh._onClose) sh._onClose(); sh._onClose = null;
+}
+$('#sheet').addEventListener('click', (e) => { if (e.target.classList.contains('backdrop') || e.target.closest('.sh-close')) closeSheet(); });
+const sheetHead = (title) => `<div class="sh-head"><h3>${title}</h3><button class="sh-close" aria-label="Close">×</button></div>`;
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+$('#verse-strip').addEventListener('click', () => {
+  const v = verseFor(nowInfo().key);
+  openSheet(`${sheetHead('Verse of the day')}<p class="full-verse">“${esc(v.text)}”</p>
+    <div class="full-ref">${esc(v.ref)}<small>World English Bible · ${fmt(nowInfo().key, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>`);
+});
+
+/* ===== Journal: a note per day + prayer intentions ===== */
+let journalTab = 'note', journalKey = null;
+function openJournal(key, tab) {
+  journalKey = key || nowInfo().key; journalTab = tab || 'note';
+  openSheet('', () => { renderPrayers(true); if (currentView === 'calendar') renderCalendar(); if (currentView === 'stats') renderStats(); });
+  renderJournal();
+}
+function renderJournal() {
+  const panel = $('#sheet .panel'), isToday = journalKey === nowInfo().key;
+  const tabs = `<div class="seg jtabs"><button data-jtab="note" aria-pressed="${journalTab === 'note'}">${isToday ? 'Today’s note' : 'Note'}</button>
+    <button data-jtab="int" aria-pressed="${journalTab === 'int'}">Intentions</button></div>`;
+  if (journalTab === 'note') {
+    const n = Store.data.notes[journalKey];
+    panel.innerHTML = `${sheetHead('Journal')}${tabs}
+      <p class="j-date">${fmt(journalKey, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <textarea id="j-text" placeholder="What are you praying for, or thankful for, today?">${n ? esc(n.text) : ''}</textarea>
+      <div class="j-saved" id="j-saved">${n ? 'Saved' : ''}</div>`;
+  } else {
+    const open = Store.data.intentions.filter((x) => !x.answered), done = Store.data.intentions.filter((x) => x.answered)
+      .sort((a, b) => b.answered.localeCompare(a.answered));
+    const item = (x) => `<div class="intent${x.answered ? ' answered' : ''}" data-iid="${x.id}">
+        <div class="it">${esc(x.text)}<small>${x.answered ? `Answered ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : `Since ${fmt(x.created, { month: 'long', day: 'numeric' })}`}</small></div>
+        ${x.answered ? '<button class="ans" data-act="reopen">Undo</button>' : '<button class="ans" data-act="answer">Answered</button>'}
+        <button class="del" data-act="del" aria-label="Delete">×</button></div>`;
+    panel.innerHTML = `${sheetHead('Journal')}${tabs}
+      <div class="j-add"><input class="j-input" id="j-new" placeholder="Add a prayer intention" maxlength="200" enterkeyhint="done"><button class="sbtn" id="j-add">Add</button></div>
+      ${open.length ? open.map(item).join('') : '<div class="j-empty">Things you are praying for will appear here. Mark them answered when they are.</div>'}
+      <div class="j-sub">Answered prayers · ${done.length}</div>
+      ${done.length ? done.map(item).join('') : '<div class="j-empty">None yet.</div>'}`;
+  }
+}
+let noteTimer;
+$('#sheet').addEventListener('input', (e) => {
+  if (e.target.id !== 'j-text') return;
+  clearTimeout(noteTimer); $('#j-saved').textContent = 'Saving…';
+  noteTimer = setTimeout(() => {
+    const t = e.target.value.trim();
+    if (t) Store.data.notes[journalKey] = { text: t, updatedAt: new Date().toISOString() }; else delete Store.data.notes[journalKey];
+    Store.save(); const el = $('#j-saved'); if (el) el.textContent = t ? 'Saved' : '';
+  }, 400);
+});
+function addIntention() {
+  const inp = $('#j-new'), t = inp.value.trim(); if (!t) return;
+  Store.data.intentions.push({ id: Date.now().toString(36), text: t, created: nowInfo().key, answered: null, updatedAt: new Date().toISOString() });
+  Store.save(); renderJournal(); $('#j-new')?.focus();
+}
+$('#sheet').addEventListener('keydown', (e) => { if (e.target.id === 'j-new' && e.key === 'Enter') { e.preventDefault(); addIntention(); } });
+$('#sheet').addEventListener('click', (e) => {
+  const tab = e.target.closest('[data-jtab]');
+  if (tab) { $('#j-text') && $('#j-text').dispatchEvent(new Event('input', { bubbles: true })); journalTab = tab.dataset.jtab; renderJournal(); return; }
+  if (e.target.closest('#j-add')) { addIntention(); return; }
+  const act = e.target.closest('[data-act]'); if (!act) return;
+  const id = act.closest('[data-iid]')?.dataset.iid, list = Store.data.intentions, x = list.find((i) => i.id === id); if (!x) return;
+  if (act.dataset.act === 'answer') { x.answered = nowInfo().key; x.updatedAt = new Date().toISOString(); Store.save(); renderJournal(); toast('Praise God! Marked as answered', () => { x.answered = null; Store.save(); renderJournal(); }); }
+  if (act.dataset.act === 'reopen') { x.answered = null; x.updatedAt = new Date().toISOString(); Store.save(); renderJournal(); }
+  if (act.dataset.act === 'del') {
+    const i = list.indexOf(x); list.splice(i, 1); Store.save(); renderJournal();
+    toast('Intention deleted', () => { list.splice(i, 0, x); Store.save(); renderJournal(); });
+  }
+});
+$('#btn-journal').addEventListener('click', () => openJournal(nowInfo().key));
 
 /* =========================================================
    HEADER + VIEW: PRAYERS
    ========================================================= */
-const $ = (s) => document.querySelector(s);
 let lastSig = '';
 
+function renderLocation() {
+  const L = Store.data.settings.location, el = $('#loc-line');
+  el.textContent = L.name ? `${L.flag ? L.flag + ' ' : ''}${L.name}` : '';
+  el.style.display = L.name ? '' : 'none';
+}
 function setTitle() {
   const now = nowInfo();
   $('#page-title').textContent = {
@@ -654,8 +936,8 @@ function currentPrayerId(min) {
   // whichever prayer's time most recently passed today (none before the first one)
   let best = null;
   for (const p of Store.prayers()) {
-    const t = toMin(p.time);
-    if (t <= min && (!best || t >= toMin(best.time))) best = p;
+    const t = toMin(timeOf(p));
+    if (t <= min && (!best || t >= toMin(timeOf(best)))) best = p;
   }
   return best ? best.id : null;
 }
@@ -663,17 +945,19 @@ function currentPrayerId(min) {
 function renderPrayers(force) {
   const now = nowInfo();
   const nowId = currentPrayerId(now.min);
-  const sig = JSON.stringify([now.key, nowId, Store.day(now.key).done, Store.prayers()]);
+  const sig = JSON.stringify([now.key, nowId, Store.day(now.key).done, Store.prayers(), Store.data.settings.autoSunset, Store.data.settings.location, Store.data.settings.showVerse, !!Store.data.notes[now.key]]);
   if (!force && sig === lastSig) return;
   lastSig = sig;
   if (currentView === 'prayers') setTitle();
+  renderVerse();
+  $('#btn-journal').classList.toggle('has', !!Store.data.notes[now.key]);
 
   const c = Store.count(now.key), n = Store.prayers().length;
-  $('#today-ring').innerHTML = ring(c / n, 9) +
+  $('#today-ring').innerHTML = ring(c / n, 7) +
     `<div class="num"><b>${c} <span>/ ${n}</span></b><small>completed</small></div>`;
   $('#sum-line').textContent = c === n ? 'All five prayed. All glory to God.' : 'Keep going. All glory to God.';
   // "Mark previous" box: ticked only when every prayer time that has passed today is marked
-  const due = Store.prayers().filter((p) => toMin(p.time) <= now.min);
+  const due = Store.prayers().filter((p) => toMin(timeOf(p)) <= now.min);
   const allPastDone = due.length > 0 && due.every((p) => Store.isDone(now.key, p.id));
   $('#btn-mark').classList.toggle('on', allPastDone);
   $('#btn-mark').setAttribute('aria-pressed', allPastDone);
@@ -686,20 +970,53 @@ function renderPrayers(force) {
       <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${PRAYER_ICON[p.id]}</span>
-      <span class="name">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span>
-      <span class="time">${p.time}</span>
+      <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
+      <span class="time">${timeOf(p)}</span>
       <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
+  updateCountdown();
+}
+
+// Countdown line: on the NOW row ("Next: Night in 1 h 42 min"), or before the first prayer on the next row
+function updateCountdown() {
+  const list = $('#prayer-list'); if (!list) return;
+  list.querySelectorAll('.cd').forEach((el) => { el.textContent = ''; });
+  const nx = nextPrayer(), nowRow = list.querySelector('.row.now .cd');
+  if (nowRow) nowRow.textContent = `Next: ${nx.p.name} in ${fmtMins(nx.mins)}`;
+  else { const r = list.querySelector(`.row[data-id="${nx.p.id}"] .cd`); if (r) r.textContent = `Begins in ${fmtMins(nx.mins)}`; }
+}
+
+// Gold glow + sparkles when the fifth prayer is ticked
+function celebrate() {
+  const card = $('#view-prayers .card'), ringEl = $('#today-ring');
+  card.classList.remove('celebrate'); ringEl.classList.remove('celebrate'); void card.offsetWidth;
+  card.classList.add('celebrate'); ringEl.classList.add('celebrate');
+  for (let i = 0; i < 10; i++) {
+    const sp = document.createElement('span'); sp.className = 'spark'; sp.textContent = i % 3 ? '✦' : '✧';
+    const a = (i / 10) * Math.PI * 2;
+    sp.style.left = (50 + 30 * Math.cos(a)) + '%'; sp.style.top = (50 + 30 * Math.sin(a)) + '%';
+    sp.style.setProperty('--dx', Math.round(Math.cos(a) * 34) + 'px'); sp.style.setProperty('--dy', Math.round(Math.sin(a) * 34 - 10) + 'px');
+    sp.style.animationDelay = (i * 40) + 'ms';
+    ringEl.appendChild(sp); setTimeout(() => sp.remove(), 1800);
+  }
+}
+// Change a day's ticks with an Undo button in the message bar
+function changeDay(key, fn, message) {
+  const n = Store.prayers().length, before = Store.count(key), snap = Store.snapshot(key);
+  fn();
+  renderPrayers(true);
+  if (currentView === 'calendar') renderCalendar();
+  if (key === nowInfo().key && before < n && Store.count(key) === n) celebrate();
+  toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'calendar') renderCalendar(); });
 }
 
 $('#prayer-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const id = btn.closest('.row').dataset.id;
   if (btn.dataset.act === 'toggle') {
-    const key = nowInfo().key;
-    Store.setDone(key, id, !Store.isDone(key, id));
-    renderPrayers(true);
+    const key = nowInfo().key, on = !Store.isDone(key, id), name = Store.prayers().find((p) => p.id === id).name;
+    changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed` : `${name} unmarked`);
   } else {
     await toggleBell(id);
   }
@@ -708,13 +1025,12 @@ $('#prayer-list').addEventListener('click', async (e) => {
 // "Mark previous as prayed": tick every prayer whose time has already passed today
 $('#btn-mark').addEventListener('click', () => {
   const now = nowInfo();
-  const due = Store.prayers().filter((p) => toMin(p.time) <= now.min);
+  const due = Store.prayers().filter((p) => toMin(timeOf(p)) <= now.min);
   const todo = due.filter((p) => !Store.isDone(now.key, p.id));
   if (!due.length) { toast('No prayer times have passed yet today.'); return; }
   if (!todo.length) { toast('All past prayers are already marked.'); return; }
-  todo.forEach((p) => Store.setDone(now.key, p.id, true));
-  renderPrayers(true);
-  toast(`Marked ${todo.length} prayer${todo.length === 1 ? '' : 's'} as prayed`);
+  changeDay(now.key, () => todo.forEach((p) => Store.setDone(now.key, p.id, true)),
+    `Marked ${todo.length} prayer${todo.length === 1 ? '' : 's'} as prayed`);
 });
 
 /* =========================================================
@@ -747,7 +1063,7 @@ function renderCalendar() {
     html = '<div class="week">';
     for (let i = 0; i < 7; i++) {
       const k = addDays(start, i), { c, st } = dayState(k, today);
-      html += `<button class="wday ${st}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>
+      html += `<button class="wday ${st}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}${Store.data.notes[k] ? ' note' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>
         <span class="d1">${fmt(k, { weekday: 'short' })}</span><span class="d2">${fmt(k, { day: 'numeric' })}</span>${ring(c / n, 13, st === 'future')}</button>`;
     }
     html += '</div>';
@@ -765,7 +1081,7 @@ function renderCalendar() {
       const k = addDays(start, i), { c, st } = dayState(k, today);
       const out = k.slice(0, 7) !== first.slice(0, 7);
       const mark = !out && c > 0 ? `<svg class="mr" viewBox="0 0 100 100">${ring(c / n, 8).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : '';
-      html += `<button class="mday ${st}${out ? ' out' : ''}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>${mark}<span>${fmt(k, { day: 'numeric' })}</span></button>`;
+      html += `<button class="mday ${st}${out ? ' out' : ''}${Store.data.notes[k] ? ' note' : ''}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>${mark}<span>${fmt(k, { day: 'numeric' })}</span>${!out && Store.data.notes[k] ? '<i class="nd"></i>' : ''}</button>`;
     }
     html += '</div>';
   }
@@ -790,8 +1106,11 @@ function renderDetail() {
       return `<div class="row${done ? ' done' : ''}" data-id="${p.id}">
         <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
         <span class="p-ico">${PRAYER_ICON[p.id]}</span>
-        <span class="name">${p.name}</span><span class="time">${p.time}</span></div>`;
-    }).join('')}</div>`;
+        <span class="name">${p.name}</span><span class="time">${timeOf(p, k)}</span></div>`;
+    }).join('')}</div>
+    <div class="detail-head" style="padding-top:10px"><b style="font-size:16px">Note</b>
+      ${k <= nowInfo().key ? `<button class="link" id="btn-note">${Store.data.notes[k] ? 'Edit' : 'Add a note'}</button>` : ''}</div>
+    <div class="note-box">${Store.data.notes[k] ? `<p>${esc(Store.data.notes[k].text)}</p>` : '<p class="muted" style="color:var(--ink-dim)">No note for this day.</p>'}</div>`;
 }
 
 $('#cal-body').addEventListener('click', (e) => {
@@ -802,10 +1121,11 @@ $('#cal-body').addEventListener('click', (e) => {
 });
 $('#cal-detail').addEventListener('click', (e) => {
   if (e.target.closest('#btn-edit')) { cal.edit = !cal.edit; renderDetail(); return; }
+  if (e.target.closest('#btn-note')) { openJournal(cal.sel, 'note'); return; }
   const c = e.target.closest('.check'); if (!c || !cal.edit) return;
-  const id = c.closest('.row').dataset.id;
-  Store.setDone(cal.sel, id, !Store.isDone(cal.sel, id));
-  renderCalendar(); renderPrayers(true);
+  const id = c.closest('.row').dataset.id, key = cal.sel, on = !Store.isDone(key, id);
+  const name = Store.prayers().find((p) => p.id === id).name;
+  changeDay(key, () => Store.setDone(key, id, on), `${name} ${on ? 'marked' : 'unmarked'} for ${fmt(key, { month: 'short', day: 'numeric' })}`);
 });
 document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
   cal.mode = b.dataset.mode; cal.anchor = cal.sel || nowInfo().key; renderCalendar();
@@ -847,8 +1167,52 @@ function renderStats() {
     <div class="card stat"><div class="big-ico">${ICON.trophy}</div>
       <div><h3>Longest streak</h3><div class="val"><b>${s.longest}</b><span>${d(s.longest)}</span></div><div class="sub">All time</div></div></div>
     <div class="card stat"><div class="big-ico">${ICON.bars}</div>
-      <div><h3>Total prayers</h3><div class="val"><b>${s.total}</b></div><div class="sub">Since ${fmt(Store.data.meta.firstDay, { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div>`;
+      <div><h3>Total prayers</h3><div class="val"><b>${s.total}</b></div><div class="sub">Since ${fmt(Store.data.meta.firstDay, { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div>
+    <div class="card stat"><div class="big-ico">${ICON.calDays}</div>
+      <div><h3>Days prayed</h3><div class="val"><b>${s.daysPrayed}</b><span>${d(s.daysPrayed)}</span></div><div class="sub">Days with at least one prayer</div></div></div>
+    <button class="card stat" id="stat-answered" style="width:100%;text-align:left"><div class="big-ico">${ICON.dove}</div>
+      <div><h3>Answered prayers</h3><div class="val"><b>${s.answered}</b></div><div class="sub">${s.openInt ? `${s.openInt} still praying for · tap to open` : 'Tap to open your journal'}</div></div></button>
+    <div class="card pad" id="year-card"></div>`;
+  renderYear();
 }
+
+// Year view: one row per month, one square per day
+let statsYear = null;
+function renderYear() {
+  const today = nowInfo().key, n = Store.prayers().length;
+  const y = statsYear || +today.slice(0, 4);
+  const first = Store.data.meta.firstDay;
+  let full = 0, prayed = 0, html = '';
+  for (let m = 1; m <= 12; m++) {
+    const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    html += `<span class="ml">${fmt(`${y}-${String(m).padStart(2, '0')}-01`, { month: 'short' })}</span>`;
+    for (let d = 1; d <= 31; d++) {
+      if (d > dim) { html += '<i class="x"></i>'; continue; }
+      const k = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`, c = Store.count(k);
+      let cls = k > today ? 'future' : c === n ? 'full' : c > 0 ? 'partial' : (k < first || k === today) ? 'none' : 'missed';
+      if (c === n) full++; if (c > 0) prayed++;
+      html += `<i class="${cls}${k === today ? ' today' : ''}" data-key="${k}" title="${k}"></i>`;
+    }
+  }
+  const thisYear = +today.slice(0, 4);
+  $('#year-card').innerHTML = `
+    <div class="year-head">
+      <button class="arrow" id="yr-prev" aria-label="Previous year"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <b>${y}</b>
+      <button class="arrow" id="yr-next" aria-label="Next year" ${y >= thisYear ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="yr">${html}</div>
+    <div class="yr-legend"><span><i style="background:var(--accent)"></i>All 5</span><span><i style="background:color-mix(in srgb, var(--accent) 45%, var(--ring-track))"></i>Partial</span><span><i style="background:var(--missed-dot);opacity:.55"></i>Missed</span></div>
+    <div class="yr-sum">${prayed} ${prayed === 1 ? 'day' : 'days'} prayed · ${full} with all five</div>`;
+  $('#yr-prev').onclick = () => { statsYear = y - 1; renderYear(); };
+  $('#yr-next').onclick = () => { statsYear = Math.min(thisYear, y + 1); renderYear(); };
+}
+document.addEventListener('click', (e) => { if (e.target.closest('#stat-answered')) openJournal(nowInfo().key, 'int'); });
+// Tap a day in the year view to open it in the Calendar
+document.addEventListener('click', (e) => {
+  const i = e.target.closest('#year-card .yr i[data-key]'); if (!i || i.classList.contains('future')) return;
+  show('calendar'); cal.mode = 'month'; cal.anchor = i.dataset.key; cal.sel = i.dataset.key; renderCalendar();
+});
 
 /* =========================================================
    VIEW: SETTINGS
@@ -860,13 +1224,21 @@ function applyTheme() {
 }
 function renderSettings() {
   document.querySelectorAll('#theme-seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === Store.data.settings.theme));
-  $('#settings-times').innerHTML = Store.prayers().map((p) =>
-    `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
-     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`).join('');
+  const S = Store.data.settings, today = nowInfo().key, realSunset = sunsetTime(today);
+  $('#settings-times').innerHTML = Store.prayers().map((p) => {
+    if (p.id === 'sunset' && S.autoSunset && realSunset)
+      return `<div class="srow"><span class="label">${p.name}<small>Real sunset today</small></span><span class="value">${realSunset}</span></div>`;
+    return `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
+     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`;
+  }).join('') + `<div class="srow"><span class="label">Use real sunset time<small>${
+      realSunset ? `Today in ${S.location.name ? S.location.name.split(',')[0] : 'your location'}: ${realSunset}` : 'Set your location below first'}</small></span>
+     <button class="switch" role="switch" id="sw-sunset" aria-checked="${S.autoSunset}" ${realSunset || S.autoSunset ? '' : 'disabled'} aria-label="Use real sunset time"></button></div>`;
+  renderLocationSettings();
   $('#settings-notify').innerHTML = Store.prayers().map((p) =>
     `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
      <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('');
   $('#app-version').textContent = APP_VERSION;
+  $('#sw-verse').setAttribute('aria-checked', Store.data.settings.showVerse);
   renderNotifyStatus();
 }
 $('#theme-seg').addEventListener('click', (e) => {
@@ -884,6 +1256,53 @@ $('#settings-times').addEventListener('change', (e) => {
   Store.updatePrayer(inp.dataset.id, { time: inp.value });
   renderSettings(); renderPrayers(true); toast('Time saved');
 });
+$('#sw-verse').addEventListener('click', () => {
+  const S = Store.data.settings; S.showVerse = !S.showVerse; S.updatedAt = new Date().toISOString(); Store.save();
+  renderSettings(); renderPrayers(true);
+});
+$('#settings-times').addEventListener('click', (e) => {
+  if (!e.target.closest('#sw-sunset')) return;
+  const S = Store.data.settings; S.autoSunset = !S.autoSunset; S.updatedAt = new Date().toISOString(); Store.save();
+  renderSettings(); renderPrayers(true);
+  toast(S.autoSunset ? `Sunset now follows the real sunset (${sunsetTime(nowInfo().key)} today)` : `Sunset back to your set time (${Store.prayers().find((p) => p.id === 'sunset').time})`);
+});
+
+function renderLocationSettings() {
+  const L = Store.data.settings.location;
+  $('#settings-location').innerHTML = `
+    <button class="srow btnrow" id="loc-name"><span class="label">${L.name || 'Not set'}<small>Shown at the top · tap to rename</small></span><span class="value">${L.flag || ''}</span>${ICON.chev}</button>
+    <button class="srow btnrow" id="loc-gps"><span class="label">Use my current location<small>${L.lat != null ? 'Sunset position saved' : 'Needed for the real sunset time'}</small></span>${ICON.chev}</button>
+    <div class="srow"><span class="label">Time zone<small>Prayer times follow this clock</small></span><span class="value muted" style="font-size:15px">${L.tz.replace(/_/g, ' ')}</span></div>`;
+}
+const flagOf = (cc) => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map((c) => 0x1F1A5 + c.charCodeAt(0))) : '';
+function saveLocation(patch) {
+  const S = Store.data.settings; S.location = { ...S.location, ...patch }; S.updatedAt = new Date().toISOString();
+  Store.save(); setTZ(S.location.tz); renderLocation(); renderSettings(); renderAll();
+}
+$('#settings-location').addEventListener('click', (e) => {
+  if (e.target.closest('#loc-name')) {
+    const v = prompt('Place name shown at the top of the app (for example "Västerås, Sverige")', Store.data.settings.location.name || '');
+    if (v !== null) saveLocation({ name: v.trim() });
+  }
+  if (e.target.closest('#loc-gps')) {
+    if (!navigator.geolocation) { toast('Location isn’t available on this device.'); return; }
+    toast('Finding your location…');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = +pos.coords.latitude.toFixed(4), lon = +pos.coords.longitude.toFixed(4);
+      const patch = { lat, lon, tz: DEVICE_TZ };
+      // Look up the place name (optional; if it fails you can type it)
+      try {
+        const lang = (navigator.language || 'en').split('-')[0];
+        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`);
+        const j = await r.json(); const city = j.city || j.locality;
+        if (city) { patch.name = `${city}${j.countryName ? ', ' + j.countryName : ''}`; patch.flag = flagOf(j.countryCode); }
+      } catch (_) {}
+      saveLocation(patch);
+      toast(patch.name ? `Location set to ${patch.name}` : 'Location saved. Tap the name to type your place.');
+    }, () => toast('Couldn’t get your location. Allow it in iOS Settings › Privacy › Location Services.'), { timeout: 15000, maximumAge: 600000 });
+  }
+});
+
 $('#settings-notify').addEventListener('click', async (e) => {
   const sw = e.target.closest('.switch'); if (!sw) return;
   await toggleBell(sw.dataset.id);
@@ -946,7 +1365,7 @@ async function toggleBell(id) {
 function notificationText(p) {
   const key = nowInfo().key, n = Store.prayers().length, c = Store.count(key);
   return {
-    title: `It’s time for ${p.name} prayer 🇸🇪`,
+    title: `It’s time for ${p.name} prayer${Store.data.settings.location.flag ? ' ' + Store.data.settings.location.flag : ''}`,
     body: Store.isDone(key, p.id) ? `${c} of ${n} prayed – ${p.name} is already marked ✓` : `${c} of ${n} prayed – mark ${p.name} ✓`,
   };
 }
@@ -989,7 +1408,7 @@ function checkReminders() {
   for (const key of Object.keys(sent)) if (key !== now.key) delete sent[key];
   const list = sent[now.key] || (sent[now.key] = []);
   for (const p of Store.prayers()) {
-    const t = toMin(p.time);
+    const t = toMin(timeOf(p));
     // fire if within 3 minutes after the time and not sent yet today
     if (p.notify && now.min >= t && now.min < t + 3 && !list.includes(p.id) && !Store.isDone(now.key, p.id)) {
       list.push(p.id); Store.save(); showNotification(p);
@@ -1048,9 +1467,16 @@ document.querySelector('nav').addEventListener('click', (e) => {
 });
 
 let toastTimer;
-function toast(msg) {
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+function toast(msg, undo) {
+  const t = $('#toast');
+  t.innerHTML = ''; const span = document.createElement('span'); span.textContent = msg; t.appendChild(span);
+  if (undo) {
+    const b = document.createElement('button'); b.className = 'undo'; b.textContent = 'Undo';
+    b.onclick = () => { undo(); t.classList.remove('show'); clearTimeout(toastTimer); };
+    t.appendChild(b);
+  }
+  t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), undo ? 5000 : 2400);
 }
 
 let lastDayKey = null;
@@ -1062,6 +1488,7 @@ function tick() {
   } else {
     renderPrayers();
   }
+  updateCountdown();
   checkReminders();
 }
 function renderAll() {
@@ -1146,7 +1573,7 @@ let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => {
   const t = Date.now();
   // block double-tap zoom on non-interactive areas; buttons stay instant
-  if (t - lastTouchEnd < 320 && !e.target.closest('button, input, label, a')) e.preventDefault();
+  if (t - lastTouchEnd < 320 && !e.target.closest('button, input, label, a, textarea, #sheet')) e.preventDefault();
   lastTouchEnd = t;
 }, { passive: false });
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
@@ -1188,9 +1615,9 @@ function runSplash() {
 /* =========================================================
    START
    ========================================================= */
-$('#ico-palette').innerHTML = ICON.palette; $('#ico-clock').innerHTML = ICON.clock;
+$('#ico-palette').innerHTML = ICON.palette; $('#ico-book').innerHTML = ICON.book; $('#ico-clock').innerHTML = ICON.clock;
 $('#ico-bell').innerHTML = ICON.bell; $('#ico-pin').innerHTML = ICON.pin; $('#ico-gear').innerHTML = ICON.gear;
-Store.load(); Store.save(); applyTheme();
+Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); renderLocation();
 if (!restoreAfterRefresh()) runSplash();
 { const id = new URLSearchParams(location.search).get('prayer');
   if (id) { history.replaceState(null, '', location.pathname); focusPrayer(id); } }
