@@ -26,12 +26,18 @@
         h = window.innerHeight, ph = pr ? pr.getBoundingClientRect().height : 0,
         top = st ? st.getBoundingClientRect().height : 0;
     if (ph > 0) h = Math.max(ph, window.visualViewport ? Math.round(visualViewport.height) : 0);
-    // iOS bug (Home Screen apps with a see-through status bar): the app is drawn on the whole screen,
-    // but iOS reports a height that is short by exactly the status-bar height, which leaves a gap
-    // under the bottom bar. If the height is short by that amount, add it back.
-    var full = Math.max(screen.width, screen.height), portrait = window.innerWidth < window.innerHeight;
-    if (navigator.standalone && portrait && top > 0 && Math.abs(full - h - top) <= 3) h = full;
-    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    // iOS bug (Home Screen apps with a see-through status bar): iOS only shows the page down to a
+    // height that is short by exactly the status-bar height; the strip below it just shows the page
+    // background colour (set to the bottom bar's colour). So in that case we keep the bottom bar inside
+    // the visible area and drop its home-bar padding: the strip underneath already covers the home bar,
+    // and together they look like one bar reaching the bottom of the screen.
+    var full = Math.max(screen.width, screen.height), portrait = window.innerWidth < window.innerHeight,
+        sb = document.getElementById('sb-probe'), safeB = sb ? sb.getBoundingClientRect().height : 0,
+        root = document.documentElement.style;
+    if (navigator.standalone && portrait && top > 0 && Math.abs(full - h - top) <= 3)
+      root.setProperty('--safe-bottom', Math.max(0, safeB - (full - h)) + 'px');
+    else root.removeProperty('--safe-bottom');
+    root.setProperty('--app-h', Math.round(h) + 'px');
   };
   appHeight();
   // Apply the saved appearance before the page paints (no flash of the wrong theme)
@@ -577,6 +583,7 @@
 <body class="fit">
 <div id="vh-probe" style="position:fixed;top:0;bottom:0;left:0;width:1px;visibility:hidden;pointer-events:none"></div>
 <div id="st-probe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
+<div id="sb-probe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none"></div>
 <div id="lvh-probe" style="position:fixed;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <div class="statusbar"></div>
 
@@ -765,7 +772,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1497,6 +1504,9 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.7.2', date: '2026-10-02', items: [
+    'Fixed: the labels under the bottom bar icons were cut off. The bar still reaches the bottom of the screen.',
+  ] },
   { v: '1.7.1', date: '2026-10-02', items: [
     'Fixed: on some iPhones the bottom bar sat too high, leaving a gap under it. It now reaches the bottom of the screen.',
     '“All reminders” now has its own box, separate from each prayer’s reminder.',
@@ -1680,7 +1690,7 @@ $('#ver-row').onclick = () => {
   const nav = document.querySelector('nav').getBoundingClientRect();
   openSheet(`${sheetHead('Screen check')}<p class="wl-small" style="margin-top:0">If the bottom bar ever doesn’t sit at the bottom of the screen, send a screenshot of this.</p>
     <div class="note" style="border-top:0;font-variant-numeric:tabular-nums;line-height:1.7">
-    Version: <b>${APP_VERSION}</b><br>Status bar: <b>${probe('#st-probe')}</b><br>Screen size: <b>${screen.width} × ${screen.height}</b><br>Window height: <b>${innerHeight}</b><br>
+    Version: <b>${APP_VERSION}</b><br>Status bar: <b>${probe('#st-probe')}</b> · home bar: <b>${probe('#sb-probe')}</b> (used: <b>${cs.getPropertyValue('--safe-bottom').trim()}</b>)<br>Screen size: <b>${screen.width} × ${screen.height}</b><br>Window height: <b>${innerHeight}</b><br>
     Visible area: <b>${window.visualViewport ? px(visualViewport.height) : '–'}</b><br>Pinned strip: <b>${probe('#vh-probe')}</b> · large: <b>${probe('#lvh-probe')}</b><br>
     App height used: <b>${cs.getPropertyValue('--app-h').trim()}</b><br>Bottom bar ends at: <b>${px(nav.bottom)}</b><br>
     Home Screen app: <b>${isStandalone ? 'yes' : 'no'}</b></div>`);
