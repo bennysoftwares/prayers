@@ -171,6 +171,18 @@
     background: linear-gradient(180deg, rgba(13,10,7,.62) 0%, rgba(0,0,0,.22) 14%, rgba(0,0,0,.05) 34%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
   }
   .hero-text { position: absolute; left: 20px; right: 20px; bottom: 42px; z-index: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
+  /* Day arrows on the Prayers page (on the location line, right side) */
+  .daynav { position: absolute; right: 18px; bottom: 36px; z-index: 2; display: flex; align-items: center; gap: 8px; }
+  body.off-prayers .daynav { display: none; }
+  .daynav button { height: 36px; display: grid; place-items: center; color: #fff; border-radius: 999px; transition: opacity .2s, transform .1s; }
+  .daynav button:active { transform: scale(.94); }
+  .dn-arrow { width: 36px; background: rgba(20,14,8,.38); border: 1px solid rgba(255,255,255,.28); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .dn-arrow svg { width: 19px; height: 19px; }
+  .dn-arrow:disabled { opacity: .35; }
+  .dn-today { padding: 0 14px; font-size: calc(15px * var(--fs)); font-weight: 700; color: #1A1206 !important; background: #F5BF4F; }
+  .dn-today[hidden] { display: none; }
+  .verse.future { cursor: default; }
+  .verse.future .vt { font-style: normal; color: var(--ink-dim); }
   .hero-text h1 { margin: 0; font-size: calc(36px * var(--fs)); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
   .hero-text p { margin: 6px 0 0; font-size: calc(18px * var(--fs)); opacity: .95; }
 
@@ -274,7 +286,12 @@
     animation: trace 3.2s linear infinite;
   }
   @keyframes trace { to { --a: 360deg; } }
-  @media (prefers-reduced-motion: reduce) { .row.now::after { animation: none; background: var(--gold); } }
+  @media (prefers-reduced-motion: reduce) {
+    .row.now::after { animation: none; background: var(--gold); }
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .05s !important; }
+    .spark { display: none !important; }
+    #ptr .spin { animation: none !important; }
+  }
   .row.pulse { animation: pulse 1.6s ease 2; }
   @keyframes pulse { 0%, 100% { box-shadow: none; } 40% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 24px rgba(245,191,79,.45); } }
   .badge { font: 700 calc(11px * var(--fs))/1 -apple-system, system-ui, sans-serif; letter-spacing: .05em; background: var(--gold); color: #1A1206; padding: 4px 6px; border-radius: 4px; flex: none; }
@@ -530,6 +547,23 @@
   .wl-list li span.i { width: 30px; height: 30px; color: var(--icon); flex: none; }
   .wl-list li span.i svg { width: 100%; height: 100%; }
   .btn-main { display: block; width: 100%; padding: 15px; border-radius: 14px; background: var(--gold); color: #1A1206; font-weight: 700; font-size: calc(17px * var(--fs)); text-align: center; margin-top: 10px; }
+  .help details { border-bottom: 1px solid var(--divider); }
+  .help summary { list-style: none; cursor: pointer; padding: 13px 26px 13px 0; position: relative; font-size: calc(17px * var(--fs)); color: var(--ink-strong); font-weight: 600; }
+  .help summary::-webkit-details-marker { display: none; }
+  .help summary::after { content: ''; position: absolute; right: 6px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--ink-dim); border-bottom: 2px solid var(--ink-dim); transform: translateY(-70%) rotate(45deg); transition: transform .2s; }
+  .help details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
+  .help p { margin: 0 0 14px; font-size: calc(15.5px * var(--fs)); line-height: 1.45; color: var(--ink); }
+  /* Place picker */
+  .pl-results { margin: 8px 0 2px; }
+  .pl-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 4px; border-bottom: 1px solid var(--divider); }
+  .pl-flag { font-size: 24px; width: 30px; text-align: center; flex: none; }
+  .pl-txt b { display: block; font-size: calc(17px * var(--fs)); color: var(--ink-strong); font-weight: 600; }
+  .pl-txt small { display: block; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
+  #pl-gps { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #pl-gps svg { width: 18px; height: 18px; }
+  .pl-manual { margin-top: 14px; }
+  .pl-manual summary { color: var(--ink-dim); font-size: calc(15px * var(--fs)); padding: 6px 0; cursor: pointer; }
+  .pl-manual select { margin-top: 6px; }
   .btn-alt { display: block; width: 100%; padding: 13px; border-radius: 14px; border: 1.5px solid var(--gold); color: var(--gold-text); font-weight: 600; font-size: calc(16px * var(--fs)); text-align: center; margin-top: 10px; }
   .wl-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
   .wl-nav button { color: var(--ink-dim); font-size: calc(16px * var(--fs)); padding: 8px 2px; }
@@ -622,6 +656,11 @@
     <h1 id="page-title">Today</h1>
     <p id="loc-line"></p>
   </div>
+  <div class="daynav" id="daynav">
+    <button class="dn-today" id="dn-today" hidden>Today</button>
+    <button class="dn-arrow" id="dn-prev" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="dn-arrow" id="dn-next" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
 </header>
 
 <main>
@@ -631,7 +670,7 @@
       <div class="summary">
         <div class="ring-wrap" id="today-ring"></div>
         <div class="sum-text">
-          <div class="sum-head"><h2>Today’s prayers</h2></div>
+          <div class="sum-head"><h2 id="sum-title">Today’s prayers</h2></div>
           <p id="sum-line">Keep going. All glory to God.</p>
           <button class="mark-btn" id="btn-mark" aria-pressed="false">
             <span class="mb-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -756,6 +795,7 @@
       <div class="s-ico" id="ico-gear"></div>
       <div>
         <div class="s-head"><div><h3>App</h3><p>Version, data and other options</p></div></div>
+        <button class="srow btnrow" id="help-row"><span class="label">Help &amp; about<small>How the app works, and your privacy</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="ver-row"><span class="label">Version</span><span class="value" id="app-version"></span></button>
         <button class="srow btnrow" id="btn-export"><span class="label">Export backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="btn-import"><span class="label">Import backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -793,12 +833,13 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.10.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
 const defaultLocation = () => DEVICE_TZ === 'Europe/Stockholm' ? { ...VASTERAS } : { name: '', flag: '', tz: DEVICE_TZ, lat: null, lon: null };
 let TZ = 'Europe/Stockholm';
+let viewDay = null;   // Prayers page: the day being looked at (null = today)
 const STORAGE_KEY = 'prayerTracker.v1';
 const DEFAULT_PRAYERS = [
   { id: 'morning',   name: 'Morning',   time: '06:00', notify: false },
@@ -1027,7 +1068,13 @@ function verseFor(key) {
 function renderVerse() {
   const el = $('#verse-strip'), on = Store.data.settings.showVerse;
   el.style.display = on ? '' : 'none'; if (!on) return;
-  const v = verseFor(nowInfo().key);
+  const k = dayKey(), future = k > nowInfo().key;
+  el.classList.toggle('future', future);
+  if (future) {                                   // a future day's verse stays a surprise until that day
+    el.querySelector('.vt').textContent = `🕊 A new verse awaits you on ${fmt(k, { weekday: 'long' })}.`;
+    el.querySelector('.vr').textContent = ''; return;
+  }
+  const v = verseFor(k);
   el.querySelector('.vt').textContent = v.text; el.querySelector('.vr').textContent = v.ref;
 }
 
@@ -1049,11 +1096,12 @@ const sheetHead = (title) => `<div class="sh-head"><h3>${title}</h3><button clas
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
-const shareBtn = () => `<button class="share-btn" data-share>${SHARE_ICON}Share verse</button>`;
+const shareBtn = (k = '') => `<button class="share-btn" data-share="${k}">${SHARE_ICON}Share verse</button>`;
 $('#verse-strip').addEventListener('click', () => {
-  const v = verseFor(nowInfo().key);
+  const k = dayKey(); if (k > nowInfo().key) return;
+  const v = verseFor(k);
   openSheet(`${sheetHead('Verse of the day')}<p class="full-verse">“${esc(v.text)}”</p>
-    <div class="full-ref">${esc(v.ref)}<small>World English Bible · ${fmt(nowInfo().key, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>${shareBtn()}`);
+    <div class="full-ref">${esc(v.ref)}<small>World English Bible · ${fmt(k, { weekday: 'long', month: 'long', day: 'numeric' })}</small></div>${shareBtn(k)}`);
 });
 // Picture of the verse on the sunset photo, shared through the iPhone share sheet.
 // Built synchronously inside the tap so iOS allows the share sheet to open.
@@ -1088,8 +1136,8 @@ function verseImage(v) {
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new File([arr], 'verse-of-the-day.jpg', { type: 'image/jpeg' });
 }
-function shareVerse() {
-  const v = verseFor(nowInfo().key), file = verseImage(v);
+function shareVerse(k) {
+  const v = verseFor(k || nowInfo().key), file = verseImage(v);
   const text = `“${v.text}” ${v.ref}`;
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({ files: [file], text }).catch(() => {});
@@ -1099,7 +1147,7 @@ function shareVerse() {
       <p class="wl-small">Press and hold the picture to save or share it.</p>`);
   }
 }
-document.addEventListener('click', (e) => { if (e.target.closest('[data-share]')) shareVerse(); });
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (b) shareVerse(b.dataset.share); });
 
 /* ===== Journal: notes per day + prayer intentions =====
    The Journal tab holds everything; a small pop-up is used to write a note for another day. */
@@ -1232,7 +1280,7 @@ function renderLocation() {
 function setTitle() {
   const now = nowInfo();
   $('#page-title').textContent = {
-    prayers: 'Today, ' + fmt(now.key, { month: 'long', day: 'numeric' }),
+    prayers: dayLabel(dayKey()),
     calendar: fmt(cal.anchor || now.key, { month: 'long', year: 'numeric' }),
     journal: 'Journal',
     stats: 'Statistics',
@@ -1246,7 +1294,8 @@ function notYet(key, p) {
   return !Store.isDone(key, p.id) && (key > now.key || (key === now.key && toMin(timeOf(p, key)) > now.min));
 }
 function notYetToast(key, p) {
-  toast(key === nowInfo().key ? `${p.name} prayer is at ${timeOf(p, key)}. You can mark it then.` : 'You can’t mark a day that hasn’t come yet.');
+  toast(key === nowInfo().key ? `${p.name} prayer is at ${timeOf(p, key)}. You can mark it then.`
+    : `This day hasn’t come yet. You can mark ${p.name} on ${fmt(key, { weekday: 'long' })} at ${timeOf(p, key)}.`);
 }
 function currentPrayerId(min) {
   // whichever prayer's time most recently passed today (none before the first one)
@@ -1258,35 +1307,76 @@ function currentPrayerId(min) {
   return best ? best.id : null;
 }
 
+const dayKey = () => viewDay || nowInfo().key;
+const DAYS_AHEAD = 30;
+function dayLimits() {
+  const today = nowInfo().key, first = Store.data.meta.firstDay || addDays(today, -365);
+  return { min: first < today ? first : today, max: addDays(today, DAYS_AHEAD), today };
+}
+function goDay(key) {
+  const L = dayLimits();
+  if (key < L.min || key > L.max) return;
+  viewDay = key === L.today ? null : key;
+  renderPrayers(true); $('#scroller').scrollTop = 0;
+}
+function renderDayNav() {
+  const L = dayLimits(), k = dayKey();
+  $('#dn-prev').disabled = k <= L.min; $('#dn-next').disabled = k >= L.max;
+  $('#dn-today').hidden = k === L.today;
+}
+$('#dn-prev').onclick = () => goDay(addDays(dayKey(), -1));
+$('#dn-next').onclick = () => goDay(addDays(dayKey(), 1));
+$('#dn-today').onclick = () => goDay(nowInfo().key);
+// Coming back to the app after a while: show today again
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (viewDay && Date.now() - hiddenAt > 10 * 60000) goDay(nowInfo().key);
+});
+function dayLabel(k) {
+  const today = nowInfo().key, md = fmt(k, { month: 'long', day: 'numeric' });
+  if (k === today) return 'Today, ' + md;
+  if (k === addDays(today, -1)) return 'Yesterday, ' + md;
+  if (k === addDays(today, 1)) return 'Tomorrow, ' + md;
+  return fmt(k, { weekday: 'long' }) + ', ' + fmt(k, { month: 'short', day: 'numeric' });
+}
 function renderPrayers(force) {
-  const now = nowInfo();
-  const nowId = currentPrayerId(now.min);
-  const sig = JSON.stringify([now.key, nowId, Store.day(now.key).done, Store.prayers(), Store.data.settings.autoSunset, Store.data.settings.location, Store.data.settings.showVerse, !!Store.data.notes[now.key]]);
+  const now = nowInfo(), today = now.key;
+  if (viewDay && viewDay === today) viewDay = null;           // the day being viewed has become today
+  const key = dayKey(), isToday = key === today;
+  const nowId = isToday ? currentPrayerId(now.min) : null;
+  const sig = JSON.stringify([today, key, nowId, Store.day(key).done, Store.prayers(), Store.data.settings.autoSunset, Store.data.settings.location, Store.data.settings.showVerse, !!Store.data.notes[today]]);
   if (!force && sig === lastSig) return;
   lastSig = sig;
   if (currentView === 'prayers') setTitle();
+  renderDayNav();
   renderVerse();
 
-  const c = Store.count(now.key), n = Store.prayers().length;
+  const c = Store.count(key), n = Store.prayers().length, wd = fmt(key, { weekday: 'long' });
+  $('#today-ring').setAttribute('role', 'img'); $('#today-ring').setAttribute('aria-label', `${c} of ${n} prayers completed`);
   $('#today-ring').innerHTML = ring(c / n, 7) +
     `<div class="num"><b>${c} <span>/ ${n}</span></b><small>completed</small></div>`;
-  $('#sum-line').textContent = c === n ? `All ${n === 5 ? 'five' : n} prayed. All glory to God.` : 'Keep going. All glory to God.';
-  // "Mark previous" box: ticked only when every prayer time that has passed today is marked
+  $('#sum-title').textContent = isToday ? 'Today’s prayers' : `${wd}’s prayers`;
+  $('#sum-line').textContent = key > today ? 'This day hasn’t come yet. Here are its prayer times.'
+    : !isToday ? (c === n ? `All ${n === 5 ? 'five' : n} prayed. All glory to God.` : 'Tap a prayer to add or remove a tick.')
+    : c === n ? `All ${n === 5 ? 'five' : n} prayed. All glory to God.` : 'Keep going. All glory to God.';
+  // "Mark previous" box (today only): ticked only when every prayer time that has passed today is marked
+  $('#btn-mark').style.display = isToday ? '' : 'none';
   const due = Store.prayers().filter((p) => toMin(timeOf(p)) <= now.min);
-  const allPastDone = due.length > 0 && due.every((p) => Store.isDone(now.key, p.id));
+  const allPastDone = due.length > 0 && due.every((p) => Store.isDone(today, p.id));
   $('#btn-mark').classList.toggle('on', allPastDone);
   $('#btn-mark').setAttribute('aria-pressed', allPastDone);
 
   const list = $('#prayer-list');
   list.classList.toggle('has-now', !!nowId);
   list.innerHTML = Store.prayers().map((p) => {
-    const done = Store.isDone(now.key, p.id);
-    return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(now.key, p) ? ' later' : ''}" data-id="${p.id}">
+    const done = Store.isDone(key, p.id);
+    return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(key, p) ? ' later' : ''}" data-id="${p.id}">
       <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
-      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" data-act="toggle">${ICON.check}</button>
+      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
       <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
-      <span class="time">${timeOf(p)}</span>
+      <span class="time" aria-label="at ${timeOf(p, key)}">${timeOf(p, key)}</span>
       <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
@@ -1297,6 +1387,7 @@ function renderPrayers(force) {
 function updateCountdown() {
   const list = $('#prayer-list'); if (!list) return;
   list.querySelectorAll('.cd').forEach((el) => { el.textContent = ''; });
+  if (viewDay) return;                                        // only on today
   const nx = nextPrayer(), nowRow = list.querySelector('.row.now .cd');
   if (nowRow) nowRow.textContent = `Next: ${nx.p.name} in ${fmtMins(nx.mins)}`;
   else { const r = list.querySelector(`.row[data-id="${nx.p.id}"] .cd`); if (r) r.textContent = `Begins in ${fmtMins(nx.mins)}`; }
@@ -1330,9 +1421,10 @@ $('#prayer-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const id = btn.closest('.row').dataset.id;
   if (btn.dataset.act === 'toggle') {
-    const key = nowInfo().key, on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
+    const key = dayKey(), on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
     if (notYet(key, pr)) { notYetToast(key, pr); renderPrayers(true); return; }
-    changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed` : `${name} unmarked`);
+    const when = key === nowInfo().key ? '' : ` for ${fmt(key, { weekday: 'long' })}`;
+    changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed${when}` : `${name} unmarked${when}`);
   } else {
     await toggleBell(id);
   }
@@ -1379,7 +1471,7 @@ function renderCalendar() {
     html = '<div class="week">';
     for (let i = 0; i < 7; i++) {
       const k = addDays(start, i), { c, st } = dayState(k, today);
-      html += `<button class="wday ${st}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}${Store.data.notes[k] ? ' note' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>
+      html += `<button class="wday ${st}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}${Store.data.notes[k] ? ' note' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''} aria-label="${fmt(k, { weekday: 'long', month: 'long', day: 'numeric' })}: ${c} of ${n} prayed${Store.data.notes[k] ? ', has a note' : ''}">
         <span class="d1">${fmt(k, { weekday: 'short' })}</span><span class="d2">${fmt(k, { day: 'numeric' })}</span>${ring(c / n, 13, st === 'future')}</button>`;
     }
     html += '</div>';
@@ -1397,7 +1489,7 @@ function renderCalendar() {
       const k = addDays(start, i), { c, st } = dayState(k, today);
       const out = k.slice(0, 7) !== first.slice(0, 7);
       const mark = !out && c > 0 ? `<svg class="mr" viewBox="0 0 100 100">${ring(c / n, 8).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : '';
-      html += `<button class="mday ${st}${out ? ' out' : ''}${Store.data.notes[k] ? ' note' : ''}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''}>${mark}<span>${fmt(k, { day: 'numeric' })}</span>${!out && Store.data.notes[k] ? '<i class="nd"></i>' : ''}</button>`;
+      html += `<button class="mday ${st}${out ? ' out' : ''}${Store.data.notes[k] ? ' note' : ''}${k === today ? ' today' : ''}${k === cal.sel ? ' sel' : ''}" data-key="${k}" ${st === 'future' ? 'disabled' : ''} aria-label="${fmt(k, { month: 'long', day: 'numeric' })}: ${c} of ${n} prayed${Store.data.notes[k] ? ', has a note' : ''}">${mark}<span>${fmt(k, { day: 'numeric' })}</span>${!out && Store.data.notes[k] ? '<i class="nd"></i>' : ''}</button>`;
     }
     html += '</div>';
   }
@@ -1535,6 +1627,19 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.10.0', date: '2026-10-04', items: [
+    'Location: search for any city (or use your current location). The place now sets the time zone, flag and real sunset for you. You can still pick a time zone by hand.',
+    'Travelling? If your phone is in another time zone, the app asks whether to switch.',
+    'Faster opening: the full splash plays once a day, after that a quick fade. Tap to skip it, and opening from a reminder goes straight to the prayer.',
+    'New: Help & about in Settings › App.',
+    'Calmer animations when “Reduce Motion” is on, and better VoiceOver descriptions.',
+    'The welcome screen for new users mentions the newer features.',
+  ] },
+  { v: '1.9.0', date: '2026-10-04', items: [
+    'New: arrows on the Prayers page to go back or forward a day. Go back to the day you started (to fix missed ticks) or up to 30 days ahead (to see prayer times).',
+    'Future days can be viewed but not ticked, and their verse stays a surprise until the day comes.',
+    'Tap “Today” (or the Prayers tab) to jump back to today. The app also returns to today when you come back after a while.',
+  ] },
   { v: '1.8.2', date: '2026-10-02', items: [
     'Prayers can’t be marked before their time. Later prayers show a faded box until their time comes.',
     'The test notification now arrives within seconds instead of up to a minute.',
@@ -1682,10 +1787,14 @@ $('#settings-times').addEventListener('click', (e) => {
 function renderLocationSettings() {
   const L = Store.data.settings.location;
   $('#settings-location').innerHTML = `
-    <button class="srow btnrow" id="loc-name"><span class="label">${L.name || 'Not set'}<small>Shown at the top · tap to rename</small></span><span class="value">${L.flag || ''}</span>${ICON.chev}</button>
-    <button class="srow btnrow" id="loc-gps"><span class="label">Use my current location<small>${L.lat != null ? 'Sunset position saved' : 'Needed for the real sunset time'}</small></span>${ICON.chev}</button>
-    <div class="srow"><span class="label">Time zone<small>Prayer times follow this clock</small></span><span class="value muted" style="font-size:calc(15px * var(--fs))">${L.tz.replace(/_/g, ' ')}</span></div>`;
+    <button class="srow btnrow" id="loc-pick"><span class="label">${L.flag ? L.flag + ' ' : ''}${esc(L.name || 'Not set')}<small>Tap to change your place</small></span>${ICON.chev}</button>
+    <div class="srow"><span class="label">Time zone<small>Prayer times and reminders follow this clock · now ${clockIn(L.tz)}</small></span><span class="value muted" style="font-size:calc(15px * var(--fs))">${esc(tzCity(L.tz))}</span></div>
+    <button class="srow btnrow" id="loc-name"><span class="label">Rename<small>Change the name shown at the top</small></span>${ICON.chev}</button>`;
 }
+// "Europe/Stockholm" → "Stockholm", and the current time on that clock
+const tzCity = (tz) => (tz || '').split('/').pop().replace(/_/g, ' ');
+const clockIn = (tz) => { try { return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()); } catch (_) { return ''; } };
+const phoneTZ = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } };
 const flagOf = (cc) => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map((c) => 0x1F1A5 + c.charCodeAt(0))) : '';
 function saveLocation(patch) {
   const S = Store.data.settings; S.location = { ...S.location, ...patch }; S.updatedAt = new Date().toISOString();
@@ -1693,17 +1802,17 @@ function saveLocation(patch) {
 }
 $('#settings-location').addEventListener('click', (e) => {
   if (e.target.closest('#loc-name')) {
-    const v = prompt('Place name shown at the top of the app (for example "Västerås, Sverige")', Store.data.settings.location.name || '');
+    const v = prompt('Name shown at the top of the app (for example "Västerås, Sverige")', Store.data.settings.location.name || '');
     if (v !== null) saveLocation({ name: v.trim() });
   }
-  if (e.target.closest('#loc-gps')) useMyLocation();
+  if (e.target.closest('#loc-pick')) openPlacePicker();
 });
 function useMyLocation(done) {
     if (!navigator.geolocation) { toast('Location isn’t available on this device.'); return; }
     toast('Finding your location…');
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const lat = +pos.coords.latitude.toFixed(4), lon = +pos.coords.longitude.toFixed(4);
-      const patch = { lat, lon, tz: DEVICE_TZ };
+      const patch = { lat, lon, tz: phoneTZ(), name: '', flag: '' };
       // Look up the place name (optional; if it fails you can type it)
       try {
         const lang = (navigator.language || 'en').split('-')[0];
@@ -1716,6 +1825,91 @@ function useMyLocation(done) {
       if (done) done();
     }, () => toast('Couldn’t get your location. Allow it in iOS Settings › Privacy › Location Services.'), { timeout: 15000, maximumAge: 600000 });
 }
+
+/* ----- Place picker: search a city (sets name, flag, time zone and sunset position), use GPS, or pick a time zone ----- */
+let placeDone = null, placeTimer = null, placeSeq = 0;
+function openPlacePicker(done) {
+  placeDone = done || null;
+  let zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch (_) {}
+  if (!zones.length) zones = ['Europe/Stockholm', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Asia/Dubai', 'Asia/Tokyo', 'Australia/Sydney'];
+  const cur = Store.data.settings.location.tz;
+  openSheet(`${sheetHead('Choose your place')}
+    <p class="wl-small" style="margin-top:0">Your prayer times, reminders and the real sunset follow this place.</p>
+    <input class="j-input" id="pl-q" type="search" placeholder="Search a city, e.g. London" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Search a city">
+    <div class="pl-results" id="pl-results" aria-live="polite"></div>
+    <button class="btn-alt" id="pl-gps">${ICON.pin}<span>Use my current location</span></button>
+    <details class="pl-manual"><summary>Or choose a time zone</summary>
+      <select class="j-input" id="pl-tz" aria-label="Time zone">${zones.map((z) => `<option value="${z}"${z === cur ? ' selected' : ''}>${z.replace(/_/g, ' ')}</option>`).join('')}</select>
+      <button class="btn-alt" id="pl-tz-go">Use this time zone</button>
+      <p class="wl-small">Without a city, the real sunset time isn’t available.</p></details>`);
+  setTimeout(() => $('#pl-q')?.focus(), 250);
+}
+function placeChosen(patch, msg) {
+  saveLocation(patch); closeSheet(); toast(msg);
+  try { localStorage.removeItem(TZ_ASK_KEY); } catch (_) {}
+  if (placeDone) { const d = placeDone; placeDone = null; d(); }
+}
+async function searchPlaces(q) {
+  const seq = ++placeSeq, box = $('#pl-results'); if (!box) return;
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = '<p class="wl-small">Searching…</p>';
+  try {
+    const lang = (navigator.language || 'en').split('-')[0];
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=${lang}&format=json`);
+    const j = await r.json(); if (seq !== placeSeq || !$('#pl-results')) return;
+    const list = (j.results || []).filter((x) => x.timezone);
+    box._list = list;
+    box.innerHTML = list.length ? list.map((x, i) => `<button class="pl-row" data-i="${i}"><span class="pl-flag">${flagOf(x.country_code) || '📍'}</span>
+      <span class="pl-txt"><b>${esc(x.name)}</b><small>${esc([x.admin1, x.country].filter(Boolean).join(', '))} · ${clockIn(x.timezone)} now</small></span></button>`).join('')
+      : '<p class="wl-small">No places found. Try another spelling, or a bigger city nearby.</p>';
+  } catch (_) {
+    if (seq === placeSeq && $('#pl-results')) $('#pl-results').innerHTML = '<p class="wl-small">Couldn’t search right now. Check your internet, or use your current location.</p>';
+  }
+}
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'pl-q') return;
+  clearTimeout(placeTimer); const q = e.target.value.trim();
+  placeTimer = setTimeout(() => searchPlaces(q), 350);
+});
+document.addEventListener('click', (e) => {
+  const row = e.target.closest('.pl-row');
+  if (row) {
+    const x = $('#pl-results')._list[+row.dataset.i];
+    placeChosen({ name: `${x.name}${x.country ? ', ' + x.country : ''}`, flag: flagOf(x.country_code), tz: x.timezone, lat: +x.latitude.toFixed(4), lon: +x.longitude.toFixed(4) },
+      `Location set to ${x.name}. Prayer times now follow ${x.name} time.`);
+  }
+  if (e.target.closest('#pl-gps')) { const d = placeDone; placeDone = null; closeSheet(); useMyLocation(d); }
+  if (e.target.closest('#pl-tz-go')) {
+    const tz = $('#pl-tz').value;
+    placeChosen({ name: tzCity(tz), flag: '', tz, lat: null, lon: null }, `Time zone set to ${tzCity(tz)}.`);
+  }
+});
+
+/* ----- Travelling: the phone is in another time zone than the app's place ----- */
+const TZ_ASK_KEY = 'prayerTracker.tzAsked';   // this phone's answer ("keep") for a given time zone
+function checkTravel() {
+  if (!Store.data.meta.onboarded || $('#splash') || $('#sheet').classList.contains('open') || $('#welcome').style.display !== 'none') return;
+  const dev = phoneTZ(), L = Store.data.settings.location;
+  if (!dev || dev === L.tz || clockIn(dev) === clockIn(L.tz)) return;   // same clock time: nothing to do
+  let asked = null; try { asked = localStorage.getItem(TZ_ASK_KEY); } catch (_) {}
+  if (asked === dev + '|' + L.tz) return;
+  const here = tzCity(dev), there = L.name ? L.name.split(',')[0] : tzCity(L.tz);
+  openSheet(`${sheetHead('Are you travelling?')}
+    <p class="lead" style="font-size:calc(17px * var(--fs));line-height:1.45;margin-top:0">Your phone is on <b>${esc(here)}</b> time (${clockIn(dev)}), but the app follows <b>${esc(there)}</b> (${clockIn(L.tz)}). Prayer times and reminders use the app’s place.</p>
+    <button class="btn-main" id="tv-gps">Use my current location</button>
+    <button class="btn-alt" id="tv-tz">Switch to ${esc(here)} time</button>
+    <button class="btn-alt" id="tv-keep">Keep ${esc(there)}</button>`);
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#tv-gps')) { closeSheet(); useMyLocation(); }
+  if (e.target.closest('#tv-tz')) { const tz = phoneTZ(); placeChosen({ name: tzCity(tz), flag: '', tz, lat: null, lon: null }, `Now following ${tzCity(tz)} time.`); }
+  if (e.target.closest('#tv-keep')) {
+    try { localStorage.setItem(TZ_ASK_KEY, phoneTZ() + '|' + Store.data.settings.location.tz); } catch (_) {}
+    closeSheet(); toast('Keeping your saved place. You can change it any time in Settings › Location.');
+  }
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkTravel, 800); });
 
 $('#settings-notify').addEventListener('click', async (e) => {
   const sw = e.target.closest('.switch'); if (!sw) return;
@@ -1730,6 +1924,21 @@ $('#settings-notify').addEventListener('click', async (e) => {
   }
   await toggleBell(sw.dataset.id);
 });
+// Help & about: short answers, opened from Settings › App
+const HELP = [
+  ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
+  ['Ticking your prayers', 'Tap the box next to a prayer when you’ve prayed. A prayer can’t be ticked before its time; later prayers show a faded box until then. Made a mistake? Tap Undo in the message at the bottom.'],
+  ['Other days', 'Use the ‹ › arrows at the top of the Prayers page to go back (to fix a missed tick) or up to 30 days ahead (to see prayer times). Tap “Today” or the Prayers tab to come back. Future days keep their verse a surprise.'],
+  ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
+  ['Your place and time zone', 'Prayer times and reminders follow the place in Settings › Location. Search a city or use your current location. When you travel, the app asks whether to switch.'],
+  ['Account and sync', 'An account keeps your prayers, notes and intentions safe and the same on every device. Changes sync by themselves; “Sync now” does it straight away.'],
+  ['Your privacy', 'Your prayers, notes, intentions and email are stored on this phone and, with an account, in the app’s database. Other users can never see them. The person who runs this app can technically see the database, as with any app. Nothing is sold or shared, and there are no ads or trackers.'],
+  ['Backups', 'Settings › App › Export backup saves everything as a file you can keep. Import backup brings it back.'],
+];
+$('#help-row').onclick = () => {
+  openSheet(`${sheetHead('Help &amp; about')}<div class="help">${HELP.map(([q, a], i) => `<details${i === 0 ? '' : ''}><summary>${q}</summary><p>${a}</p></details>`).join('')}</div>
+    <p class="wl-small" style="text-align:center;margin-top:14px">Prayers ${APP_VERSION} · Bible verses: World English Bible (public domain)<br>Made with love. All glory to God.</p>`);
+};
 $('#ver-row').onclick = () => {
   const px = (v) => Math.round(v), cs = getComputedStyle(document.documentElement), probe = (id) => px($(id).getBoundingClientRect().height);
   const nav = document.querySelector('nav').getBoundingClientRect();
@@ -1903,7 +2112,9 @@ $('#file-import').onchange = async (e) => {
 let currentView = 'prayers';
 function show(view) {
   const jt = $('#jp-text'); if (jt && currentView === 'journal') { clearTimeout(notePageTimer); saveNote(nowInfo().key, jt.value); }
+  if (view === 'prayers' && currentView === 'prayers') viewDay = null;   // tap Prayers again → today
   currentView = view;
+  document.body.classList.toggle('off-prayers', view !== 'prayers');
   document.body.classList.toggle('fit', view === 'prayers'); // Prayers page: one screen, no scrolling
   document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
@@ -1998,7 +2209,7 @@ function renderAll() {
     // remember exactly where you were, so the reloaded app opens on the same screen
     try {
       sessionStorage.setItem('ptr-state', JSON.stringify({
-        view: currentView, scroll: sc.scrollTop, cal: { mode: cal.mode, anchor: cal.anchor, sel: cal.sel } }));
+        view: currentView, scroll: sc.scrollTop, day: viewDay, cal: { mode: cal.mode, anchor: cal.anchor, sel: cal.sel } }));
     } catch (_) {}
     const wait = new Promise((r) => setTimeout(r, 900));          // let the spinner be seen
     const upd = navigator.serviceWorker?.getRegistration?.().then((r) => r && r.update()).catch(() => {});
@@ -2014,6 +2225,7 @@ function restoreAfterRefresh() {
   if (!st) return false;
   $('#splash')?.remove();
   if (st.cal) { cal.mode = st.cal.mode || 'week'; }
+  if (st.day && st.day !== nowInfo().key) viewDay = st.day;
   show(st.view || 'prayers');
   if (st.view === 'calendar' && st.cal) { cal.anchor = st.cal.anchor; cal.sel = st.cal.sel; renderCalendar(); }
   requestAnimationFrame(() => { $('#scroller').scrollTop = st.scroll || 0; });
@@ -2045,13 +2257,19 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) rela
 function runSplash() {
   const s = $('#splash'), img = s.querySelector('img'), glow = s.querySelector('.glow');
   // Timeline (ms): black pause → fade in → hold → fade out into the app.
-  const BLACK = 400, FADE_IN = 2200, HOLD = 1400, FADE_OUT = 900;
+  // The full splash plays once a day; after that a quick fade. Tap to skip. Gentle with "Reduce Motion".
+  const SPLASH_KEY = 'prayerTracker.splashDay', today = nowInfo().key;
+  let seen = null; try { seen = localStorage.getItem(SPLASH_KEY); localStorage.setItem(SPLASH_KEY, today); } catch (_) {}
+  const quick = seen === today || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [BLACK, FADE_IN, HOLD, FADE_OUT] = quick ? [0, 450, 250, 400] : [400, 2200, 1400, 900];
   const ZOOM = FADE_IN + HOLD + FADE_OUT;           // zoom runs the whole time and ends as the app appears
   [img, glow].forEach((el) => { el.style.transition =
     `opacity ${FADE_IN}ms cubic-bezier(.45,0,.55,1), transform ${ZOOM}ms cubic-bezier(.33,0,.4,1)`; });
   s.style.transition = `opacity ${FADE_OUT}ms ease`;
   let done = false, started = false;
-  const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout(); setTimeout(() => s.remove(), FADE_OUT + 50); };
+  const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout(); setTimeout(() => { s.remove(); checkTravel(); }, FADE_OUT + 50); };
+  s.addEventListener('click', finish);   // tap to skip
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) [img, glow].forEach((el) => { el.style.transform = 'none'; });
   const start = () => {
     if (started) return; started = true;
     setTimeout(() => requestAnimationFrame(() => s.classList.add('in')), BLACK);
@@ -2413,6 +2631,8 @@ function renderWelcome() {
       <li><span class="i">${ICON.sun}</span>Tick off each prayer as you pray</li>
       <li><span class="i">${ICON.flame}</span>See your streaks, calendar and year</li>
       <li><span class="i">${ICON.book}</span>A verse a day, notes and prayer intentions</li>
+      <li><span class="i">${ICON.calDays}</span>Look back to fix a missed day, or ahead to see prayer times</li>
+      <li><span class="i">${ICON.bell}</span>Reminders on time, even with the app closed (with a free account)</li>
     </ul>
     <button class="btn-main" data-wl="next">Get started</button>
     <button class="btn-alt" data-wl="signin">I already have an account</button>
@@ -2421,7 +2641,7 @@ function renderWelcome() {
     <p class="lead">Used for your local time, the real sunset time and the name at the top.</p>
     <div class="wl-place">${L.name ? `${L.flag ? L.flag + ' ' : ''}${esc(L.name)}` : '<span style="color:var(--ink-dim)">No place set yet</span>'}</div>
     <button class="btn-alt" data-wl="gps">Use my current location</button>
-    <button class="btn-alt" data-wl="type">Type a place name</button>
+    <button class="btn-alt" data-wl="type">Search for a place</button>
     ${nav()}`;
   if (wlStep === 2) {
     const rs = sunsetTime(nowInfo().key);
@@ -2441,7 +2661,7 @@ function renderWelcome() {
       : st === 'granted' ? '<div class="wl-place">✓ Reminders are on</div>'
       : st === 'denied' ? '<p class="wl-small">Notifications are blocked. You can allow them in iOS Settings › Notifications.</p>'
       : '<button class="btn-alt" data-wl="notify">Turn on reminders</button>'}
-    <p class="wl-small">You can choose which prayers remind you in Settings.</p>
+    <p class="wl-small">You can choose which prayers remind you in Settings. With a free account (Settings › Account &amp; sync), reminders arrive on time even when the app is closed.</p>
     ${nav('Start praying')}`;
   }
 }
@@ -2453,7 +2673,7 @@ $('#welcome').addEventListener('click', async (e) => {
   if (a === 'skip') finishWelcome();
   if (a === 'signin') openAuth('signin', true);
   if (a === 'gps') useMyLocation(renderWelcome);
-  if (a === 'type') { const v = prompt('Place name (for example "Västerås, Sverige")', Store.data.settings.location.name || ''); if (v !== null) { saveLocation({ name: v.trim() }); renderWelcome(); } }
+  if (a === 'type') openPlacePicker(renderWelcome);
   if (a === 'sunset') { const S = Store.data.settings; S.autoSunset = !S.autoSunset; S.updatedAt = new Date().toISOString(); Store.save(); renderWelcome(); }
   if (a === 'notify') {
     if (await askPermission()) { Store.prayers().forEach((p) => { p.notify = true; }); Store.save(); }
@@ -2490,7 +2710,8 @@ document.querySelectorAll('.scard.fold').forEach((card) => {
   h.addEventListener('click', () => setFold(card, !card.classList.contains('open')));
 });
 Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
-if (!restoreAfterRefresh()) runSplash();
+if (new URLSearchParams(location.search).get('prayer')) $('#splash')?.remove();   // opened from a reminder: straight to the prayer
+else if (!restoreAfterRefresh()) runSplash();
 if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
 Cloud.load(); renderAccount(); handleRecoveryLink(); if (Cloud.session) { scheduleSync(800); setTimeout(() => Push.ensure(), 1500); }
 { const id = new URLSearchParams(location.search).get('prayer');
