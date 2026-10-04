@@ -159,9 +159,9 @@
   }
   #splash .glow { display: none; background: radial-gradient(circle at 50% 42%, #FBDDA4 0, #D4A04F 18%, #6F0B05 52%, #1a0806 85%); }
   #splash.in img, #splash.in .glow { opacity: 1; transform: scale(1.12); }
-  /* bottom edge of the painting blends into a solid colour, which also fills the strip some iPhones leave below the app */
-  #splash .edge { position: absolute; left: 0; right: 0; top: calc(var(--app-h, 100vh) - 120px); height: 320px; opacity: 0;
-    background: linear-gradient(rgba(92,22,15,0), #5C160F 120px); }
+  /* the painting fades softly into black at the bottom, so it flows into the black strip some iPhones leave below the app */
+  #splash .edge { position: absolute; left: 0; right: 0; top: calc(var(--app-h, 100vh) - 150px); height: 150px; opacity: 0;
+    background: linear-gradient(transparent, color-mix(in srgb, var(--nav-bg) 60%, transparent) 45%, var(--nav-bg) 100%); }
   #splash.in .edge { opacity: 1; }
 
   /* ===== Header photo (every screen) ===== */
@@ -870,7 +870,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.12.1';
+const APP_VERSION = '1.12.2';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1749,8 +1749,8 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
-  { v: '1.12.1', date: '2026-10-05', items: [
-    'Splash: the strip at the very bottom of the screen now takes the deep red of the painting, so the painting seems to reach all the way down.',
+  { v: '1.12.2', date: '2026-10-05', items: [
+    'Splash: the painting now fades softly at the bottom into the colour of the strip below it, so there is no hard edge.',
   ] },
   { v: '1.12.0', date: '2026-10-04', items: [
     'Reminders can now include one of your open prayer intentions (“Tonight, pray for: …”), taking turns. Turn it off in Settings › Notifications.',
@@ -2431,23 +2431,19 @@ function runSplash() {
   const quick = seen === today || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [BLACK, FADE_IN, HOLD, FADE_OUT] = quick ? [150, 900, 700, 600] : [400, 2200, 1400, 900];
   const ZOOM = FADE_IN + HOLD + FADE_OUT;           // zoom runs the whole time and ends as the app appears
-  const edge = s.querySelector('.edge'), root = document.documentElement.style;
+  const edge = s.querySelector('.edge');
   [img, glow, edge].forEach((el) => { el.style.transition =
     `opacity ${FADE_IN}ms cubic-bezier(.45,0,.55,1), transform ${ZOOM}ms cubic-bezier(.33,0,.4,1)`; });
   s.style.transition = `opacity ${FADE_OUT}ms ease`;
-  // The page background shows in the strip some iPhones leave at the very bottom: keep it in step with the splash
-  root.backgroundColor = '#000';
   let done = false, started = false;
   const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout();
-    setTimeout(() => { s.remove(); root.backgroundColor = ''; checkTravel(); }, FADE_OUT + 50); };
+    setTimeout(() => { s.remove(); checkTravel(); }, FADE_OUT + 50); };
   s.addEventListener('click', finish);   // tap to skip
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) [img, glow].forEach((el) => { el.style.transform = 'none'; });
   const start = () => {
     if (started) return; started = true;
     setTimeout(() => requestAnimationFrame(() => {
       s.classList.add('in');
-      // one step (no slow colour change): iOS repaints that strip reliably this way
-      setTimeout(() => { if (!done) root.backgroundColor = img.isConnected ? '#5C160F' : '#1a0806'; }, FADE_IN * 0.35);
     }), BLACK);
     setTimeout(finish, BLACK + FADE_IN + HOLD);
   };
