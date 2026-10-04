@@ -159,6 +159,10 @@
   }
   #splash .glow { display: none; background: radial-gradient(circle at 50% 42%, #FBDDA4 0, #D4A04F 18%, #6F0B05 52%, #1a0806 85%); }
   #splash.in img, #splash.in .glow { opacity: 1; transform: scale(1.12); }
+  /* bottom edge of the painting blends into a solid colour, which also fills the strip some iPhones leave below the app */
+  #splash .edge { position: absolute; left: 0; right: 0; top: calc(var(--app-h, 100vh) - 110px); height: 310px; opacity: 0;
+    background: linear-gradient(rgba(58,24,12,0), #3A180C 110px); }
+  #splash.in .edge { opacity: 1; }
 
   /* ===== Header photo (every screen) ===== */
   .hero {
@@ -564,6 +568,8 @@
   .help summary::after { content: ''; position: absolute; right: 6px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--ink-dim); border-bottom: 2px solid var(--ink-dim); transform: translateY(-70%) rotate(45deg); transition: transform .2s; }
   .help details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
   .help p { margin: 0 0 14px; font-size: calc(15.5px * var(--fs)); line-height: 1.45; color: var(--ink); }
+  .link-inline { color: var(--gold-text); text-decoration: underline; font: inherit; padding: 0; }
+  .help a { color: var(--gold-text); }
   /* Pray now guide */
   .pn-head small { display: block; font-size: calc(13px * var(--fs)); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-text); margin-bottom: 2px; }
   .pn-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
@@ -675,6 +681,7 @@
 <div id="splash" aria-hidden="true">
   <img src="splash.jpg" alt="">
   <div class="glow"></div>
+  <div class="edge"></div>
 </div>
 
 <div id="ptr" aria-hidden="true"><div class="spin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9" /></svg></div></div>
@@ -824,6 +831,7 @@
       <div class="s-ico" id="ico-gear"></div>
       <div>
         <div class="s-head"><div><h3>App</h3><p>Version, data and other options</p></div></div>
+        <button class="srow btnrow" data-privacy><span class="label">Privacy<small>What’s stored, where, and who can see it</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="help-row"><span class="label">Help &amp; about<small>How the app works, and your privacy</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="ver-row"><span class="label">Version</span><span class="value" id="app-version"></span></button>
         <button class="srow btnrow" id="btn-export"><span class="label">Export backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -862,7 +870,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -996,8 +1004,11 @@ const Store = {
   },
   snapshot(key) { return JSON.stringify(this.day(key).done); },
   restore(key, snap) {
-    const day = this.data.days[key] || (this.data.days[key] = { done: {} });
-    day.done = JSON.parse(snap); day.updatedAt = new Date().toISOString(); this.save();
+    const day = this.data.days[key] || (this.data.days[key] = { done: {} }), t = new Date().toISOString(), back = JSON.parse(snap);
+    day.undone = day.undone || {};
+    for (const id of Object.keys(day.done)) if (!back[id]) day.undone[id] = t;          // undo removes these ticks
+    for (const id of Object.keys(back)) { if (!day.done[id]) back[id] = t; delete day.undone[id]; }
+    day.done = back; day.updatedAt = t; this.save();
   },
   prayers() { const S = this.data.settings; return S.customOn && S.custom && S.custom.length ? S.custom : S.prayers; },
   updatePrayer(id, patch) {
@@ -1008,8 +1019,9 @@ const Store = {
   day(key) { return this.data.days[key] || { done: {} }; },
   isDone(key, id) { return !!this.day(key).done[id]; },
   setDone(key, id, done) {
-    const day = this.data.days[key] || (this.data.days[key] = { done: {} });
-    if (done) day.done[id] = new Date().toISOString(); else delete day.done[id];
+    const day = this.data.days[key] || (this.data.days[key] = { done: {} }), t = new Date().toISOString();
+    day.undone = day.undone || {};       // when a tick was removed, so syncing two phones merges each prayer correctly
+    if (done) { day.done[id] = t; delete day.undone[id]; } else { delete day.done[id]; day.undone[id] = t; }
     day.updatedAt = new Date().toISOString();
     if (key < this.data.meta.firstDay) this.data.meta.firstDay = key;
     this.save();
@@ -1737,6 +1749,14 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.12.0', date: '2026-10-04', items: [
+    'Reminders can now include one of your open prayer intentions (“Tonight, pray for: …”), taking turns. Turn it off in Settings › Notifications.',
+    'New: Delete my account (Settings › Account & sync) removes your account and all its data.',
+    'New: Privacy page in Settings › App, explaining what is stored, where and who can see it.',
+    'Password reset emails now work for everyone. Check your spam folder if one doesn’t arrive.',
+    'Sync: ticking prayers on two devices on the same day no longer loses a tick.',
+    'Splash: the quick version is a little slower again, and the painting now reaches all the way to the bottom of the screen.',
+  ] },
   { v: '1.11.0', date: '2026-10-04', items: [
     'New: Pray now. Tap a prayer on today’s list for a short guide: Be still, Rejoice (with today’s verse), Ask (with your intentions) and Yield, plus the Lord’s Prayer. Each time of day has its own focus. “Amen ✓” marks the prayer. The box still ticks straight away.',
     'New: grace for streaks. Missed one day? Once a week (it renews every Wednesday) you can use grace in Statistics to keep your streak going. The day shows as a dove.',
@@ -1828,7 +1848,9 @@ function renderSettings() {
      <button class="switch" role="switch" id="sw-all" aria-checked="${allOn}" aria-label="All reminders"></button></div>
      <div class="sub-head">Each prayer</div>` + Store.prayers().map((p) =>
     `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
-     <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('');
+     <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('') +
+    `<div class="sub-head">In each reminder</div><div class="srow"><span class="label">Show a prayer intention<small>One of your open intentions, taking turns. Shown on the lock screen.</small></span>
+     <button class="switch" role="switch" id="sw-remint" aria-checked="${Store.data.settings.remIntentions !== false}" aria-label="Show a prayer intention in reminders"></button></div>`;
   $('#app-version').textContent = APP_VERSION;
   renderChangelog();
   $('#sw-verse').setAttribute('aria-checked', Store.data.settings.showVerse);
@@ -2027,6 +2049,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) setT
 
 $('#settings-notify').addEventListener('click', async (e) => {
   const sw = e.target.closest('.switch'); if (!sw) return;
+  if (sw.id === 'sw-remint') {
+    const S = Store.data.settings; S.remIntentions = S.remIntentions === false; S.updatedAt = new Date().toISOString(); Store.save(); renderSettings();
+    toast(S.remIntentions ? 'Reminders will include one of your intentions' : 'Reminders won’t show your intentions');
+    return;
+  }
   if (sw.id === 'sw-all') {
     const on = !Store.prayers().every((p) => p.notify);
     Store.prayers().forEach((p) => { p.notify = on; });
@@ -2038,6 +2065,22 @@ $('#settings-notify').addEventListener('click', async (e) => {
   }
   await toggleBell(sw.dataset.id);
 });
+// Privacy page (Settings › App › Privacy, and from the sign-up form)
+const CONTACT_EMAIL = 'softwaresbenny@gmail.com';
+const PRIVACY = [
+  ['In short', 'Prayers is a free, personal prayer tracker with no ads, no tracking and no selling of data. You can use it without an account; then everything stays only on your phone.'],
+  ['What is stored', 'On your phone: your prayer ticks, prayer times and settings, journal notes, prayer intentions and grace days. With an account, the same is also stored in your account, together with your email address and an encrypted password, so it can sync between your devices. If you turn on reminders, the address your phone uses to receive notifications is stored too.'],
+  ['Where it is stored', 'The account database is run by Supabase, on servers in Ireland (EU, region eu-west-1). The app itself is hosted on GitHub Pages.'],
+  ['Who can see it', 'Only you can see your data in the app. Other users can never see it. The person who runs this app can technically access the database (as with any app) but does not read or use it, and never shares or sells it.'],
+  ['Outside services', 'Supabase (account, sync and reminders) · GitHub Pages (hosting the app) · Open-Meteo (city search, only what you type) · BigDataCloud (turning your GPS position into a place name, only when you tap “Use my current location”) · Apple’s push service (delivering reminders) · Gmail (sending password-reset emails).'],
+  ['Your choices', 'You can export everything (Settings › App › Export backup), turn off any reminder, hide intentions from reminders, sign out, or delete your account (Settings › Account & sync › Delete my account), which removes your account and all its data right away.'],
+  ['Questions', `Email ${CONTACT_EMAIL}. You can also ask for a copy or correction of your data there.`],
+];
+function openPrivacy() {
+  openSheet(`${sheetHead('Privacy')}<div class="help">${PRIVACY.map(([q, a], i) => `<details${i === 0 ? ' open' : ''}><summary>${q}</summary><p>${a.replace(CONTACT_EMAIL, `<a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>`)}</p></details>`).join('')}</div>
+    <p class="wl-small" style="text-align:center;margin-top:14px">Last updated October 2026</p>`);
+}
+document.addEventListener('click', (e) => { if (e.target.closest('[data-privacy]')) { e.preventDefault(); openPrivacy(); } });
 // Help & about: short answers, opened from Settings › App
 const HELP = [
   ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
@@ -2048,7 +2091,8 @@ const HELP = [
   ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
   ['Your place and time zone', 'Prayer times and reminders follow the place in Settings › Location. Search a city or use your current location. When you travel, the app asks whether to switch.'],
   ['Account and sync', 'An account keeps your prayers, notes and intentions safe and the same on every device. Changes sync by themselves; “Sync now” does it straight away.'],
-  ['Your privacy', 'Your prayers, notes, intentions and email are stored on this phone and, with an account, in the app’s database. Other users can never see them. The person who runs this app can technically see the database, as with any app. Nothing is sold or shared, and there are no ads or trackers.'],
+  ['Your privacy', 'Your data is only visible to you; nothing is sold or shared, and there are no ads or trackers. Full details are in Settings › App › Privacy.'],
+  ['Forgot your password?', 'On the Sign in screen, type your email and tap “Forgot password?”. Check your spam folder if the email doesn’t arrive within a few minutes.'],
   ['Backups', 'Settings › App › Export backup saves everything as a file you can keep. Import backup brings it back.'],
 ];
 $('#help-row').onclick = () => {
@@ -2132,7 +2176,12 @@ function notificationText(p) {
   const key = nowInfo().key, n = Store.prayers().length, c = Store.count(key);
   return {
     title: `It’s time for ${p.name} prayer${Store.data.settings.location.flag ? ' ' + Store.data.settings.location.flag : ''}`,
-    body: Store.isDone(key, p.id) ? `${c} of ${n} prayed – ${p.name} is already marked ✓` : `${c} of ${n} prayed – mark ${p.name} ✓`,
+    body: (Store.isDone(key, p.id) ? `${c} of ${n} prayed – ${p.name} is already marked ✓` : `${c} of ${n} prayed – mark ${p.name} ✓`) + (() => {
+      const ints = Store.data.settings.remIntentions === false ? [] : Store.data.intentions.filter((x) => !x.answered && x.text);
+      if (!ints.length) return '';
+      const it = ints[Math.floor(Math.random() * ints.length)].text, t = toMin(timeOf(p));
+      return `\n${t < 720 ? 'Today, pray for' : t >= 1200 ? 'Tonight, pray for' : 'Pray for'}: ${it.length > 90 ? it.slice(0, 88) + '…' : it}`;
+    })(),
   };
 }
 
@@ -2377,18 +2426,26 @@ function runSplash() {
   const SPLASH_KEY = 'prayerTracker.splashDay', today = nowInfo().key;
   let seen = null; try { seen = localStorage.getItem(SPLASH_KEY); localStorage.setItem(SPLASH_KEY, today); } catch (_) {}
   const quick = seen === today || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const [BLACK, FADE_IN, HOLD, FADE_OUT] = quick ? [0, 450, 250, 400] : [400, 2200, 1400, 900];
+  const [BLACK, FADE_IN, HOLD, FADE_OUT] = quick ? [150, 900, 700, 600] : [400, 2200, 1400, 900];
   const ZOOM = FADE_IN + HOLD + FADE_OUT;           // zoom runs the whole time and ends as the app appears
-  [img, glow].forEach((el) => { el.style.transition =
+  const edge = s.querySelector('.edge'), root = document.documentElement.style;
+  [img, glow, edge].forEach((el) => { el.style.transition =
     `opacity ${FADE_IN}ms cubic-bezier(.45,0,.55,1), transform ${ZOOM}ms cubic-bezier(.33,0,.4,1)`; });
   s.style.transition = `opacity ${FADE_OUT}ms ease`;
+  // The page background shows in the strip some iPhones leave at the very bottom: keep it in step with the splash
+  root.backgroundColor = '#000';
   let done = false, started = false;
-  const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout(); setTimeout(() => { s.remove(); checkTravel(); }, FADE_OUT + 50); };
+  const finish = () => { if (done) return; done = true; s.classList.add('hide'); relayout();
+    root.transition = `background-color ${FADE_OUT}ms ease`; root.backgroundColor = '';
+    setTimeout(() => { s.remove(); root.transition = ''; checkTravel(); }, FADE_OUT + 50); };
   s.addEventListener('click', finish);   // tap to skip
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) [img, glow].forEach((el) => { el.style.transform = 'none'; });
   const start = () => {
     if (started) return; started = true;
-    setTimeout(() => requestAnimationFrame(() => s.classList.add('in')), BLACK);
+    setTimeout(() => requestAnimationFrame(() => {
+      s.classList.add('in');
+      root.transition = `background-color ${FADE_IN}ms cubic-bezier(.45,0,.55,1)`; root.backgroundColor = img.isConnected ? '#3A180C' : '#1a0806';
+    }), BLACK);
     setTimeout(finish, BLACK + FADE_IN + HOLD);
   };
   if (img.complete && img.naturalWidth) start();
@@ -2473,6 +2530,20 @@ const Cloud = {
 
 /* ----- Merging: each day, note and intention keeps its most recent version ----- */
 const newerOf = (a, b) => ((a && a.updatedAt) || '') >= ((b && b.updatedAt) || '') ? a : b;
+// One day from two phones: each prayer keeps its latest change (ticked or unticked)
+const iso = (v) => (typeof v === 'string' && /^\d{4}-/.test(v) ? v : '');
+function mergeDay(a, b) {
+  const out = { done: {}, undone: {}, updatedAt: [a.updatedAt || '', b.updatedAt || ''].sort().pop() };
+  const ids = new Set([...Object.keys(a.done || {}), ...Object.keys(a.undone || {}), ...Object.keys(b.done || {}), ...Object.keys(b.undone || {})]);
+  for (const id of ids) {
+    // legacy ticks without a time count as made at the day's last change
+    const tick = (d) => d.done?.[id] ? (iso(d.done[id]) || d.updatedAt || '0') : '', untick = (d) => iso(d.undone?.[id]);
+    const on = [tick(a), tick(b)].sort().pop(), off = [untick(a), untick(b)].sort().pop();
+    if (on && on >= off) out.done[id] = (a.done?.[id] && tick(a) === on) ? a.done[id] : b.done[id];
+    else if (off) out.undone[id] = off;
+  }
+  return out;
+}
 function mergeData(L, R) {
   const out = JSON.parse(JSON.stringify(L)); R = R || {};
   const dead = { ...(R.deleted || {}) };
@@ -2480,7 +2551,7 @@ function mergeData(L, R) {
   out.deleted = dead;
   out.days = {};
   for (const k of new Set([...Object.keys(L.days || {}), ...Object.keys(R.days || {})]))
-    out.days[k] = !L.days?.[k] ? R.days[k] : !R.days?.[k] ? L.days[k] : newerOf(L.days[k], R.days[k]);
+    out.days[k] = !L.days?.[k] ? R.days[k] : !R.days?.[k] ? L.days[k] : mergeDay(L.days[k], R.days[k]);
   out.notes = {};
   for (const k of new Set([...Object.keys(L.notes || {}), ...Object.keys(R.notes || {})])) {
     const n = !L.notes?.[k] ? R.notes[k] : !R.notes?.[k] ? L.notes[k] : newerOf(L.notes[k], R.notes[k]);
@@ -2627,7 +2698,8 @@ function renderAccount() {
     <small><span class="sync-dot ${dot}"></span>${esc(line)}</small>${held}</div>
     <div class="acct-btns"><button class="sbtn" data-acct="sync">Sync now</button><button class="sbtn" data-acct="password">Change password</button></div>
     ${reminderPanel()}
-    <button class="srow btnrow" data-acct="signout"><span class="label">Sign out</span>${ICON.chev}</button>`;
+    <button class="srow btnrow" data-acct="signout"><span class="label">Sign out</span>${ICON.chev}</button>
+    <button class="srow btnrow danger" data-acct="delete"><span class="label">Delete my account<small>Removes your account and everything in it</small></span>${ICON.chev}</button>`;
 }
 $('#settings-account').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-acct]'); if (!b) return;
@@ -2641,6 +2713,20 @@ $('#settings-account').addEventListener('click', async (e) => {
     try { toast(await Push.test() === 'fast' ? 'Test on its way. It should arrive in a few seconds.' : 'Test on its way. It arrives within a minute.'); }
     catch (ex) { toast(ex.code === 'offline' ? 'No internet connection.' : 'Couldn’t send the test: ' + ex.message); }
     setTimeout(renderAccount, 2500);
+  }
+  if (a === 'delete') {
+    if (!confirm('Delete your account?\n\nThis permanently deletes your account and everything stored in it: prayers, notes, intentions, reminders and settings, on every device. It cannot be undone.')) return;
+    const typed = prompt('To confirm, type DELETE');
+    if ((typed || '').trim().toUpperCase() !== 'DELETE') { toast('Nothing was deleted.'); return; }
+    try { await Cloud.api('POST', 'rpc/delete_my_account', {}); }
+    catch (ex) { toast(ex.code === 'offline' ? 'No internet connection. Nothing was deleted.' : 'Couldn’t delete the account: ' + ex.message); return; }
+    try { localStorage.removeItem(PUSH_KEY); const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (_) {}
+    Cloud.setSession(null); syncState = 'idle';
+    const keep = confirm('Your account has been deleted.\n\nKeep a copy of your prayers on this phone?\n\nOK = keep them here (not synced)\nCancel = erase them from this phone too');
+    if (!keep) { Store.reset(); cal.anchor = null; cal.sel = null; }
+    renderAll(); renderAccount(); renderNotifyStatus();
+    toast(keep ? 'Account deleted. Your prayers are still on this phone.' : 'Account deleted and this phone erased.');
+    return;
   }
   if (a === 'signout') {
     if (!confirm('Sign out?\n\nYour prayers stay on this phone and in your account. Sign in again any time to keep syncing.')) return;
@@ -2662,7 +2748,7 @@ function openAuth(mode, fromWelcome = false) {
     </form>
     <button class="auth-alt" data-auth="${up ? 'signin' : 'signup'}">${up ? 'Already have an account? Sign in' : 'New here? Create an account'}</button>
     ${up ? '' : '<button class="auth-alt" data-auth="forgot" style="font-weight:400">Forgot password?</button>'}
-    <p class="wl-small">${up ? 'Your iPhone can suggest a strong password and save it for you. ' : ''}Your prayers, notes and settings are kept in your account and synced to every device you sign in on.</p>`);
+    <p class="wl-small">${up ? 'Your iPhone can suggest a strong password and save it for you. ' : ''}Your prayers, notes and settings are kept in your account and synced to every device you sign in on. <button class="link-inline" data-privacy>How your data is handled</button></p>`);
 }
 $('#sheet').addEventListener('submit', async (e) => {
   if (e.target.id === 'auth-form') {
@@ -2700,7 +2786,7 @@ $('#sheet').addEventListener('click', async (e) => {
     if (!/^\S+@\S+\.\S+$/.test(email)) { $('#auth-err').textContent = 'Type your email above first, then tap “Forgot password?”.'; return; }
     try {
       await Cloud.auth(`recover?redirect_to=${encodeURIComponent(location.origin + location.pathname)}`, { email });
-      $('#auth-err').textContent = ''; toast('If there is an account for this email, a reset link is on its way.');
+      $('#auth-err').textContent = ''; toast('If there is an account for this email, a reset link is on its way. Check your spam folder if it doesn’t arrive within a few minutes.');
     } catch (ex) { $('#auth-err').textContent = ex.message; }
     return;
   }
