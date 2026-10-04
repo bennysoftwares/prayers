@@ -354,6 +354,15 @@
   .streak-card { padding: 22px 20px 18px; }
   .streak-card h3 { margin: 0 0 4px; font-size: calc(20px * var(--fs)); font-weight: 600; }
   .streak-top { display: flex; align-items: center; gap: 22px; }
+  .grace-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 14px; padding: 12px 14px; border-radius: 14px;
+    background: var(--accent); color: var(--on-accent); }
+  .grace-btn svg { width: 26px; height: 26px; flex: none; }
+  .grace-btn b { display: block; font-size: calc(17px * var(--fs)); }
+  .grace-btn small { display: block; font-size: calc(14px * var(--fs)); opacity: .85; margin-top: 1px; }
+  .grace-note, .grace-line { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: calc(14.5px * var(--fs)); line-height: 1.38; color: var(--ink-dim); }
+  .grace-note { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--card-line); color: var(--ink); }
+  .grace-note svg, .grace-line svg { width: 18px; height: 18px; flex: none; color: var(--gold); margin-top: 1px; }
+  .streak-card.celebrate { animation: celebrate 1.9s ease; }
   .dots { display: flex; align-items: center; margin: 18px 4px 6px; }
   .dots i { width: 18px; height: 18px; border-radius: 50%; background: var(--ring-track); flex: none; border: 2px solid transparent; }
   .dots i.on { background: var(--gold); }
@@ -361,6 +370,8 @@
   .dots i.future { opacity: .6; }
   .dots em { flex: 1; height: 2px; background: var(--ring-track); }
   .dots em.on { background: var(--gold); }
+  .dots i.on.grace { display: grid; place-items: center; background: var(--card); border: 2px dashed var(--gold); color: var(--gold); width: 22px; height: 22px; }
+  .dots i.on.grace svg { width: 13px; height: 13px; }
   .dot-dates { display: flex; justify-content: space-between; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
 
   /* ===== Settings ===== */
@@ -553,6 +564,24 @@
   .help summary::after { content: ''; position: absolute; right: 6px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--ink-dim); border-bottom: 2px solid var(--ink-dim); transform: translateY(-70%) rotate(45deg); transition: transform .2s; }
   .help details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
   .help p { margin: 0 0 14px; font-size: calc(15.5px * var(--fs)); line-height: 1.45; color: var(--ink); }
+  /* Pray now guide */
+  .pn-head small { display: block; font-size: calc(13px * var(--fs)); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-text); margin-bottom: 2px; }
+  .pn-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+  .pn-step:last-child { border-bottom: 0; }
+  .pn-n { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--gold); color: var(--gold-text); display: grid; place-items: center;
+    font: 700 13px -apple-system, system-ui, sans-serif; margin-top: 1px; }
+  .pn-step h4 { margin: 2px 0 4px; font-size: calc(18px * var(--fs)); color: var(--ink-strong); }
+  .pn-step p { margin: 0 0 6px; font-size: calc(16px * var(--fs)); line-height: 1.45; color: var(--ink); }
+  .pn-verse { font-style: italic; }
+  .pn-verse small { display: block; font-style: normal; font-size: calc(13.5px * var(--fs)); color: var(--gold-text); margin-top: 2px; }
+  .pn-small { font-size: calc(15px * var(--fs)) !important; color: var(--ink-dim) !important; }
+  .pn-hint { display: block; margin-top: 4px; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
+  .pn-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pn-chips span { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--card-line); color: var(--gold-text); font-size: calc(14.5px * var(--fs)); }
+  .pn-lp summary { cursor: pointer; color: var(--gold-text); font-weight: 600; font-size: calc(15.5px * var(--fs)); padding: 4px 0; }
+  .pn-lp p { margin: 6px 0 2px; font-style: italic; }
+  .pn-lp small { color: var(--ink-dim); font-size: calc(13px * var(--fs)); }
+  .pn-amen { margin-top: 10px; }
   /* Place picker */
   .pl-results { margin: 8px 0 2px; }
   .pl-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 4px; border-bottom: 1px solid var(--divider); }
@@ -833,7 +862,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -950,6 +979,7 @@ const Store = {
     d.settings.textSize = d.settings.textSize || 'normal';
     d.settings.customOn = !!d.settings.customOn;                   // "Customize prayers" (off = the normal five)
     d.settings.custom = d.settings.custom || null;
+    d.grace = d.grace || {};            // { 'YYYY-MM-DD' (missed day): { used: 'YYYY-MM-DD', at } } streak kept by a grace day
     d.deleted = d.deleted || {};        // { 'note:YYYY-MM-DD' | 'int:<id>': time deleted } so deletions sync too
     return d;
   },
@@ -991,24 +1021,33 @@ const Store = {
    STATS
    ========================================================= */
 function computeStats(todayKey) {
-  const n = Store.prayers().length;
+  const n = Store.prayers().length, grace = Store.data.grace || {};
   const complete = (k) => Store.count(k) === n;
+  const kept = (k) => complete(k) || !!grace[k];          // a grace day keeps the streak going
   let total = 0;
   for (const k of Object.keys(Store.data.days)) total += Store.count(k);
   // current streak: today counts if complete; an unfinished today doesn't break it yet
-  let cur = 0, k = complete(todayKey) ? todayKey : addDays(todayKey, -1);
-  while (complete(k)) { cur++; k = addDays(k, -1); }
+  const runBack = (from) => { let c = 0, k = from; while (kept(k)) { c++; k = addDays(k, -1); } return { c, k }; };
+  const start = complete(todayKey) ? todayKey : addDays(todayKey, -1);
+  const { c: cur, k: gap } = runBack(start);
   // longest streak
   let longest = 0, run = 0, prev = null;
-  for (const key of Object.keys(Store.data.days).sort()) {
-    if (!complete(key)) { run = 0; prev = key; continue; }
+  for (const key of [...new Set([...Object.keys(Store.data.days), ...Object.keys(grace)])].sort()) {
+    if (!kept(key)) { run = 0; prev = key; continue; }
     run = (prev && addDays(prev, 1) === key && run > 0) ? run + 1 : 1;
     longest = Math.max(longest, run);
     prev = key;
   }
+  // Grace: one per week (the week starts on Wednesday). Offered when a single missed day in the
+  // last 7 days broke a streak (the day before it was kept).
+  const dow = keyToDate(todayKey).getUTCDay(), weekStart = addDays(todayKey, -((dow - 3 + 7) % 7)), nextGrace = addDays(weekStart, 7);
+  const graceUsed = Object.values(grace).some((g) => (g.used || '') >= weekStart);
+  const before = runBack(addDays(gap, -1)).c;
+  const graceDay = gap < todayKey && gap >= addDays(todayKey, -7) && gap >= (Store.data.meta.firstDay || gap) && before > 0 ? gap : null;
+  const streakIfGrace = graceDay ? cur + 1 + before : 0;
   const daysPrayed = Object.keys(Store.data.days).filter((k) => Store.count(k) > 0).length;
   const answered = Store.data.intentions.filter((x) => x.answered).length, openInt = Store.data.intentions.length - answered;
-  return { total, cur, longest, n, complete, daysPrayed, answered, openInt };
+  return { total, cur, longest, n, complete, kept, daysPrayed, answered, openInt, graceDay, graceUsed, nextGrace, streakIfGrace };
 }
 
 /* =========================================================
@@ -1372,7 +1411,7 @@ function renderPrayers(force) {
   list.innerHTML = Store.prayers().map((p) => {
     const done = Store.isDone(key, p.id);
     return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(key, p) ? ' later' : ''}" data-id="${p.id}">
-      <button class="hit" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
+      <button class="hit" data-act="${isToday ? 'pray' : 'toggle'}" aria-hidden="true" tabindex="-1"></button>
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
       <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
@@ -1392,6 +1431,56 @@ function updateCountdown() {
   if (nowRow) nowRow.textContent = `Next: ${nx.p.name} in ${fmtMins(nx.mins)}`;
   else { const r = list.querySelector(`.row[data-id="${nx.p.id}"] .cd`); if (r) r.textContent = `Begins in ${fmtMins(nx.mins)}`; }
 }
+
+/* ----- Pray now: a short guide (Be still · Rejoice · Ask · Yield), opened by tapping a prayer on today's list ----- */
+const LORDS_PRAYER = 'Our Father in heaven, may your name be kept holy. Let your Kingdom come. Let your will be done on earth as it is in heaven. Give us today our daily bread. Forgive us our debts, as we also forgive our debtors. Bring us not into temptation, but deliver us from the evil one. For yours is the Kingdom, the power, and the glory forever. Amen.';
+const PRAY_FOCUS = {
+  morning: { still: 'Before the day begins, take three slow breaths. Offer this day to God.',
+    yield: '“Your will be done.” Lord, I give you this day: my work, my words and the people I will meet.',
+    word: ['This is the day that the LORD has made. We will rejoice and be glad in it.', 'Psalm 118:24'] },
+  midday: { still: 'Pause in the middle of your day. Breathe slowly. God is with you, right here.',
+    yield: 'Lord, be with me for the rest of this day. Give me patience, kindness and peace.',
+    word: ['Be still, and know that I am God.', 'Psalm 46:10'] },
+  afternoon: { still: 'Set down what you are doing for a moment. Breathe, and remember whose you are.',
+    yield: 'Lord, renew my strength for the hours ahead, and let me serve you in them.',
+    word: ['But those who wait for the LORD will renew their strength.', 'Isaiah 40:31'] },
+  sunset: { still: 'As the day turns to evening, be still. Thank God for the light of this day.',
+    yield: 'Lord, thank you for this day. Stay with me as evening comes.',
+    word: ['Stay with us, for it is almost evening, and the day is almost over.', 'Luke 24:29'] },
+  night: { still: 'Take three slow breaths. Let the day go, into God’s hands.',
+    look: 'Look back over today: where did you see God’s goodness? Is there anything to bring to him for forgiveness?',
+    yield: '“Into your hand I commend my spirit.” Lord, keep me through the night.',
+    word: ['In peace I will both lay myself down and sleep, for you, LORD alone, make me live in safety.', 'Psalm 4:8'] },
+};
+function focusFor(p) {
+  if (PRAY_FOCUS[p.id]) return PRAY_FOCUS[p.id];
+  const m = toMin(timeOf(p));                       // own prayers: by time of day
+  return PRAY_FOCUS[m < 600 ? 'morning' : m < 840 ? 'midday' : m < 1050 ? 'afternoon' : m < 1230 ? 'sunset' : 'night'];
+}
+function openPrayNow(id) {
+  const p = Store.prayers().find((x) => x.id === id); if (!p) return;
+  const f = focusFor(p), today = nowInfo().key, v = verseFor(today);
+  const open = Store.data.intentions.filter((x) => !x.answered);
+  const step = (n, title, body) => `<div class="pn-step"><span class="pn-n">${n}</span><div><h4>${title}</h4>${body}</div></div>`;
+  openSheet(`<div class="sh-head pn-head"><div><small>Pray now · ${timeOf(p)}</small><h3>${esc(p.name)} prayer</h3></div><button class="sh-close" aria-label="Close">×</button></div>
+    <div class="pn">
+      ${step(1, 'Be still', `<p>${f.still}</p>`)}
+      ${step(2, 'Rejoice', `<p class="pn-verse">“${esc(Store.data.settings.showVerse ? v.text : f.word[0])}”<small>${esc(Store.data.settings.showVerse ? v.ref : f.word[1])}</small></p>${f.look ? `<p>${f.look}</p>` : ''}`)}
+      ${step(3, 'Ask', open.length ? `<p>Bring your requests to God:</p><div class="pn-chips">${open.map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>`
+        : '<p>Bring your own needs, and the people on your heart, to God. <span class="pn-hint">Tip: add prayer intentions in the Journal and they’ll appear here.</span></p>')}
+      ${step(4, 'Yield', `<p>${f.yield}</p><p class="pn-verse pn-small">“${esc(f.word[0])}”<small>${esc(f.word[1])}</small></p>
+        <details class="pn-lp"><summary>Pray the Lord’s Prayer</summary><p>${LORDS_PRAYER}</p><small>Matthew 6:9–13</small></details>`)}
+    </div>
+    <button class="btn-main pn-amen" data-amen="${p.id}">Amen ✓</button>`);
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-amen]'); if (!b) return;
+  const id = b.dataset.amen, key = nowInfo().key, p = Store.prayers().find((x) => x.id === id);
+  closeSheet(); if (!p) return;
+  if (Store.isDone(key, id)) { toast('Amen 🙏'); return; }
+  if (notYet(key, p)) { toast(`Amen 🙏 You can mark ${p.name} at ${timeOf(p, key)}.`); return; }
+  changeDay(key, () => Store.setDone(key, id, true), `Amen 🙏 ${p.name} marked as prayed`);
+});
 
 // Gold glow + sparkles when the fifth prayer is ticked
 function celebrate() {
@@ -1420,6 +1509,7 @@ function changeDay(key, fn, message) {
 $('#prayer-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const id = btn.closest('.row').dataset.id;
+  if (btn.dataset.act === 'pray') { openPrayNow(id); return; }
   if (btn.dataset.act === 'toggle') {
     const key = dayKey(), on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
     if (notYet(key, pr)) { notYetToast(key, pr); renderPrayers(true); return; }
@@ -1550,6 +1640,25 @@ $('#cal-next').onclick = () => stepCal(1);
 /* =========================================================
    VIEW: STATISTICS
    ========================================================= */
+// Grace button: once a week (renews every Wednesday), keeps a streak alive after one missed day
+function graceBlock(s) {
+  const wd = (k) => fmt(k, { weekday: 'long' }), next = s.nextGrace;
+  if (s.graceDay && !s.graceUsed) return `<button class="grace-btn" id="btn-grace" data-day="${s.graceDay}">${ICON.dove}
+      <span><b>Use grace for ${wd(s.graceDay)}</b><small>You missed ${wd(s.graceDay)}. Keep your streak going: ${s.streakIfGrace} days</small></span></button>`;
+  if (s.graceDay) return `<div class="grace-note">${ICON.dove}<span>You missed ${wd(s.graceDay)}. This week’s grace is already used; it’s available again on ${wd(next)}, ${fmt(next, { month: 'short', day: 'numeric' })}.</span></div>`;
+  return `<div class="grace-line">${ICON.dove}<span>${s.graceUsed ? `Grace used this week · available again ${wd(next)}` : 'Grace: 1 available this week · renews every Wednesday'}</span></div>`;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#btn-grace'); if (!b) return;
+  const day = b.dataset.day, today = nowInfo().key, before = computeStats(today).cur;
+  Store.data.grace[day] = { used: today, at: new Date().toISOString() }; delete Store.data.deleted['grace:' + day];
+  Store.save(); renderStats();
+  const now = computeStats(today).cur;
+  toast(`Grace given 🕊 ${fmt(day, { weekday: 'long' })} is covered. Your streak is ${now} days.`, () => {
+    delete Store.data.grace[day]; Store.data.deleted['grace:' + day] = new Date().toISOString(); Store.save(); renderStats();
+  });
+  if (now > before) { const c = document.querySelector('.streak-card'); c?.classList.remove('celebrate'); void c?.offsetWidth; c?.classList.add('celebrate'); }
+});
 function renderStats() {
   const today = nowInfo().key;
   const s = computeStats(today);
@@ -1557,9 +1666,9 @@ function renderStats() {
   const from = addDays(today, -8), to = addDays(today, 3);
   let dots = '';
   for (let i = 0; i < 12; i++) {
-    const k = addDays(from, i), on = k <= today && s.complete(k);
-    const nextOn = i < 11 && addDays(k, 1) <= today && on && s.complete(addDays(k, 1));
-    dots += `<i class="${on ? 'on' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"></i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
+    const k = addDays(from, i), on = k <= today && s.kept(k), gr = on && !s.complete(k);
+    const nextOn = i < 11 && addDays(k, 1) <= today && on && s.kept(addDays(k, 1));
+    dots += `<i class="${on ? 'on' : ''}${gr ? ' grace' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"${gr ? ` title="Grace day"` : ''}>${gr ? ICON.dove : ''}</i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
   }
   const d = (x) => `day${x === 1 ? '' : 's'}`;
   $('#stats').innerHTML = `
@@ -1572,6 +1681,7 @@ function renderStats() {
       </div>
       <div class="dots">${dots}</div>
       <div class="dot-dates"><span>${fmt(from, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span>${fmt(to, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+      ${graceBlock(s)}
     </div>
     <div class="card stat"><div class="big-ico">${ICON.trophy}</div>
       <div><h3>Longest streak</h3><div class="val"><b>${s.longest}</b><span>${d(s.longest)}</span></div><div class="sub">All time</div></div></div>
@@ -1627,6 +1737,10 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.11.0', date: '2026-10-04', items: [
+    'New: Pray now. Tap a prayer on today’s list for a short guide: Be still, Rejoice (with today’s verse), Ask (with your intentions) and Yield, plus the Lord’s Prayer. Each time of day has its own focus. “Amen ✓” marks the prayer. The box still ticks straight away.',
+    'New: grace for streaks. Missed one day? Once a week (it renews every Wednesday) you can use grace in Statistics to keep your streak going. The day shows as a dove.',
+  ] },
   { v: '1.10.0', date: '2026-10-04', items: [
     'Location: search for any city (or use your current location). The place now sets the time zone, flag and real sunset for you. You can still pick a time zone by hand.',
     'Travelling? If your phone is in another time zone, the app asks whether to switch.',
@@ -1927,6 +2041,8 @@ $('#settings-notify').addEventListener('click', async (e) => {
 // Help & about: short answers, opened from Settings › App
 const HELP = [
   ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
+  ['Pray now', 'Tap a prayer’s name on today’s list for a short guide (Be still, Rejoice, Ask, Yield) with today’s verse, your intentions and the Lord’s Prayer. “Amen ✓” marks the prayer.'],
+  ['Grace for streaks', 'Missed one day? In Statistics you can use grace once a week (it renews every Wednesday) to keep your streak going. The covered day shows as a dove.'],
   ['Ticking your prayers', 'Tap the box next to a prayer when you’ve prayed. A prayer can’t be ticked before its time; later prayers show a faded box until then. Made a mistake? Tap Undo in the message at the bottom.'],
   ['Other days', 'Use the ‹ › arrows at the top of the Prayers page to go back (to fix a missed tick) or up to 30 days ahead (to see prayer times). Tap “Today” or the Prayers tab to come back. Future days keep their verse a surprise.'],
   ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
@@ -2375,6 +2491,8 @@ function mergeData(L, R) {
   out.intentions = [...ints.values()].filter((x) => !(dead['int:' + x.id] && dead['int:' + x.id] >= (x.updatedAt || '')))
     .sort((a, b) => (a.created || '').localeCompare(b.created || ''));
   if (R.settings && (R.settings.updatedAt || '') > (L.settings.updatedAt || '')) out.settings = R.settings;
+  out.grace = { ...(R.grace || {}), ...(L.grace || {}) };
+  for (const [k, t] of Object.entries(dead)) if (k.startsWith('grace:')) { const day = k.slice(6); if (out.grace[day] && (out.grace[day].at || '') <= t) delete out.grace[day]; }
   out.meta = { ...L.meta,
     firstDay: [L.meta?.firstDay, R.meta?.firstDay].filter(Boolean).sort()[0] || L.meta.firstDay,
     onboarded: !!(L.meta?.onboarded || R.meta?.onboarded), notified: L.meta?.notified || {} };
