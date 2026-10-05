@@ -165,11 +165,18 @@
   #splash.in .edge { opacity: 1; }
 
   /* ===== Header photo (every screen) ===== */
+  /* Compact title bar that appears when a long page is scrolled (like iPhone apps) */
+  #cbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: calc(var(--safe-top) + 46px); padding-top: var(--safe-top);
+    display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transform: translateY(-8px);
+    transition: opacity .2s ease, transform .2s ease; border-bottom: 1px solid var(--card-line);
+    background: color-mix(in srgb, var(--nav-bg) 78%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+  #cbar.show { opacity: 1; transform: none; pointer-events: auto; }
+  #cbar span { font: 700 calc(18px * var(--fs)) var(--serif); color: var(--ink-strong); max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hero {
     position: relative; height: calc(var(--safe-top) + 150px); overflow: hidden;
     background: linear-gradient(160deg, #1d0f06 0%, #5a2a09 40%, #c9711f 68%, #2a1406 100%); /* shown until header.jpg loads */
   }
-  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% 50%; }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% 50%; transition: opacity .8s ease; }
   .hero::after {
     content: ""; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(13,10,7,.62) 0%, rgba(0,0,0,.22) 14%, rgba(0,0,0,.05) 34%, rgba(0,0,0,.18) 62%, var(--bg) 100%);
@@ -195,6 +202,8 @@
   .view { display: none; }
   .view.active { display: block; animation: viewIn .25s ease; }
   @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .hero-text.swap { animation: titleIn .3s ease; }
+  @keyframes titleIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
   .card { background: var(--card); border: 1px solid var(--card-line); border-radius: 16px; }
   .card + .card { margin-top: 12px; }
   .pad { padding: 18px; }
@@ -264,6 +273,14 @@
   .row .time { flex: none; font-size: calc(19px * var(--fs)); font-variant-numeric: tabular-nums; }
   /* Square checkbox */
   .row.later .check { opacity: .35; border-style: dashed; }
+  /* Satisfying tick: press in, pop while the ✓ draws itself, settle with a soft glow */
+  .check:active { transform: scale(.88); }
+  .row.pop .check { animation: tickPop .42s cubic-bezier(.3, 1.6, .5, 1); }
+  .row.pop .check svg path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: tickDraw .3s .08s ease-out forwards; }
+  @keyframes tickPop { 0% { transform: scale(.86); } 45% { transform: scale(1.18); box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 30%, transparent); }
+    100% { transform: scale(1); box-shadow: 0 0 16px color-mix(in srgb, var(--gold) 45%, transparent); } }
+  @keyframes tickDraw { to { stroke-dashoffset: 0; } }
+  .row.pop .check { box-shadow: 0 0 16px color-mix(in srgb, var(--gold) 45%, transparent); transition: box-shadow 1.2s ease .6s; }
   .check { width: 28px; height: 28px; flex: none; border: 2px solid var(--ink-dim); border-radius: 3px; display: grid; place-items: center; transition: background .15s, border-color .15s; }
   .check svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .15s ease; color: var(--on-accent); }
   .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
@@ -355,6 +372,28 @@
   .stat .val b { font-size: calc(58px * var(--fs)); line-height: 1.05; color: var(--gold-text); font-variant-numeric: tabular-nums; }
   .stat .val span { font-size: calc(28px * var(--fs)); font-weight: 700; color: var(--ink-strong); }
   .stat .sub { font-size: calc(16px * var(--fs)); color: var(--ink-dim); margin-top: 2px; }
+  /* Statistics: 2×2 tiles, "Prayers kept", friendly start */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .tiles .tile { margin: 0; padding: 14px 14px 12px; text-align: left; width: 100%; }
+  .tile .ti { display: flex; align-items: center; gap: 8px; color: var(--ink-dim); font-size: calc(14px * var(--fs)); }
+  .tile .ti svg { width: 20px; height: 20px; color: var(--icon); flex: none; }
+  .tile b { display: block; font-size: calc(34px * var(--fs)); line-height: 1.1; margin-top: 6px; color: var(--gold-text); font-variant-numeric: tabular-nums; }
+  .tile small { color: var(--ink-dim); font-size: calc(13px * var(--fs)); }
+  .kept { padding: 16px 16px 10px; }
+  .kept h3 { margin: 0 0 10px; font-size: calc(19px * var(--fs)); color: var(--ink-strong); }
+  .kept h3 small { font-weight: 400; font-size: calc(13.5px * var(--fs)); color: var(--ink-dim); margin-left: 6px; }
+  .kr { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 10px; margin: 8px 0; font-size: calc(15px * var(--fs)); }
+  .kr i { height: 10px; border-radius: 6px; background: var(--ring-track); position: relative; overflow: hidden; }
+  .kr i em { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--gold); }
+  .kr span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kr span:last-child { text-align: right; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .kept p { margin: 8px 0 4px; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
+  .empty { text-align: center; padding: 28px 22px 24px; }
+  .empty .ei { width: 64px; height: 64px; margin: 0 auto 10px; color: var(--gold); }
+  .empty .ei svg { width: 100%; height: 100%; }
+  .empty h3 { margin: 0 0 6px; font-size: calc(22px * var(--fs)); color: var(--ink-strong); }
+  .empty p { margin: 0 auto 16px; max-width: 290px; color: var(--ink-dim); font-size: calc(16px * var(--fs)); line-height: 1.45; }
+  .empty .empty-go { display: inline-block; width: auto; padding: 11px 22px; }
   .streak-card { padding: 22px 20px 18px; }
   .streak-card h3 { margin: 0 0 4px; font-size: calc(20px * var(--fs)); font-weight: 600; }
   .streak-top { display: flex; align-items: center; gap: 22px; }
@@ -388,7 +427,7 @@
   .scard.fold .s-head::after { content: ''; flex: none; width: 10px; height: 10px; margin-right: 6px;
     border-right: 2px solid var(--ink-dim); border-bottom: 2px solid var(--ink-dim); transform: rotate(45deg) translate(-3px, -3px); transition: transform .2s; }
   .scard.fold.open .s-head::after { transform: rotate(-135deg) translate(-3px, -3px); }
-  .scard.fold:not(.open) > div > :not(.s-head) { display: none; }
+  .scard.fold:not(.open) > div:not(.s-ico) > :not(.s-head) { display: none; }
   .scard.fold:not(.open) { padding-bottom: 10px; }
   .s-head h3 { margin: 0; font-size: calc(21px * var(--fs)); color: var(--ink-strong); }
   .s-head p { margin: 2px 0 0; font-size: calc(15px * var(--fs)); color: var(--ink-dim); }
@@ -403,6 +442,8 @@
   .chev { width: 18px; height: 18px; color: var(--ink-dim); flex: none; }
   .srow input[type="time"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; -webkit-appearance: none; appearance: none; border: 0; font-size: calc(16px * var(--fs)); cursor: pointer; }
   .srow.btnrow { width: 100%; text-align: left; }
+  #btn-export.due small { color: var(--gold-text); }
+  #btn-export.due .label::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; vertical-align: 3px; }
   .srow.danger .label { color: var(--danger); }
   .switch { width: 52px; height: 30px; flex: none; background: var(--ring-track); border-radius: 15px; position: relative; transition: background .2s; }
   .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
@@ -446,7 +487,7 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .verse .vr { display: block; margin-top: 3px; font-size: calc(13px * var(--fs)); color: var(--gold-text); letter-spacing: .02em; }
   @media (max-height: 700px) {   /* small iPhones (SE): a slightly tighter summary so all five prayers still fit */
-    .verse .vt { -webkit-line-clamp: 1; } .verse { padding: 7px 16px 8px; }
+    .verse { padding: 7px 16px 8px; }
     .summary { padding: 10px 14px; gap: 12px; } .ring-wrap { width: 90px; height: 90px; }
     .sum-text p { margin: 1px 0 6px; } .mark-btn { padding: 5px 9px; }
     body.fit #prayer-list .row { min-height: 44px; }
@@ -614,6 +655,7 @@
   .acct-email { display: block; font-size: calc(17px * var(--fs)); color: var(--ink-strong); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acct-state small { display: block; color: var(--ink-dim); font-size: calc(14px * var(--fs)); margin-top: 2px; }
   .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--ink-faint); }
+  .sync-dot.warn { background: #E8A33D; }
   .sync-dot.ok { background: #5BB974; } .sync-dot.busy { background: var(--gold); animation: blink 1s infinite; } .sync-dot.err { background: var(--danger); }
   @keyframes blink { 50% { opacity: .3; } }
   .rem-panel { margin: 4px 0 10px; padding: 12px; border-radius: 14px; border: 1.5px solid var(--card-line);
@@ -685,9 +727,11 @@
 </div>
 
 <div id="ptr" aria-hidden="true"><div class="spin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9" /></svg></div></div>
+<div id="cbar" aria-hidden="true"><span id="cbar-t"></span></div>
 <div id="scroller">
 <header class="hero">
-  <img src="header.jpg" alt="" onerror="this.remove()">
+  <img class="hero-img" id="hero-a" src="header.jpg" alt="">
+  <img class="hero-img" id="hero-b" alt="" style="opacity:0">
   <div class="hero-text">
     <h1 id="page-title">Today</h1>
     <p id="loc-line"></p>
@@ -834,7 +878,7 @@
         <button class="srow btnrow" data-privacy><span class="label">Privacy<small>What’s stored, where, and who can see it</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="help-row"><span class="label">Help &amp; about<small>How the app works, and your privacy</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="ver-row"><span class="label">Version</span><span class="value" id="app-version"></span></button>
-        <button class="srow btnrow" id="btn-export"><span class="label">Export backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="srow btnrow" id="btn-export"><span class="label">Export backup<small id="backup-age"></small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow" id="btn-import"><span class="label">Import backup</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <button class="srow btnrow danger" id="btn-reset"><span class="label">Reset all data</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <input type="file" id="file-import" accept="application/json,.json" hidden>
@@ -870,7 +914,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.12.2';
+const APP_VERSION = '1.13.1';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1059,7 +1103,8 @@ function computeStats(todayKey) {
   const streakIfGrace = graceDay ? cur + 1 + before : 0;
   const daysPrayed = Object.keys(Store.data.days).filter((k) => Store.count(k) > 0).length;
   const answered = Store.data.intentions.filter((x) => x.answered).length, openInt = Store.data.intentions.length - answered;
-  return { total, cur, longest, n, complete, kept, daysPrayed, answered, openInt, graceDay, graceUsed, nextGrace, streakIfGrace };
+  const daysSince = Math.max(1, Math.round((keyToDate(todayKey) - keyToDate(Store.data.meta.firstDay || todayKey)) / 864e5) + 1);
+  return { total, cur, longest, n, complete, kept, daysPrayed, daysSince, answered, openInt, graceDay, graceUsed, nextGrace, streakIfGrace };
 }
 
 /* =========================================================
@@ -1323,10 +1368,64 @@ $('#sheet').addEventListener('input', (e) => {
    ========================================================= */
 let lastSig = '';
 
-function renderLocation() {
-  const L = Store.data.settings.location, el = $('#loc-line');
-  el.textContent = L.name ? `${L.flag ? L.flag + ' ' : ''}${L.name}` : '';
-  el.style.display = L.name ? '' : 'none';
+/* ----- Header picture follows the time of day (sunrise → morning, 11:00 → midday, 16:00 → sunset, after dusk → night) ----- */
+function sunriseTime(key) {
+  const L = Store.data.settings.location;
+  if (L.lat == null || L.lon == null) return null;
+  const rad = Math.PI / 180, [y, m, d] = key.split('-').map(Number);
+  const n = Math.round(Date.UTC(y, m - 1, d, 12) / 864e5 + 2440587.5 - 2451545.0 + 0.0008);
+  const Js = n - L.lon / 360, M = (357.5291 + 0.98560028 * Js) % 360;
+  const C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+  const lam = (M + C + 180 + 102.9372) % 360;
+  const Jt = 2451545 + Js + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * lam * rad);
+  const dec = Math.asin(Math.sin(lam * rad) * Math.sin(23.4397 * rad));
+  const cosw = (Math.sin(-0.833 * rad) - Math.sin(L.lat * rad) * Math.sin(dec)) / (Math.cos(L.lat * rad) * Math.cos(dec));
+  if (cosw < -1 || cosw > 1) return null;
+  return nowInfo(new Date((Jt - Math.acos(cosw) / rad / 360 - 2440587.5) * 864e5)).min;
+}
+const HEADER_IMG = { morning: 'header-morning.jpg', midday: 'header-midday.jpg', sunset: 'header.jpg', night: 'header-night.jpg' };
+function headerPeriod() {
+  const now = nowInfo(), ss = sunsetTime(now.key), sr = sunriseTime(now.key);
+  const rise = sr != null ? sr : 360, dusk = (ss ? toMin(ss) : 1140) + 60;        // without a place: 06:00 and 20:00
+  const m = now.min;
+  if (m < rise || m >= Math.max(dusk, 960 + 30)) return 'night';
+  if (m < Math.max(660, rise + 60)) return 'morning';
+  if (m < 960) return 'midday';
+  return 'sunset';
+}
+let heroNow = '';
+function updateHeader(instant) {
+  const p = headerPeriod(); if (p === heroNow) return;
+  const first = !heroNow; heroNow = p;
+  const a = $('#hero-a'), b = $('#hero-b'), show = a.style.opacity === '0' ? a : b, hide = show === a ? b : a;
+  const src = HEADER_IMG[p];
+  if (first || instant) { a.style.transition = 'none'; a.src = src; a.style.opacity = '1'; b.style.opacity = '0'; requestAnimationFrame(() => { a.style.transition = ''; }); return; }
+  const go = () => { show.style.opacity = '1'; hide.style.opacity = '0'; };
+  show.onload = go; show.src = src; if (show.complete && show.naturalWidth) go();     // slow cross-fade
+}
+// load the other pictures quietly so the switch is instant
+setTimeout(() => Object.values(HEADER_IMG).forEach((f) => { const i = new Image(); i.src = f; }), 4000);
+
+function renderLocation() { renderSubtitle(); }
+function updateCBar() {
+  const bar = $('#cbar'); if (!bar) return;
+  const hero = document.querySelector('.hero'), top = parseFloat(getComputedStyle(bar).height) || 90;
+  bar.classList.toggle('show', currentView !== 'prayers' && $('#scroller').scrollTop > hero.offsetHeight - top - 10);
+}
+$('#scroller').addEventListener('scroll', updateCBar, { passive: true });
+$('#cbar').addEventListener('click', () => $('#scroller').scrollTo({ top: 0, behavior: 'smooth' }));
+// The small line under each page title: the place on Prayers, Calendar and Settings; something useful elsewhere
+function renderSubtitle() {
+  const L = Store.data.settings.location, el = $('#loc-line'), place = L.name ? `${L.flag ? L.flag + ' ' : ''}${L.name}` : '';
+  let t = place;
+  if (currentView === 'stats') {
+    const s = computeStats(nowInfo().key);
+    t = s.total ? `🔥 ${s.cur}-day streak · best ${s.longest}` : 'Day 1 · welcome 🙏';
+  } else if (currentView === 'journal') {
+    const open = Store.data.intentions.filter((x) => !x.answered).length, ans = Store.data.intentions.length - open;
+    t = Store.data.intentions.length ? `${open} ${open === 1 ? 'intention' : 'intentions'} · ${ans} answered` : place;
+  }
+  el.textContent = t; el.style.display = t ? '' : 'none';
 }
 function setTitle() {
   const now = nowInfo();
@@ -1337,6 +1436,8 @@ function setTitle() {
     stats: 'Statistics',
     settings: 'Settings',
   }[currentView];
+  renderSubtitle();
+  const cb = $('#cbar-t'); if (cb) cb.textContent = $('#page-title').textContent;
 }
 
 // A prayer can't be ticked before its time has come (today's later prayers, or a future day)
@@ -1431,6 +1532,8 @@ function renderPrayers(force) {
       <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
+  if (popRow && popRow.key === key) { list.querySelector(`.row[data-id="${popRow.id}"]`)?.classList.add('pop'); }
+  popRow = null;
   updateCountdown();
 }
 
@@ -1491,6 +1594,7 @@ document.addEventListener('click', (e) => {
   closeSheet(); if (!p) return;
   if (Store.isDone(key, id)) { toast('Amen 🙏'); return; }
   if (notYet(key, p)) { toast(`Amen 🙏 You can mark ${p.name} at ${timeOf(p, key)}.`); return; }
+  popRow = { key, id }; haptic();
   changeDay(key, () => Store.setDone(key, id, true), `Amen 🙏 ${p.name} marked as prayed`);
 });
 
@@ -1509,6 +1613,15 @@ function celebrate() {
   }
 }
 // Change a day's ticks with an Undo button in the message bar
+// A tiny vibration (Android: vibrate; iPhone with iOS 18+: the system "switch" tap)
+function haptic() {
+  try {
+    if (navigator.vibrate) { navigator.vibrate(12); return; }
+    const l = document.createElement('label'), i = document.createElement('input');
+    i.type = 'checkbox'; i.setAttribute('switch', ''); l.style.display = 'none'; l.appendChild(i); document.body.appendChild(l); l.click(); l.remove();
+  } catch (_) {}
+}
+let popRow = null;   // the row that was just ticked, so it can play the tick animation after re-rendering
 function changeDay(key, fn, message) {
   const n = Store.prayers().length, before = Store.count(key), snap = Store.snapshot(key);
   fn();
@@ -1526,6 +1639,7 @@ $('#prayer-list').addEventListener('click', async (e) => {
     const key = dayKey(), on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
     if (notYet(key, pr)) { notYetToast(key, pr); renderPrayers(true); return; }
     const when = key === nowInfo().key ? '' : ` for ${fmt(key, { weekday: 'long' })}`;
+    if (on) { popRow = { key, id }; haptic(); }
     changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed${when}` : `${name} unmarked${when}`);
   } else {
     await toggleBell(id);
@@ -1652,6 +1766,13 @@ $('#cal-next').onclick = () => stepCal(1);
 /* =========================================================
    VIEW: STATISTICS
    ========================================================= */
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-health]')) return;
+  openSheet(`${sheetHead('Reminders may be delayed')}<div class="help"><p>The reminder server hasn’t checked in for a while, so reminders may come late or not at all. It usually fixes itself within a few minutes.</p>
+    <p><b>If it lasts longer than an hour</b>, open Supabase on a computer or phone:</p>
+    <p>1. If the project shows as <b>Paused</b>, tap <b>Restore</b>.<br>2. Check <b>Integrations › Cron</b>: the job “prayer-reminders” should run every minute.<br>3. Check <b>Edge Functions › reminders › Logs</b> for errors.</p>
+    <p>Your prayers and data are safe either way; only the reminders are affected.</p></div>`);
+});
 // Grace button: once a week (renews every Wednesday), keeps a streak alive after one missed day
 function graceBlock(s) {
   const wd = (k) => fmt(k, { weekday: 'long' }), next = s.nextGrace;
@@ -1673,6 +1794,7 @@ document.addEventListener('click', (e) => {
 });
 function renderStats() {
   const today = nowInfo().key;
+  if (currentView === 'stats') setTimeout(renderSubtitle);
   const s = computeStats(today);
   // dotted row: 12 days, ending 3 days after today
   const from = addDays(today, -8), to = addDays(today, 3);
@@ -1683,6 +1805,13 @@ function renderStats() {
     dots += `<i class="${on ? 'on' : ''}${gr ? ' grace' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"${gr ? ` title="Grace day"` : ''}>${gr ? ICON.dove : ''}</i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
   }
   const d = (x) => `day${x === 1 ? '' : 's'}`;
+  if (s.total === 0) {     // nothing ticked yet: a friendly start instead of a page of zeros
+    $('#stats').innerHTML = `<div class="card empty"><div class="ei">${ICON.flame}</div><h3>Your streak starts today</h3>
+      <p>Pray all of today’s prayers and your first streak day appears here. Every journey begins with one step.</p>
+      <button class="btn-main empty-go" data-go="prayers">Go to today’s prayers</button></div>
+      <div class="card pad" id="year-card"></div>`;
+    renderYear(); return;
+  }
   $('#stats').innerHTML = `
     <div class="card streak-card">
       <h3>Current streak</h3>
@@ -1695,17 +1824,35 @@ function renderStats() {
       <div class="dot-dates"><span>${fmt(from, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span>${fmt(to, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
       ${graceBlock(s)}
     </div>
-    <div class="card stat"><div class="big-ico">${ICON.trophy}</div>
-      <div><h3>Longest streak</h3><div class="val"><b>${s.longest}</b><span>${d(s.longest)}</span></div><div class="sub">All time</div></div></div>
-    <div class="card stat"><div class="big-ico">${ICON.bars}</div>
-      <div><h3>Total prayers</h3><div class="val"><b>${s.total}</b></div><div class="sub">Since ${fmt(Store.data.meta.firstDay, { month: 'long', day: 'numeric', year: 'numeric' })}</div></div></div>
-    <div class="card stat"><div class="big-ico">${ICON.calDays}</div>
-      <div><h3>Days prayed</h3><div class="val"><b>${s.daysPrayed}</b><span>${d(s.daysPrayed)}</span></div><div class="sub">Days with at least one prayer</div></div></div>
-    <button class="card stat" id="stat-answered" style="width:100%;text-align:left"><div class="big-ico">${ICON.dove}</div>
-      <div><h3>Answered prayers</h3><div class="val"><b>${s.answered}</b></div><div class="sub">${s.openInt ? `${s.openInt} still praying for · tap to open` : 'Tap to open the Journal'}</div></div></button>
+    <div class="tiles">
+      <div class="card tile"><div class="ti">${ICON.trophy}Longest streak</div><b>${s.longest}</b><small>${d(s.longest)} · all time</small></div>
+      <div class="card tile"><div class="ti">${ICON.bars}Total prayers</div><b>${s.total}</b><small>since ${fmt(Store.data.meta.firstDay, { month: 'short', day: 'numeric' })}</small></div>
+      <div class="card tile"><div class="ti">${ICON.calDays}Days prayed</div><b>${s.daysPrayed}</b><small>of ${s.daysSince} ${d(s.daysSince)}</small></div>
+      <button class="card tile" id="stat-answered"><div class="ti">${ICON.dove}Answered</div><b>${s.answered}</b><small>${s.openInt ? `${s.openInt} still praying for` : 'open the Journal'}</small></button>
+    </div>
+    ${keptCard(today)}
     <div class="card pad" id="year-card"></div>`;
   renderYear();
 }
+
+// "Prayers kept": share of each prayer ticked over the last 30 days (days that have passed, since the first day)
+function keptCard(today) {
+  const first = Store.data.meta.firstDay || today, now = nowInfo(), ps = Store.prayers();
+  const rows = ps.map((p) => {
+    let had = 0, kept = 0;
+    for (let i = 0; i < 30; i++) {
+      const k = addDays(today, -i); if (k < first) break;
+      if (k === today && toMin(timeOf(p, k)) > now.min) continue;      // not due yet today
+      had++; if (Store.isDone(k, p.id)) kept++;
+    }
+    return { p, pct: had ? Math.round(kept * 100 / had) : null };
+  }).filter((r) => r.pct !== null);
+  if (!rows.length) return '';
+  const low = rows.reduce((a, b) => (b.pct < a.pct ? b : a));
+  const hint = low.pct < 85 ? `${esc(low.p.name)} is the hardest one to keep.${low.p.notify ? '' : ' A reminder might help.'}` : 'You keep every prayer well. All glory to God.';
+  return `<div class="card kept"><h3>Prayers kept <small>last 30 days</small></h3>${rows.map((r) => `<div class="kr"><span>${esc(r.p.name)}</span><i><em style="width:${r.pct}%"></em></i><span>${r.pct}%</span></div>`).join('')}<p>${hint}</p></div>`;
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) show(b.dataset.go); });
 
 // Year view: one row per month, one square per day
 let statsYear = null;
@@ -1749,6 +1896,20 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.13.1', date: '2026-10-05', items: [
+    'The header picture now cross-fades in 0.8 seconds when the time of day changes.',
+  ] },
+  { v: '1.13.0', date: '2026-10-05', items: [
+    'New: the header picture follows the time of day: early morning, midday, sunset and a starry night, switching gently with your real sunrise and sunset.',
+    'Ticking a prayer feels nicer: the box pops, the ✓ draws itself, and newer iPhones give a tiny tap.',
+    'Statistics: a tidy grid of numbers, a new “Prayers kept” chart (last 30 days), and your streak under the title.',
+    'Long pages show a small title bar at the top when you scroll, like other iPhone apps.',
+    'New users see a friendly start instead of a page of zeros.',
+    'Smoother page changes, and the verse on the Prayers page is no longer cut off on small iPhones.',
+    'Reminder health: Account & sync shows when the reminder server last checked, and warns if reminders may be delayed.',
+    'A quiet backup reminder under Settings › App › Export backup (no pop-ups).',
+    'Fixed: the icons next to closed Settings sections were missing.',
+  ] },
   { v: '1.12.2', date: '2026-10-05', items: [
     'Splash: the painting now fades softly at the bottom into the colour of the strip below it, so there is no hard edge.',
   ] },
@@ -1855,6 +2016,7 @@ function renderSettings() {
     `<div class="sub-head">In each reminder</div><div class="srow"><span class="label">Show a prayer intention<small>One of your open intentions, taking turns. Shown on the lock screen.</small></span>
      <button class="switch" role="switch" id="sw-remint" aria-checked="${Store.data.settings.remIntentions !== false}" aria-label="Show a prayer intention in reminders"></button></div>`;
   $('#app-version').textContent = APP_VERSION;
+  renderBackupAge();
   renderChangelog();
   $('#sw-verse').setAttribute('aria-checked', Store.data.settings.showVerse);
   renderNotifyStatus();
@@ -2250,15 +2412,28 @@ const localTest = () => showNotification(Store.prayers().find((p) => p.id === cu
 /* =========================================================
    BACKUP
    ========================================================= */
+// Quiet backup reminder: only a line under "Export backup" (gold after 30 days). Never a pop-up.
+const BACKUP_KEY = 'prayerTracker.lastBackup';
+function renderBackupAge() {
+  const el = $('#backup-age'); if (!el) return;
+  let last = null; try { last = localStorage.getItem(BACKUP_KEY); } catch (_) {}
+  const today = nowInfo().key, days = last ? Math.round((keyToDate(today) - keyToDate(last)) / 864e5) : null;
+  const usedLong = (Store.data.meta.firstDay || today) <= addDays(today, -30);
+  const due = days === null ? usedLong : days >= 30;
+  el.textContent = days === null ? (usedLong ? 'No backup saved yet. Time for one?' : 'Save a copy of everything as a file')
+    : days === 0 ? 'Last backup: today' : `Last backup: ${days} day${days === 1 ? '' : 's'} ago${due ? '. Time for a new one?' : ''}`;
+  $('#btn-export').classList.toggle('due', due);
+}
+const backupDone = () => { try { localStorage.setItem(BACKUP_KEY, nowInfo().key); } catch (_) {} renderBackupAge(); };
 $('#btn-export').onclick = async () => {
   const name = `prayers-backup-${nowInfo().key}.json`;
   const blob = new Blob([JSON.stringify(Store.data, null, 2)], { type: 'application/json' });
   const file = new File([blob], name, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: name }); return; } catch (_) { return; }
+    try { await navigator.share({ files: [file], title: name }); backupDone(); toast('Backup saved'); return; } catch (_) { return; }   // cancelled: not counted
   }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  a.href = URL.createObjectURL(blob); a.download = name; a.click(); backupDone();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 $('#btn-import').onclick = () => $('#file-import').click();
@@ -2292,7 +2467,8 @@ function show(view) {
   if (view === 'settings') { renderSettings(); renderAccount(); }
   if (view === 'prayers') renderPrayers(true);
   setTitle();
-  $('#scroller').scrollTop = 0;
+  const ht = $('.hero-text'); ht.classList.remove('swap'); void ht.offsetWidth; ht.classList.add('swap');
+  $('#scroller').scrollTop = 0; updateCBar();
 }
 document.querySelector('nav').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (b) show(b.dataset.view);
@@ -2313,6 +2489,7 @@ function toast(msg, undo) {
 
 let lastDayKey = null;
 function tick() {
+  updateHeader();
   const k = nowInfo().key;
   if (k !== lastDayKey) {           // new day (midnight) → fresh checkboxes everywhere
     lastDayKey = k;
@@ -2669,9 +2846,21 @@ function ago(iso) {
 }
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 // "Prayer reminders" panel in Account & sync: is this phone connected, plus the test button
+// Reminder health: when the reminder server last ran (needs the SQL from health-check.sql; hidden until then)
+const Health = { at: undefined, fetched: 0, missing: false };
+async function checkHealth() {
+  if (!Cloud.session || Health.missing || Date.now() - Health.fetched < 60000) return;
+  Health.fetched = Date.now();
+  try { const at = await Cloud.api('POST', 'rpc/reminders_status', {}); const was = Health.at; Health.at = at || null; if (was !== Health.at) renderAccount(); }
+  catch (e) { if (e.status === 404 || /reminders_status/.test(e.message || '')) Health.missing = true; }
+}
+const minsAgo = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
 function reminderPanel() {
   const n = notifSupport(), on = window.Push && Push.active();
-  const st = on ? { dot: 'ok', line: 'Connected. They arrive on time, even when the app is closed.' }
+  checkHealth();
+  const late = on && typeof Health.at === 'string' && Date.now() - new Date(Health.at) > 10 * 60000;   // no report yet: stay quiet
+  const st = late ? { dot: 'warn', line: `Reminders may be delayed. The server last checked ${Health.at ? minsAgo(Health.at) : 'a while ago'}. <button class="link-inline" data-health>What can I do?</button>` }
+    : on ? { dot: 'ok', line: `Connected. They arrive on time, even when the app is closed.${Health.at ? ` Last checked ${minsAgo(Health.at)}.` : ''}` }
     : n === 'granted' ? { dot: 'err', line: window.Push && Push.error ? 'Not connected yet.' : 'Connecting…' }
     : n === 'install' ? { dot: '', line: 'Open the app from your Home Screen icon to use reminders.' }
     : { dot: '', line: 'Turn on a prayer’s reminder in Notifications below.' };
