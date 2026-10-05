@@ -250,6 +250,8 @@
   .row + .row { border-top: 1px solid var(--divider); }
   .row .hit { position: absolute; inset: 0; z-index: 0; }
   .row > *:not(.hit) { position: relative; z-index: 1; }
+  /* Ticking: everything from the row's left edge to just past the prayer icon ticks the prayer */
+  .row .tickzone { position: absolute !important; left: 0; top: 0; bottom: 0; width: 98px; z-index: 2 !important; }
   .row .p-ico, .row .name, .row .time { pointer-events: none; }
   .p-ico { width: 30px; height: 30px; flex: none; color: var(--icon); }
   .p-ico svg { width: 100%; height: 100%; }
@@ -610,6 +612,27 @@
   .help p { margin: 0 0 14px; font-size: calc(15.5px * var(--fs)); line-height: 1.45; color: var(--ink); }
   .link-inline { color: var(--gold-text); text-decoration: underline; font: inherit; padding: 0; }
   .help a { color: var(--gold-text); }
+  /* Milestone card */
+  .ms { text-align: center; padding: 10px 6px 4px; }
+  .ms-ring { width: 96px; height: 96px; margin: 4px auto 12px; border-radius: 50%; display: grid; place-items: center; color: var(--gold);
+    background: radial-gradient(circle, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%);
+    box-shadow: 0 0 0 2px var(--gold), 0 0 40px color-mix(in srgb, var(--gold) 45%, transparent); animation: msIn .7s cubic-bezier(.3, 1.5, .5, 1); }
+  .ms-ring svg { width: 52px; height: 52px; }
+  @keyframes msIn { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  .ms small { letter-spacing: .14em; text-transform: uppercase; color: var(--gold-text); font-size: calc(13px * var(--fs)); }
+  .ms h2 { margin: 4px 0 12px; font-size: calc(30px * var(--fs)); color: var(--ink-strong); line-height: 1.15; }
+  .ms-v { font-style: italic; font-size: calc(17px * var(--fs)); line-height: 1.45; margin: 0 0 10px; }
+  .ms-v span { display: block; font-style: normal; color: var(--gold-text); font-size: calc(14px * var(--fs)); margin-top: 4px; }
+  .ms-t { color: var(--ink-dim); font-size: calc(15.5px * var(--fs)); line-height: 1.45; margin: 0 0 16px; }
+  /* Save verse (♥) and the Saved verses list */
+  .vrow { display: flex; gap: 10px; margin-top: 10px; }
+  .vrow .share-btn { flex: 1; margin: 0; }
+  .heart { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--gold); color: var(--gold-text); font-weight: 700; font-size: calc(16px * var(--fs)); min-height: 46px; }
+  .heart.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .sv { padding: 10px 0; border-top: 1px solid var(--divider); }
+  .sv p { margin: 0; font-style: italic; font-size: calc(16px * var(--fs)); line-height: 1.4; }
+  .sv-r { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; color: var(--gold-text); font-size: calc(13.5px * var(--fs)); }
+  .sv-x { color: var(--gold); font-size: 18px; padding: 2px 4px; }
   /* Pray now guide */
   .pn-head small { display: block; font-size: calc(13px * var(--fs)); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-text); margin-bottom: 2px; }
   .pn-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
@@ -798,6 +821,7 @@
     <div class="card pad" id="jp-results"></div>
     <div class="card pad" id="jp-note"></div>
     <div class="card pad" id="jp-verse"></div>
+    <div class="card pad" id="jp-saved-v"></div>
     <div class="card pad" id="jp-int"></div>
     <div class="card pad" id="jp-ans"></div>
     <div class="card pad" id="jp-past"></div>
@@ -918,7 +942,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.13.2';
+const APP_VERSION = '1.14.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1035,7 +1059,8 @@ const Store = {
     d.settings.textSize = d.settings.textSize || 'normal';
     d.settings.customOn = !!d.settings.customOn;                   // "Customize prayers" (off = the normal five)
     d.settings.custom = d.settings.custom || null;
-    d.grace = d.grace || {};            // { 'YYYY-MM-DD' (missed day): { used: 'YYYY-MM-DD', at } } streak kept by a grace day
+    d.grace = d.grace || {};
+    d.saved = d.saved || {};            // { 'John 8:32': { text, at } } verses you saved with ♥            // { 'YYYY-MM-DD' (missed day): { used: 'YYYY-MM-DD', at } } streak kept by a grace day
     d.deleted = d.deleted || {};        // { 'note:YYYY-MM-DD' | 'int:<id>': time deleted } so deletions sync too
     return d;
   },
@@ -1196,7 +1221,23 @@ const sheetHead = (title) => `<div class="sh-head"><h3>${title}</h3><button clas
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
-const shareBtn = (k = '') => `<button class="share-btn" data-share="${k}">${SHARE_ICON}Share verse</button>`;
+const shareBtn = (k = '') => {
+  const v = verseFor(k || nowInfo().key), on = !!Store.data.saved[v.ref];
+  return `<div class="vrow"><button class="heart${on ? ' on' : ''}" data-save="${k}" aria-pressed="${on}">${on ? '♥ Saved' : '♡ Save'}</button>
+    <button class="share-btn" data-share="${k}">${SHARE_ICON}Share verse</button></div>`;
+};
+// ♥ Save / unsave a verse (synced with your account)
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-save]'); if (!b) return;
+  const v = verseFor(b.dataset.save || nowInfo().key), t = new Date().toISOString();
+  if (Store.data.saved[v.ref]) { delete Store.data.saved[v.ref]; Store.data.deleted['saved:' + v.ref] = t; }
+  else { Store.data.saved[v.ref] = { text: v.text, at: t }; delete Store.data.deleted['saved:' + v.ref]; haptic(); }
+  Store.save();
+  const on = !!Store.data.saved[v.ref];
+  document.querySelectorAll(`[data-save="${b.dataset.save}"]`).forEach((h) => { h.classList.toggle('on', on); h.setAttribute('aria-pressed', on); h.textContent = on ? '♥ Saved' : '♡ Save'; });
+  if (currentView === 'journal') renderSavedVerses();
+  toast(on ? 'Verse saved to your Journal' : 'Verse removed from your Journal');
+});
 $('#verse-strip').addEventListener('click', () => {
   const k = dayKey(); if (k > nowInfo().key) return;
   const v = verseFor(k);
@@ -1205,8 +1246,8 @@ $('#verse-strip').addEventListener('click', () => {
 });
 // Picture of the verse on the sunset photo, shared through the iPhone share sheet.
 // Built synchronously inside the tap so iOS allows the share sheet to open.
-const shareBg = new Image(); shareBg.src = 'header.jpg';
-function verseImage(v) {
+const shareBg = new Image(); shareBg.src = 'header.jpg';   // swapped to the picture for the time of day (updateHeader)
+function verseImage(v, opt = {}) {
   const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
   x.fillStyle = '#1a0f08'; x.fillRect(0, 0, W, H);
@@ -1226,24 +1267,27 @@ function verseImage(v) {
   do { lines = wrap(); } while (lines.length * size * 1.38 > 760 && (size -= 2) > 34);
   const lh = size * 1.38, block = lines.length * lh + 40 + 52;
   let y = Math.max(220, (H - block) / 2 + 40);
+  if (opt.heading) { x.textAlign = 'center'; x.font = `700 40px ${serif}`; x.fillStyle = '#F5BF4F'; x.fillText(opt.heading, W / 2, Math.max(150, y - 70)); }
   x.textAlign = 'center'; x.fillStyle = '#FFF8EC'; x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 18;
   for (const l of lines) { x.fillText(l, W / 2, y + size); y += lh; }
   x.shadowBlur = 0;
   x.fillStyle = '#F5BF4F'; x.fillRect(W / 2 - 40, y + 30, 80, 3);
   x.font = `600 46px ${serif}`; x.fillText(v.ref, W / 2, y + 100);
-  x.font = `30px ${serif}`; x.fillStyle = 'rgba(255,248,236,.7)'; x.fillText('Verse of the day · World English Bible', W / 2, H - 70);
+  x.font = `30px ${serif}`; x.fillStyle = 'rgba(255,248,236,.7)'; x.fillText(opt.footer || 'Verse of the day · World English Bible', W / 2, H - 70);
   const bin = atob(c.toDataURL('image/jpeg', .9).split(',')[1]), arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return new File([arr], 'verse-of-the-day.jpg', { type: 'image/jpeg' });
+  return new File([arr], opt.name || 'verse-of-the-day.jpg', { type: 'image/jpeg' });
 }
 function shareVerse(k) {
-  const v = verseFor(k || nowInfo().key), file = verseImage(v);
-  const text = `“${v.text}” ${v.ref}`;
+  const v = verseFor(k || nowInfo().key);
+  shareImage(verseImage(v), `“${v.text}” ${v.ref}`);
+}
+function shareImage(file, text) {
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({ files: [file], text }).catch(() => {});
   } else {                                                      // fallback: show the picture to save
     const url = URL.createObjectURL(file);
-    openSheet(`${sheetHead('Share verse')}<img src="${url}" alt="Verse picture" style="width:100%;border-radius:12px;display:block">
+    openSheet(`${sheetHead('Share')}<img src="${url}" alt="Picture to share" style="width:100%;border-radius:12px;display:block">
       <p class="wl-small">Press and hold the picture to save or share it.</p>`);
   }
 }
@@ -1265,6 +1309,19 @@ const intentItem = (x) => `<div class="intent${x.answered ? ' answered' : ''}" d
     <button class="del" data-act="del" aria-label="Delete">×</button></div>`;
 
 let pastLimit = 10;
+function renderSavedVerses() {
+  const el = $('#jp-saved-v'); if (!el) return;
+  const list = Object.entries(Store.data.saved).sort((a, b) => (b[1].at || '').localeCompare(a[1].at || ''));
+  el.style.display = list.length ? '' : 'none';
+  el.innerHTML = `<div class="jp-h"><h3>Saved verses</h3><small>${list.length}</small></div>` + list.map(([ref, x]) =>
+    `<div class="sv"><p>“${esc(x.text)}”</p><div class="sv-r"><span>${esc(ref)}</span><button class="sv-x" data-unsave="${esc(ref)}" aria-label="Remove ${esc(ref)}">♥</button></div></div>`).join('');
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-unsave]'); if (!b) return;
+  const ref = b.dataset.unsave; if (!confirm(`Remove ${ref} from your saved verses?`)) return;
+  delete Store.data.saved[ref]; Store.data.deleted['saved:' + ref] = new Date().toISOString(); Store.save(); renderSavedVerses();
+  document.querySelectorAll('[data-save]').forEach((h) => { const v = verseFor(h.dataset.save || nowInfo().key); if (v.ref === ref) { h.classList.remove('on'); h.textContent = '♡ Save'; } });
+});
 function renderJournalPage(full = true) {
   const today = nowInfo().key;
   if (full) {
@@ -1276,6 +1333,7 @@ function renderJournalPage(full = true) {
     $('#jp-verse').innerHTML = `<div class="jp-h"><h3>Verse of the day</h3></div>
       <p class="full-verse">“${esc(v.text)}”</p><div class="full-ref">${esc(v.ref)}<small>World English Bible</small></div>${shareBtn()}`;
   }
+  renderSavedVerses();
   const open = Store.data.intentions.filter((x) => !x.answered);
   const done = Store.data.intentions.filter((x) => x.answered).sort((a, b) => b.answered.localeCompare(a.answered));
   $('#jp-int').innerHTML = `<div class="jp-h"><h3>Prayer intentions</h3><small>${open.length || ''}</small></div>
@@ -1402,6 +1460,7 @@ function updateHeader(instant) {
   const p = headerPeriod(); if (p === heroNow) return;
   const first = !heroNow; heroNow = p;
   try { localStorage.setItem('prayerTracker.hero', p); } catch (_) {}
+  shareBg.src = HEADER_IMG[p];
   const a = $('#hero-a'), b = $('#hero-b'), show = a.style.opacity === '0' ? a : b, hide = show === a ? b : a;
   const src = HEADER_IMG[p];
   if (first || instant) { a.style.transition = 'none'; if (a.getAttribute('src') !== src) a.src = src; a.style.opacity = '1'; b.style.opacity = '0'; requestAnimationFrame(() => { a.style.transition = ''; }); return; }
@@ -1530,6 +1589,7 @@ function renderPrayers(force) {
     const done = Store.isDone(key, p.id);
     return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(key, p) ? ' later' : ''}" data-id="${p.id}">
       <button class="hit" data-act="${isToday ? 'pray' : 'toggle'}" aria-hidden="true" tabindex="-1"></button>
+      <button class="tickzone" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
       <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
@@ -1600,7 +1660,7 @@ document.addEventListener('click', (e) => {
   if (Store.isDone(key, id)) { toast('Amen 🙏'); return; }
   if (notYet(key, p)) { toast(`Amen 🙏 You can mark ${p.name} at ${timeOf(p, key)}.`); return; }
   popRow = { key, id }; haptic();
-  changeDay(key, () => Store.setDone(key, id, true), `Amen 🙏 ${p.name} marked as prayed`);
+  changeDay(key, () => Store.setDone(key, id, true), null);
 });
 
 // Gold glow + sparkles when the fifth prayer is ticked
@@ -1618,6 +1678,37 @@ function celebrate() {
   }
 }
 // Change a day's ticks with an Undo button in the message bar
+/* ----- Streak milestones: a one-time card with a verse at 7, 30, 50, 100, 200 and 365 days ----- */
+const MILESTONES = {
+  7: ['A whole week of prayer', 'Seven days, every prayer. God sees your faithfulness, and he draws near.', 'The LORD is near to all those who call on him, to all who call on him in truth.', 'Psalm 145:18'],
+  30: ['30 days of prayer', 'A whole month, every prayer, every day. Thank God for the faithfulness he gave you.', 'Let’s not be weary in doing good, for we will reap in due season, if we don’t give up.', 'Galatians 6:9'],
+  50: ['50 days of prayer', 'Fifty days of turning to God, morning to night. Keep holding on.', 'Let’s hold fast the confession of our hope without wavering; for he who promised is faithful.', 'Hebrews 10:23'],
+  100: ['100 days of prayer', 'One hundred days. What God began in you, he is carrying on.', 'Being confident of this very thing, that he who began a good work in you will complete it until the day of Jesus Christ.', 'Philippians 1:6'],
+  200: ['200 days of prayer', 'Two hundred days of waiting on the Lord. May he keep renewing your strength.', 'But those who wait for the LORD will renew their strength. They will mount up with wings like eagles.', 'Isaiah 40:31'],
+  365: ['A whole year of prayer', 'Every day for a year. All glory to God, whose mercies are new every morning.', 'His compassion doesn’t fail. They are new every morning. Great is your faithfulness.', 'Lamentations 3:22-23'],
+};
+const MS_KEY = 'prayerTracker.milestones';   // milestones already shown on this phone (per streak)
+function checkMilestone() {
+  const today = nowInfo().key, s = computeStats(today), m = MILESTONES[s.cur]; if (!m) return;
+  const id = `${s.cur}:${addDays(today, 1 - s.cur)}`;          // the same streak never shows the same milestone twice
+  let seen = []; try { seen = JSON.parse(localStorage.getItem(MS_KEY)) || []; } catch (_) {}
+  if (seen.includes(id)) return;
+  try { localStorage.setItem(MS_KEY, JSON.stringify([...seen, id].slice(-50))); } catch (_) {}
+  openMilestone(s.cur);
+}
+function openMilestone(days) {
+  const [title, text, verse, ref] = MILESTONES[days];
+  openSheet(`<div class="ms"><div class="ms-ring">${ICON.flame}</div><small>Milestone · ${days} days</small><h2>${title}</h2>
+    <p class="ms-v">“${verse}”<span>${ref}</span></p><p class="ms-t">${text}</p>
+    <button class="btn-main" id="ms-amen">Amen 🙏</button><button class="auth-alt" data-ms-share="${days}">Share this milestone</button></div>`);
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#ms-amen')) { closeSheet(); return; }
+  const b = e.target.closest('[data-ms-share]'); if (!b) return;
+  const [title, , verse, ref] = MILESTONES[b.dataset.msShare];
+  shareImage(verseImage({ text: verse, ref }, { heading: title.toUpperCase(), footer: 'A prayer milestone · World English Bible', name: 'prayer-milestone.jpg' }), `${title} 🙏 “${verse}” ${ref}`);
+});
+
 // A tiny vibration (Android: vibrate; iPhone with iOS 18+: the system "switch" tap)
 function haptic() {
   try {
@@ -1632,20 +1723,21 @@ function changeDay(key, fn, message) {
   fn();
   renderPrayers(true);
   if (currentView === 'calendar') renderCalendar();
-  if (key === nowInfo().key && before < n && Store.count(key) === n) celebrate();
-  toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'calendar') renderCalendar(); });
+  if (key === nowInfo().key && before < n && Store.count(key) === n) { celebrate(); setTimeout(checkMilestone, 1700); }
+  if (message) toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'calendar') renderCalendar(); });
 }
 
 $('#prayer-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const id = btn.closest('.row').dataset.id;
   if (btn.dataset.act === 'pray') { openPrayNow(id); return; }
+  if (btn.classList.contains('tickzone')) { const c = btn.parentNode.querySelector('.check'); c.style.transform = 'scale(.88)'; setTimeout(() => { c.style.transform = ''; }, 120); }
   if (btn.dataset.act === 'toggle') {
     const key = dayKey(), on = !Store.isDone(key, id), pr = Store.prayers().find((p) => p.id === id), name = pr.name;
     if (notYet(key, pr)) { notYetToast(key, pr); renderPrayers(true); return; }
     const when = key === nowInfo().key ? '' : ` for ${fmt(key, { weekday: 'long' })}`;
     if (on) { popRow = { key, id }; haptic(); }
-    changeDay(key, () => Store.setDone(key, id, on), on ? `${name} marked as prayed${when}` : `${name} unmarked${when}`);
+    changeDay(key, () => Store.setDone(key, id, on), null);   // no message: tap again to untick
   } else {
     await toggleBell(id);
   }
@@ -1901,6 +1993,12 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.14.0', date: '2026-10-05', items: [
+    'New: streak milestones. At 7, 30, 50, 100, 200 and 365 days a card with a verse celebrates your faithfulness, and you can share it.',
+    'New: ♥ Save verses you love. Saved verses collect in the Journal and sync with your account.',
+    'Shared verse pictures now use the picture for the time of day.',
+    'Easier ticking: tap anywhere on the box or the prayer’s icon. The message bar after a tick is gone; tap again to untick.',
+  ] },
   { v: '1.13.2', date: '2026-10-05', items: [
     'Fixed: pulling down to refresh briefly showed the sunset picture before the right one for the time of day.',
   ] },
@@ -2259,7 +2357,8 @@ const HELP = [
   ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
   ['Pray now', 'Tap a prayer’s name on today’s list for a short guide (Be still, Rejoice, Ask, Yield) with today’s verse, your intentions and the Lord’s Prayer. “Amen ✓” marks the prayer.'],
   ['Grace for streaks', 'Missed one day? In Statistics you can use grace once a week (it renews every Wednesday) to keep your streak going. The covered day shows as a dove.'],
-  ['Ticking your prayers', 'Tap the box next to a prayer when you’ve prayed. A prayer can’t be ticked before its time; later prayers show a faded box until then. Made a mistake? Tap Undo in the message at the bottom.'],
+  ['Ticking your prayers', 'Tap the box or the prayer’s icon when you’ve prayed; tap again to untick. A prayer can’t be ticked before its time; later prayers show a faded box until then.'],
+  ['Milestones and saved verses', 'At 7, 30, 50, 100, 200 and 365 days in a row, a milestone card celebrates your faithfulness. Tap ♡ Save on a verse to keep it in the Journal under Saved verses.'],
   ['Other days', 'Use the ‹ › arrows at the top of the Prayers page to go back (to fix a missed tick) or up to 30 days ahead (to see prayer times). Tap “Today” or the Prayers tab to come back. Future days keep their verse a surprise.'],
   ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
   ['Your place and time zone', 'Prayer times and reminders follow the place in Settings › Location. Search a city or use your current location. When you travel, the app asks whether to switch.'],
@@ -2746,6 +2845,8 @@ function mergeData(L, R) {
   out.intentions = [...ints.values()].filter((x) => !(dead['int:' + x.id] && dead['int:' + x.id] >= (x.updatedAt || '')))
     .sort((a, b) => (a.created || '').localeCompare(b.created || ''));
   if (R.settings && (R.settings.updatedAt || '') > (L.settings.updatedAt || '')) out.settings = R.settings;
+  out.saved = { ...(R.saved || {}), ...(L.saved || {}) };
+  for (const [k, t] of Object.entries(dead)) if (k.startsWith('saved:')) { const r = k.slice(6); if (out.saved[r] && (out.saved[r].at || '') <= t) delete out.saved[r]; }
   out.grace = { ...(R.grace || {}), ...(L.grace || {}) };
   for (const [k, t] of Object.entries(dead)) if (k.startsWith('grace:')) { const day = k.slice(6); if (out.grace[day] && (out.grace[day].at || '') <= t) delete out.grace[day]; }
   out.meta = { ...L.meta,
