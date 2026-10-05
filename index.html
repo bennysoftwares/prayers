@@ -612,6 +612,17 @@
   .help p { margin: 0 0 14px; font-size: calc(15.5px * var(--fs)); line-height: 1.45; color: var(--ink); }
   .link-inline { color: var(--gold-text); text-decoration: underline; font: inherit; padding: 0; }
   .help a { color: var(--gold-text); }
+  /* Tree of faith */
+  .tree-card { padding: 16px 16px 14px; text-align: center; }
+  .tree-card h3 { margin: 0; font-size: calc(20px * var(--fs)); color: var(--ink-strong); }
+  .tree-card .tsub { color: var(--gold-text); font-size: calc(13.5px * var(--fs)); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+  .tree-card svg, .tree-up svg { max-width: 300px; margin: 0 auto; }
+  .tree-card .tv { font-style: italic; color: var(--ink); font-size: calc(15px * var(--fs)); line-height: 1.4; margin: 2px 6px 8px; }
+  .tree-card .tv span { display: block; font-style: normal; color: var(--gold-text); font-size: calc(13px * var(--fs)); margin-top: 2px; }
+  .tree-card .tn { color: var(--ink-dim); font-size: calc(14px * var(--fs)); }
+  .tbar { height: 6px; border-radius: 4px; background: var(--ring-track); margin: 8px 30px 6px; overflow: hidden; }
+  .tbar i { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
+  .tree-up svg { animation: msIn .8s cubic-bezier(.3, 1.4, .5, 1); }
   /* Milestone card */
   .ms { text-align: center; padding: 10px 6px 4px; }
   .ms-ring { width: 96px; height: 96px; margin: 4px auto 12px; border-radius: 50%; display: grid; place-items: center; color: var(--gold);
@@ -942,7 +953,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.15.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1678,6 +1689,120 @@ function celebrate() {
   }
 }
 // Change a day's ticks with an Undo button in the message bar
+/* ----- Tree of faith: grows with every full day of prayer (all full days ever, so it never shrinks) ----- */
+const TREE_STAGES = [
+  [0, 'A seed is planted', 'Pray all five prayers today and your seed will sprout.'],
+  [1, 'A sprout', 'Your first full day of prayer, and the seed has sprouted.'],
+  [7, 'A sapling', 'Seven full days. Your tree is putting down roots and branches.'],
+  [30, 'A young tree', 'Thirty full days. Your tree is standing tall.'],
+  [100, 'In blossom', 'One hundred full days. Your tree is in blossom. 🌸'],
+  [365, 'Bearing fruit', 'A whole year of full days. Your tree bears fruit in its season.'],
+];
+const PSALM_1_3 = ['He will be like a tree planted by the streams of water, that produces its fruit in its season, whose leaf also does not wither.', 'Psalm 1:3'];
+const fullDayCount = () => { const n = Store.prayers().length; return Object.keys(Store.data.days).filter((k) => Store.count(k) === n).length; };
+const treeStage = (d) => { let i = 0; TREE_STAGES.forEach((st, j) => { if (d >= st[0]) i = j; }); return i; };
+// Drawn by the app: tapered trunk, a rounded crown with light and shadow, a grassy bank and a little stream (Psalm 1:3).
+function treeSVG(days, uid = 't') {
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const W = 300, H = 280, gx = 150, gy = 228;
+  const g = Math.min(1, Math.sqrt(Math.max(0, days) / 100));
+  const id = (n) => `${uid}-${n}`;
+  const defs = `<defs>
+    <radialGradient id="${id('glow')}" cx="50%" cy="52%" r="55%"><stop offset="0" stop-color="#F5BF4F" stop-opacity="${days >= 100 ? .42 : .18 + g * .2}"/><stop offset="1" stop-color="#F5BF4F" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${id('bank')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5F8A3A"/><stop offset=".55" stop-color="#3F6128"/><stop offset="1" stop-color="#2A4119"/></linearGradient>
+    <linearGradient id="${id('water')}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E5C86" stop-opacity="0"/><stop offset=".3" stop-color="#4C88B8"/><stop offset=".7" stop-color="#3A73A3"/><stop offset="1" stop-color="#2E5C86" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${id('bark')}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3E2614"/><stop offset=".45" stop-color="#6E4523"/><stop offset="1" stop-color="#4A2D17"/></linearGradient>
+    <radialGradient id="${id('fadeg')}" cx="50%" cy="40%" r="60%"><stop offset=".6" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+    <mask id="${id('fade')}"><rect x="0" y="0" width="300" height="300" fill="url(#${id('fadeg')})"/></mask>
+    <radialGradient id="${id('l0')}" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#4E7A30"/><stop offset="1" stop-color="#2C4A1B"/></radialGradient>
+    <radialGradient id="${id('l1')}" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#7DB04E"/><stop offset="1" stop-color="#4A7A2E"/></radialGradient>
+    <radialGradient id="${id('l2')}" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#B5DB7A"/><stop offset="1" stop-color="#7DB04E" stop-opacity="0"/></radialGradient>
+  </defs>`;
+  // bank, stream and grass
+  let ground = `<ellipse cx="150" cy="${gy + 18}" rx="138" ry="30" fill="url(#${id('bank')})" mask="url(#${id('fade')})"/>
+    <path d="M40 ${gy + 30} Q120 ${gy + 21} 190 ${gy + 28} T262 ${gy + 26}" stroke="url(#${id('water')})" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M60 ${gy + 27} q12 -2 22 0 M168 ${gy + 25} q10 -2 18 0" stroke="#BFE0F5" stroke-width="1.4" fill="none" opacity=".7" stroke-linecap="round"/>`;
+  for (let i = 0; i < 22; i++) { const x = 45 + rnd() * 210, y = gy + 2 + Math.abs(x - 150) * .1 - 4 + rnd() * 6; ground += `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l${(rnd() * 3 - 1.5).toFixed(1)} -${(4 + rnd() * 5).toFixed(1)}" stroke="#7DB04E" stroke-width="1.3" stroke-linecap="round" opacity=".8"/>`; }
+  let trunk = '', back = '', mid = '', hi = '', extra = '';
+  if (days === 0) {
+    extra = `<ellipse cx="${gx}" cy="${gy - 9}" rx="7" ry="5" fill="#8A5A2B"/><ellipse cx="${gx - 2}" cy="${gy - 11}" rx="2.5" ry="1.5" fill="#C08A55"/>`;
+  } else if (days < 7) {
+    const h = 14 + days * 4, top = gy - 10 - h;
+    trunk = `<path d="M${gx} ${gy - 10} C${gx - 4} ${gy - 10 - h * .4} ${gx + 3} ${top + h * .3} ${gx} ${top}" stroke="#6FA24A" stroke-width="3.2" fill="none" stroke-linecap="round"/>`;
+    mid = `<path d="M${gx} ${top + 2} c-6 -8 -18 -8 -22 -2 c6 6 16 6 22 2z" fill="url(#${id('l1')})"/><path d="M${gx} ${top} c6 -9 18 -9 22 -3 c-6 7 -16 7 -22 3z" fill="url(#${id('l1')})"/>`;
+  } else {
+    const depth = Math.min(6, 2 + Math.floor(g * 4.6)), len0 = 28 + 22 * g, w0 = 6 + 15 * g;
+    const nodes = [];
+    const seg = (x, y, x2, y2, w1, w2) => {           // tapered, slightly curved branch as a filled shape
+      const a = Math.atan2(y2 - y, x2 - x) + Math.PI / 2, c = Math.cos(a), s = Math.sin(a), mx = (x + x2) / 2 + (rnd() - .5) * 4, my = (y + y2) / 2;
+      return `<path d="M${(x + c * w1).toFixed(1)} ${(y + s * w1).toFixed(1)} Q${(mx + c * (w1 + w2) / 2).toFixed(1)} ${(my + s * (w1 + w2) / 2).toFixed(1)} ${(x2 + c * w2).toFixed(1)} ${(y2 + s * w2).toFixed(1)} L${(x2 - c * w2).toFixed(1)} ${(y2 - s * w2).toFixed(1)} Q${(mx - c * (w1 + w2) / 2).toFixed(1)} ${(my - s * (w1 + w2) / 2).toFixed(1)} ${(x - c * w1).toFixed(1)} ${(y - s * w1).toFixed(1)} Z" fill="url(#${id('bark')})"/>`;
+    };
+    const branch = (x, y, len, ang, d, w) => {
+      const x2 = x + Math.sin(ang) * len, y2 = y - Math.cos(ang) * len, w2 = Math.max(.8, w * .64);
+      trunk += seg(x, y, x2, y2, w / 2, w2 / 2);
+      if (d >= depth - 2) nodes.push([x2, y2, d]);
+      if (d >= depth) return;
+      const n = d === 1 ? 2 + (g > .6 ? 1 : 0) : (rnd() < .3 ? 3 : 2), spread = .45 + rnd() * .2;
+      for (let i = 0; i < n; i++) { const a = ang + (n === 2 ? (i ? spread : -spread) * (.8 + rnd() * .4) : (i - 1) * spread) + (rnd() - .5) * .2;
+        branch(x2, y2, len * (.68 + rnd() * .1), a, d + 1, w2); }
+    };
+    branch(gx, gy - 6, len0, (rnd() - .5) * .08, 1, w0);
+    // crown: an ellipse around the branch ends, filled in three layers (shadow, leaves, sunlit highlights)
+    const xs = nodes.map((n) => n[0]), ys = nodes.map((n) => n[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + 10 + 10 * g, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + 10 + 8 * g;
+    const blobs = Math.round(10 + g * 22), r0 = 8 + g * 10;
+    const pts = [];
+    for (let i = 0; i < blobs; i++) { const t = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * .9; pts.push([cx + Math.cos(t) * rx * rr, cy + Math.sin(t) * ry * rr * .95, r0 * (.7 + rnd() * .55)]); }
+    for (const [x, y] of nodes) pts.push([x + (rnd() - .5) * 8, y - 2 + (rnd() - .5) * 6, r0 * (.6 + rnd() * .4)]);
+    pts.sort((a, b) => a[1] - b[1]);
+    for (const [x, y, r] of pts) {
+      back += `<circle cx="${(x + r * .25).toFixed(1)}" cy="${(y + r * .3).toFixed(1)}" r="${(r * 1.05).toFixed(1)}" fill="url(#${id('l0')})"/>`;
+      mid += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="url(#${id('l1')})"/>`;
+      if (y < cy + ry * .2 && rnd() < .55) hi += `<circle cx="${(x - r * .3).toFixed(1)}" cy="${(y - r * .35).toFixed(1)}" r="${(r * .55).toFixed(1)}" fill="url(#${id('l2')})"/>`;
+    }
+    const inCrown = () => { const t = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * .85; return [cx + Math.cos(t) * rx * rr, cy + Math.sin(t) * ry * rr - 2]; };
+    if (days >= 100) {                                        // blossoms: little five-petal flowers
+      const nb = Math.min(34, 10 + Math.floor((days - 100) / 8));
+      for (let i = 0; i < nb; i++) { const [x, y] = inCrown(), c = rnd() < .5 ? '#FFF6F2' : '#F6C3CF', r = 1.9 + rnd() * .8;
+        let f = ''; for (let k = 0; k < 5; k++) { const a = k * 1.2566; f += `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${(r * .85).toFixed(1)}" fill="${c}"/>`; }
+        extra += f + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * .55).toFixed(1)}" fill="#F5BF4F"/>`; }
+    }
+    if (days >= 365) {                                        // fruit in its season
+      for (let i = 0; i < 16; i++) { const [x, y] = inCrown();
+        extra += `<circle cx="${x.toFixed(1)}" cy="${(y + 3).toFixed(1)}" r="4.8" fill="#E39A2E"/><circle cx="${(x - 1.5).toFixed(1)}" cy="${(y + 1.4).toFixed(1)}" r="1.5" fill="#FFE2A6"/><path d="M${x.toFixed(1)} ${(y - 1.6).toFixed(1)} l1 -2.4" stroke="#5B3A1E" stroke-width="1"/>`; }
+    }
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block" role="img" aria-label="Your tree of faith">${defs}
+    <circle cx="150" cy="135" r="140" fill="url(#${id('glow')})"/>${ground}${trunk}${back}${mid}${hi}${extra}</svg>`;
+}
+function treeCard() {
+  const d = fullDayCount(), i = treeStage(d), [, name] = TREE_STAGES[i], next = TREE_STAGES[i + 1];
+  const nextTxt = next ? `${next[0] - d} more full day${next[0] - d === 1 ? '' : 's'} until it ${['sprouts', 'becomes a sapling', 'becomes a young tree', 'blossoms 🌸', 'bears fruit 🍊'][i]}` : 'Bearing fruit in its season. Keep going.';
+  const pct = next ? Math.round((d - TREE_STAGES[i][0]) * 100 / (next[0] - TREE_STAGES[i][0])) : 100;
+  return `<div class="card tree-card"><h3>Your tree of faith</h3><div class="tsub">${name} · ${d} full day${d === 1 ? '' : 's'}</div>${treeSVG(d, 'st')}
+    <p class="tv">“${PSALM_1_3[0]}”<span>${PSALM_1_3[1]}</span></p>
+    <div class="tbar"><i style="width:${pct}%"></i></div><div class="tn">${nextTxt}</div></div>`;
+}
+// One-time card when the tree reaches a new stage (shown after a milestone card, if both happen on the same day)
+const TREE_KEY = 'prayerTracker.treeStages';
+function seenStages() { try { return JSON.parse(localStorage.getItem(TREE_KEY)); } catch (_) { return null; } }
+function initTreeStages() {     // people updating the app: stages already reached don't pop up all at once
+  if (seenStages()) return;
+  const d = fullDayCount(); try { localStorage.setItem(TREE_KEY, JSON.stringify(TREE_STAGES.filter((st) => st[0] <= d).map((st) => st[0]))); } catch (_) {}
+}
+function checkTreeStage() {
+  const d = fullDayCount(), i = treeStage(d), at = TREE_STAGES[i][0], seen = seenStages() || [];
+  if (!at || seen.includes(at) || d !== at) return null;
+  try { localStorage.setItem(TREE_KEY, JSON.stringify([...seen, at])); } catch (_) {}
+  const [, name, text] = TREE_STAGES[i];
+  return () => openSheet(`<div class="ms tree-up"><small>Your tree of faith</small><h2>${name}</h2>${treeSVG(d, 'up')}
+    <p class="ms-t">${text}</p><p class="ms-v">“${PSALM_1_3[0]}”<span>${PSALM_1_3[1]}</span></p>
+    <button class="btn-main" id="ms-amen">Amen 🙏</button></div>`, showNextCard);
+}
+// Cards that follow a completed day are shown one after the other
+let cardQueue = [];
+function showNextCard() { const next = cardQueue.shift(); if (next) setTimeout(next, 350); }
 /* ----- Streak milestones: a one-time card with a verse at 7, 30, 50, 100, 200 and 365 days ----- */
 const MILESTONES = {
   7: ['A whole week of prayer', 'Seven days, every prayer. God sees your faithfulness, and he draws near.', 'The LORD is near to all those who call on him, to all who call on him in truth.', 'Psalm 145:18'],
@@ -1689,18 +1814,22 @@ const MILESTONES = {
 };
 const MS_KEY = 'prayerTracker.milestones';   // milestones already shown on this phone (per streak)
 function checkMilestone() {
-  const today = nowInfo().key, s = computeStats(today), m = MILESTONES[s.cur]; if (!m) return;
+  const today = nowInfo().key, s = computeStats(today), m = MILESTONES[s.cur]; if (!m) return null;
   const id = `${s.cur}:${addDays(today, 1 - s.cur)}`;          // the same streak never shows the same milestone twice
   let seen = []; try { seen = JSON.parse(localStorage.getItem(MS_KEY)) || []; } catch (_) {}
-  if (seen.includes(id)) return;
+  if (seen.includes(id)) return null;
   try { localStorage.setItem(MS_KEY, JSON.stringify([...seen, id].slice(-50))); } catch (_) {}
-  openMilestone(s.cur);
+  return () => openMilestone(s.cur);
+}
+function afterFullDay() {
+  cardQueue = [checkMilestone(), checkTreeStage()].filter(Boolean);
+  showNextCard();
 }
 function openMilestone(days) {
   const [title, text, verse, ref] = MILESTONES[days];
   openSheet(`<div class="ms"><div class="ms-ring">${ICON.flame}</div><small>Milestone · ${days} days</small><h2>${title}</h2>
     <p class="ms-v">“${verse}”<span>${ref}</span></p><p class="ms-t">${text}</p>
-    <button class="btn-main" id="ms-amen">Amen 🙏</button><button class="auth-alt" data-ms-share="${days}">Share this milestone</button></div>`);
+    <button class="btn-main" id="ms-amen">Amen 🙏</button><button class="auth-alt" data-ms-share="${days}">Share this milestone</button></div>`, showNextCard);
 }
 document.addEventListener('click', (e) => {
   if (e.target.closest('#ms-amen')) { closeSheet(); return; }
@@ -1723,7 +1852,7 @@ function changeDay(key, fn, message) {
   fn();
   renderPrayers(true);
   if (currentView === 'calendar') renderCalendar();
-  if (key === nowInfo().key && before < n && Store.count(key) === n) { celebrate(); setTimeout(checkMilestone, 1700); }
+  if (key === nowInfo().key && before < n && Store.count(key) === n) { celebrate(); setTimeout(afterFullDay, 1700); }
   if (message) toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'calendar') renderCalendar(); });
 }
 
@@ -1906,7 +2035,7 @@ function renderStats() {
     $('#stats').innerHTML = `<div class="card empty"><div class="ei">${ICON.flame}</div><h3>Your streak starts today</h3>
       <p>Pray all of today’s prayers and your first streak day appears here. Every journey begins with one step.</p>
       <button class="btn-main empty-go" data-go="prayers">Go to today’s prayers</button></div>
-      <div class="card pad" id="year-card"></div>`;
+      ${treeCard()}<div class="card pad" id="year-card"></div>`;
     renderYear(); return;
   }
   $('#stats').innerHTML = `
@@ -1921,6 +2050,7 @@ function renderStats() {
       <div class="dot-dates"><span>${fmt(from, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span>${fmt(to, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
       ${graceBlock(s)}
     </div>
+    ${treeCard()}
     <div class="tiles">
       <div class="card tile"><div class="ti">${ICON.trophy}Longest streak</div><b>${s.longest}</b><small>${d(s.longest)} · all time</small></div>
       <div class="card tile"><div class="ti">${ICON.bars}Total prayers</div><b>${s.total}</b><small>since ${fmt(Store.data.meta.firstDay, { month: 'short', day: 'numeric' })}</small></div>
@@ -1993,6 +2123,10 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.15.0', date: '2026-10-05', items: [
+    'New: your tree of faith in Statistics. It grows with every full day of prayer, from a seed to a sapling, a young tree, blossom at 100 days and fruit at 365. It never shrinks.',
+    'A small card celebrates each new stage of your tree, with Psalm 1:3.',
+  ] },
   { v: '1.14.0', date: '2026-10-05', items: [
     'New: streak milestones. At 7, 30, 50, 100, 200 and 365 days a card with a verse celebrates your faithfulness, and you can share it.',
     'New: ♥ Save verses you love. Saved verses collect in the Journal and sync with your account.',
@@ -2358,7 +2492,7 @@ const HELP = [
   ['Pray now', 'Tap a prayer’s name on today’s list for a short guide (Be still, Rejoice, Ask, Yield) with today’s verse, your intentions and the Lord’s Prayer. “Amen ✓” marks the prayer.'],
   ['Grace for streaks', 'Missed one day? In Statistics you can use grace once a week (it renews every Wednesday) to keep your streak going. The covered day shows as a dove.'],
   ['Ticking your prayers', 'Tap the box or the prayer’s icon when you’ve prayed; tap again to untick. A prayer can’t be ticked before its time; later prayers show a faded box until then.'],
-  ['Milestones and saved verses', 'At 7, 30, 50, 100, 200 and 365 days in a row, a milestone card celebrates your faithfulness. Tap ♡ Save on a verse to keep it in the Journal under Saved verses.'],
+  ['Milestones, your tree and saved verses', 'At 7, 30, 50, 100, 200 and 365 days in a row, a milestone card celebrates your faithfulness. Your tree of faith in Statistics grows with every full day of prayer (it never shrinks), from a seed to a tree that blossoms at 100 days and bears fruit at 365. Tap ♡ Save on a verse to keep it in the Journal.'],
   ['Other days', 'Use the ‹ › arrows at the top of the Prayers page to go back (to fix a missed tick) or up to 30 days ahead (to see prayer times). Tap “Today” or the Prayers tab to come back. Future days keep their verse a surprise.'],
   ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
   ['Your place and time zone', 'Prayer times and reminders follow the place in Settings › Location. Search a city or use your current location. When you travel, the app asks whether to switch.'],
@@ -3210,7 +3344,7 @@ document.querySelectorAll('.scard.fold').forEach((card) => {
   const o = openFolds.includes(card.dataset.fold); card.classList.toggle('open', o); h.setAttribute('aria-expanded', o);
   h.addEventListener('click', () => setFold(card, !card.classList.contains('open')));
 });
-Store.load(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
+Store.load(); initTreeStages(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
 if (new URLSearchParams(location.search).get('prayer')) $('#splash')?.remove();   // opened from a reminder: straight to the prayer
 else if (!restoreAfterRefresh()) runSplash();
 if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
