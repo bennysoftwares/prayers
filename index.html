@@ -170,6 +170,7 @@
     transition: opacity .2s ease, transform .2s ease; border-bottom: 1px solid var(--card-line);
     background: color-mix(in srgb, var(--nav-bg) 78%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
   #cbar.show { opacity: 1; transform: none; pointer-events: auto; }
+  #scroller { scroll-padding-top: calc(var(--safe-top) + 56px); }   /* fields scrolled into view stay below the compact title bar */
   #cbar span { font: 700 calc(18px * var(--fs)) var(--serif); color: var(--ink-strong); max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hero {
     position: relative; height: calc(var(--safe-top) + 150px); overflow: hidden;
@@ -252,6 +253,9 @@
   .row > *:not(.hit) { position: relative; z-index: 1; }
   /* Ticking: everything from the row's left edge to just past the prayer icon ticks the prayer */
   .row .tickzone { position: absolute !important; left: 0; top: 0; bottom: 0; width: 98px; z-index: 2 !important; }
+  /* long (custom) prayer names end with "…" instead of running off the row */
+  .row .name, .row .nm { min-width: 0; }
+  .row .nt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .row .p-ico, .row .name, .row .time { pointer-events: none; }
   .p-ico { width: 30px; height: 30px; flex: none; color: var(--icon); }
   .p-ico svg { width: 100%; height: 100%; }
@@ -953,7 +957,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.15.0';
+const APP_VERSION = '1.15.1';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1378,8 +1382,9 @@ function renderSearch() {
   const ints = Store.data.intentions.filter((x) => x.text.toLowerCase().includes(ql));
   const count = notes.length + ints.length;
   $('#jp-results').innerHTML = `<div class="jp-h"><h3>Results</h3><small>${count}</small></div>
-    ${notes.map((k) => `<button class="res" data-note="${k}"><b>${fmt(k, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</b><span>${highlight(snippet(Store.data.notes[k].text, q), q)}</span></button>`).join('')}
+    ${notes.slice(0, 50).map((k) => `<button class="res" data-note="${k}"><b>${fmt(k, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</b><span>${highlight(snippet(Store.data.notes[k].text, q), q)}</span></button>`).join('')}
     ${ints.map((x) => `<div class="res"><b>${x.answered ? `Answered prayer · ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : 'Prayer intention'}</b><span>${highlight(x.text, q)}</span></div>`).join('')}
+    ${notes.length > 50 ? `<div class="j-empty">Showing the 50 most recent notes. Type more words to narrow it down.</div>` : ''}
     ${count ? '' : `<div class="j-empty">Nothing found for “${esc(q)}”.</div>`}`;
 }
 $('#jp-q').addEventListener('input', renderSearch);
@@ -1599,13 +1604,13 @@ function renderPrayers(force) {
   list.innerHTML = Store.prayers().map((p) => {
     const done = Store.isDone(key, p.id);
     return `<div class="row${done ? ' done' : ''}${p.id === nowId ? ' now' : ''}${notYet(key, p) ? ' later' : ''}" data-id="${p.id}">
-      <button class="hit" data-act="${isToday ? 'pray' : 'toggle'}" aria-hidden="true" tabindex="-1"></button>
+      <button class="hit" data-act="${isToday ? 'pray' : 'toggle'}" ${isToday ? `aria-label="Pray now: ${esc(p.name)} prayer"` : 'aria-hidden="true" tabindex="-1"'}></button>
       <button class="tickzone" data-act="toggle" aria-hidden="true" tabindex="-1"></button>
-      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
+      <button class="check" role="checkbox" aria-checked="${done}" aria-label="${esc(p.name)} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
-      <span class="name"><span class="nm">${p.name}${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
+      <span class="name"><span class="nm"><span class="nt">${esc(p.name)}</span>${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
       <span class="time" aria-label="at ${timeOf(p, key)}">${timeOf(p, key)}</span>
-      <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${p.name} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
+      <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${esc(p.name)} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
   if (popRow && popRow.key === key) { list.querySelector(`.row[data-id="${popRow.id}"]`)?.classList.add('pop'); }
@@ -1787,6 +1792,10 @@ function treeCard() {
 // One-time card when the tree reaches a new stage (shown after a milestone card, if both happen on the same day)
 const TREE_KEY = 'prayerTracker.treeStages';
 function seenStages() { try { return JSON.parse(localStorage.getItem(TREE_KEY)); } catch (_) { return null; } }
+function resetOneTimeCards() {
+  try { localStorage.removeItem(TREE_KEY); localStorage.removeItem(MS_KEY); } catch (_) {}
+  initTreeStages();
+}
 function initTreeStages() {     // people updating the app: stages already reached don't pop up all at once
   if (seenStages()) return;
   const d = fullDayCount(); try { localStorage.setItem(TREE_KEY, JSON.stringify(TREE_STAGES.filter((st) => st[0] <= d).map((st) => st[0]))); } catch (_) {}
@@ -1954,9 +1963,9 @@ function renderDetail() {
     <div class="list">${Store.prayers().map((p) => {
       const done = Store.isDone(k, p.id);
       return `<div class="row${done ? ' done' : ''}${cal.edit && notYet(k, p) ? ' later' : ''}" data-id="${p.id}">
-        <button class="check" role="checkbox" aria-checked="${done}" aria-label="${p.name}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
+        <button class="check" role="checkbox" aria-checked="${done}" aria-label="${esc(p.name)}" ${cal.edit ? '' : 'disabled'}>${ICON.check}</button>
         <span class="p-ico">${iconFor(p)}</span>
-        <span class="name">${p.name}</span><span class="time">${timeOf(p, k)}</span></div>`;
+        <span class="name"><span class="nt">${esc(p.name)}</span></span><span class="time">${timeOf(p, k)}</span></div>`;
     }).join('')}</div>
     <div class="detail-head" style="padding-top:10px"><b style="font-size:calc(16px * var(--fs))">Note</b>
       ${k <= nowInfo().key ? `<button class="link" id="btn-note">${Store.data.notes[k] ? 'Edit' : 'Add a note'}</button>` : ''}</div>
@@ -2123,6 +2132,16 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.15.1', date: '2026-10-06', items: [
+    'Stability update after a full check of every screen and action.',
+    'Fixed: long custom prayer names could push the Calendar wider than the screen; they now end with “…”.',
+    'Fixed: Import backup now applies the backup’s place and text size straight away, and replaces your account copy too when signed in.',
+    'Fixed: after Reset all data, the tree’s stage cards and milestones celebrate again from the start.',
+    'Journal search shows the 50 most recent matching notes, so it stays fast with years of notes.',
+    'Text boxes no longer hide under the small title bar when scrolled into view.',
+    'The “Are you travelling?” check now also runs when the app opens from a reminder.',
+    'VoiceOver can now open Pray now, and prayer names are always shown safely as plain text.',
+  ] },
   { v: '1.15.0', date: '2026-10-05', items: [
     'New: your tree of faith in Statistics. It grows with every full day of prayer, from a seed to a sapling, a young tree, blossom at 100 days and fruit at 365. It never shrinks.',
     'A small card celebrates each new stage of your tree, with Psalm 1:3.',
@@ -2242,17 +2261,17 @@ function renderSettings() {
   } else
   $('#settings-times').innerHTML = customRow + Store.prayers().map((p) => {
     if (p.id === 'sunset' && S.autoSunset && realSunset)
-      return `<div class="srow"><span class="label">${p.name}<small>Real sunset today</small></span><span class="value">${realSunset}</span></div>`;
-    return `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
-     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`;
+      return `<div class="srow"><span class="label">${esc(p.name)}<small>Real sunset today</small></span><span class="value">${realSunset}</span></div>`;
+    return `<label class="srow"><span class="label">${esc(p.name)}</span><span class="value">${p.time}</span>${ICON.chev}
+     <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${esc(p.name)} time"></label>`;
   }).join('') + sunsetRow;
   renderLocationSettings();
   const allOn = Store.prayers().every((p) => p.notify);
   $('#settings-notify').innerHTML = `<div class="srow all-row"><span class="label"><b style="font-weight:600">All reminders</b><small>Turn every prayer’s reminder on or off</small></span>
      <button class="switch" role="switch" id="sw-all" aria-checked="${allOn}" aria-label="All reminders"></button></div>
      <div class="sub-head">Each prayer</div>` + Store.prayers().map((p) =>
-    `<div class="srow"><span class="label">${p.name}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
-     <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${p.name} reminder"></button></div>`).join('') +
+    `<div class="srow"><span class="label">${esc(p.name)}<small>${SILENT_IDS.includes(p.id) ? 'Silent banner' : 'Short buzz'}</small></span>
+     <button class="switch" role="switch" aria-checked="${p.notify}" data-id="${p.id}" aria-label="${esc(p.name)} reminder"></button></div>`).join('') +
     `<div class="sub-head">In each reminder</div><div class="srow"><span class="label">Show a prayer intention<small>One of your open intentions, taking turns. Shown on the lock screen.</small></span>
      <button class="switch" role="switch" id="sw-remint" aria-checked="${Store.data.settings.remIntentions !== false}" aria-label="Show a prayer intention in reminders"></button></div>`;
   $('#app-version').textContent = APP_VERSION;
@@ -2518,7 +2537,7 @@ $('#ver-row').onclick = () => {
 $('#btn-reset').onclick = () => {
   const inAccount = !!Cloud.session;
   if (!confirm(`Reset all data?\n\nThis deletes your whole prayer history, streaks, notes and prayer times on this phone${inAccount ? ' and in your account' : ''}. It cannot be undone.`)) return;
-  Store.reset(); cal.anchor = null; cal.sel = null; renderAll(); toast('All data has been reset');
+  Store.reset(); resetOneTimeCards(); viewDay = null; cal.anchor = null; cal.sel = null; renderAll(); toast('All data has been reset');
   if (inAccount) syncNow(true);
 };
 
@@ -2683,9 +2702,12 @@ $('#file-import').onchange = async (e) => {
   try {
     const d = JSON.parse(await f.text());
     if (d.version !== 1 || !d.days || !d.settings) throw 0;
-    if (!confirm('Replace all data on this phone with the backup?')) return;
+    if (!confirm(`Replace all data ${Cloud.session ? 'on this phone and in your account ' : 'on this phone '}with the backup?`)) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    Store.load(); applyTheme(); renderAll(); toast('Backup restored');
+    Store.load(); resetOneTimeCards(); setTZ(Store.data.settings.location.tz);
+    applyTheme(); applyTextSize(); renderLocation(); lastSig = ''; viewDay = null; renderAll(); renderSettings();
+    if (Cloud.session) syncNow(true);                        // the restored backup replaces the account copy
+    toast('Backup restored');
   } catch (_) { toast('That file isn’t a valid backup.'); }
   e.target.value = '';
 };
@@ -3154,7 +3176,7 @@ $('#settings-account').addEventListener('click', async (e) => {
     try { localStorage.removeItem(PUSH_KEY); const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (_) {}
     Cloud.setSession(null); syncState = 'idle';
     const keep = confirm('Your account has been deleted.\n\nKeep a copy of your prayers on this phone?\n\nOK = keep them here (not synced)\nCancel = erase them from this phone too');
-    if (!keep) { Store.reset(); cal.anchor = null; cal.sel = null; }
+    if (!keep) { Store.reset(); resetOneTimeCards(); viewDay = null; cal.anchor = null; cal.sel = null; }
     renderAll(); renderAccount(); renderNotifyStatus();
     toast(keep ? 'Account deleted. Your prayers are still on this phone.' : 'Account deleted and this phone erased.');
     return;
@@ -3282,8 +3304,8 @@ function renderWelcome() {
     const rs = sunsetTime(nowInfo().key);
     body.innerHTML = `${dots}<h2>Your prayer times</h2>
     <p class="lead">Tap a time to change it.</p>
-    <div class="wl-box" id="wl-times">${S.prayers.map((p) => `<label class="srow"><span class="label">${p.name}</span><span class="value">${p.time}</span>${ICON.chev}
-      <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${p.name} time"></label>`).join('')}
+    <div class="wl-box" id="wl-times">${S.prayers.map((p) => `<label class="srow"><span class="label">${esc(p.name)}</span><span class="value">${p.time}</span>${ICON.chev}
+      <input type="time" value="${p.time}" data-id="${p.id}" aria-label="${esc(p.name)} time"></label>`).join('')}
       ${rs ? `<div class="srow"><span class="label">Use real sunset time<small>Today: ${rs}</small></span><button class="switch" role="switch" data-wl="sunset" aria-checked="${S.autoSunset}"></button></div>` : ''}</div>
     <p class="wl-small">You can rename, add or remove prayers later in Settings.</p>
     ${nav()}`;
@@ -3347,6 +3369,7 @@ document.querySelectorAll('.scard.fold').forEach((card) => {
 Store.load(); initTreeStages(); setTZ(Store.data.settings.location.tz); Store.save(); applyTheme(); applyTextSize(); renderLocation();
 if (new URLSearchParams(location.search).get('prayer')) $('#splash')?.remove();   // opened from a reminder: straight to the prayer
 else if (!restoreAfterRefresh()) runSplash();
+if (!$('#splash')) setTimeout(checkTravel, 1500);
 if (!Store.data.meta.onboarded) showWelcome();   // sits under the splash and appears as it fades
 Cloud.load(); renderAccount(); handleRecoveryLink(); if (Cloud.session) { scheduleSync(800); setTimeout(() => Push.ensure(), 1500); }
 { const id = new URLSearchParams(location.search).get('prayer');
