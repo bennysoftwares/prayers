@@ -12,7 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="Prayers">
 <meta name="format-detection" content="telephone=no">
 <link rel="preload" as="image" href="splash.jpg">
-<link rel="preload" as="image" href="header.jpg">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -730,8 +729,13 @@
 <div id="cbar" aria-hidden="true"><span id="cbar-t"></span></div>
 <div id="scroller">
 <header class="hero">
-  <img class="hero-img" id="hero-a" src="header.jpg" alt="">
+  <img class="hero-img" id="hero-a" alt="">
   <img class="hero-img" id="hero-b" alt="" style="opacity:0">
+  <script>
+    // Start with the picture shown last time, so a reload never flashes the wrong time of day
+    (function () { var p = null; try { p = localStorage.getItem('prayerTracker.hero'); } catch (e) {}
+      document.getElementById('hero-a').src = { morning: 'header-morning.jpg', midday: 'header-midday.jpg', night: 'header-night.jpg' }[p] || 'header.jpg'; })();
+  </script>
   <div class="hero-text">
     <h1 id="page-title">Today</h1>
     <p id="loc-line"></p>
@@ -914,7 +918,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.13.1';
+const APP_VERSION = '1.13.2';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1397,9 +1401,10 @@ let heroNow = '';
 function updateHeader(instant) {
   const p = headerPeriod(); if (p === heroNow) return;
   const first = !heroNow; heroNow = p;
+  try { localStorage.setItem('prayerTracker.hero', p); } catch (_) {}
   const a = $('#hero-a'), b = $('#hero-b'), show = a.style.opacity === '0' ? a : b, hide = show === a ? b : a;
   const src = HEADER_IMG[p];
-  if (first || instant) { a.style.transition = 'none'; a.src = src; a.style.opacity = '1'; b.style.opacity = '0'; requestAnimationFrame(() => { a.style.transition = ''; }); return; }
+  if (first || instant) { a.style.transition = 'none'; if (a.getAttribute('src') !== src) a.src = src; a.style.opacity = '1'; b.style.opacity = '0'; requestAnimationFrame(() => { a.style.transition = ''; }); return; }
   const go = () => { show.style.opacity = '1'; hide.style.opacity = '0'; };
   show.onload = go; show.src = src; if (show.complete && show.naturalWidth) go();     // slow cross-fade
 }
@@ -1896,6 +1901,9 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.13.2', date: '2026-10-05', items: [
+    'Fixed: pulling down to refresh briefly showed the sunset picture before the right one for the time of day.',
+  ] },
   { v: '1.13.1', date: '2026-10-05', items: [
     'The header picture now cross-fades in 0.8 seconds when the time of day changes.',
   ] },
