@@ -399,12 +399,12 @@
   .kr span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .kr span:last-child { text-align: right; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
   .kept p { margin: 8px 0 4px; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
-  .empty { text-align: center; padding: 28px 22px 24px; }
-  .empty .ei { width: 64px; height: 64px; margin: 0 auto 10px; color: var(--gold); }
-  .empty .ei svg { width: 100%; height: 100%; }
-  .empty h3 { margin: 0 0 6px; font-size: calc(22px * var(--fs)); color: var(--ink-strong); }
-  .empty p { margin: 0 auto 16px; max-width: 290px; color: var(--ink-dim); font-size: calc(16px * var(--fs)); line-height: 1.45; }
-  .empty .empty-go { display: inline-block; width: auto; padding: 11px 22px; }
+  .card.empty { text-align: center; padding: 28px 22px 24px; }
+  .card.empty .ei { width: 64px; height: 64px; margin: 0 auto 10px; color: var(--gold); }
+  .card.empty .ei svg { width: 100%; height: 100%; }
+  .card.empty h3 { margin: 0 0 6px; font-size: calc(22px * var(--fs)); color: var(--ink-strong); }
+  .card.empty p { margin: 0 auto 16px; max-width: 290px; color: var(--ink-dim); font-size: calc(16px * var(--fs)); line-height: 1.45; }
+  .card.empty .empty-go { display: inline-block; width: auto; padding: 11px 22px; }
   .streak-card { padding: 22px 20px 18px; }
   .streak-card h3 { margin: 0 0 4px; font-size: calc(20px * var(--fs)); font-weight: 600; }
   .streak-top { display: flex; align-items: center; gap: 22px; }
@@ -1116,7 +1116,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.16.2';
+const APP_VERSION = '1.16.5';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -1631,14 +1631,15 @@ function sunriseTime(key) {
   return nowInfo(new Date((Jt - Math.acos(cosw) / rad / 360 - 2440587.5) * 864e5)).min;
 }
 const HEADER_IMG = { morning: 'header-morning.jpg', midday: 'header-midday.jpg', sunset: 'header.jpg', night: 'header-night.jpg' };
+// The pictures follow your prayers: each one from its prayer's time until the next prayer
+// (Morning, Midday — also through Afternoon —, Sunset, Night). Before the first prayer of the day it is still night.
 function headerPeriod() {
-  const now = nowInfo(), ss = sunsetTime(now.key), sr = sunriseTime(now.key);
-  const rise = sr != null ? sr : 360, dusk = (ss ? toMin(ss) : 1140) + 60;        // without a place: 06:00 and 20:00
-  const m = now.min;
-  if (m < rise || m >= Math.max(dusk, 960 + 30)) return 'night';
-  if (m < Math.max(660, rise + 60)) return 'morning';
-  if (m < 960) return 'midday';
-  return 'sunset';
+  const now = nowInfo(); let best = null, bt = -1;
+  for (const p of Store.prayers()) { const t = toMin(timeOf(p)); if (t <= now.min && t > bt) { best = p; bt = t; } }
+  if (!best) return 'night';
+  const id = ['morning', 'midday', 'afternoon', 'sunset', 'night'].includes(best.id) ? best.id
+    : bt < 600 ? 'morning' : bt < 840 ? 'midday' : bt < 1050 ? 'afternoon' : bt < 1230 ? 'sunset' : 'night';   // your own prayers: by their time
+  return id === 'afternoon' ? 'midday' : id;
 }
 let heroNow = '';
 function updateHeader(instant) {
@@ -1808,6 +1809,8 @@ const LORDS_PRAYER = 'Our Father in heaven, may your name be kept holy. Let your
 const PERIODS = ['morning', 'midday', 'afternoon', 'sunset', 'night'];
 const periodAt = (m) => m < 600 ? 'morning' : m < 840 ? 'midday' : m < 1050 ? 'afternoon' : m < 1230 ? 'sunset' : 'night';
 const periodFor = (p) => PERIODS.includes(p.id) ? p.id : periodAt(toMin(timeOf(p)));
+// the prayer time we are in now (before the first prayer of the day, it is still night)
+const curPeriod = () => { const id = currentPrayerId(nowInfo().min), p = id && Store.prayers().find((x) => x.id === id); return p ? periodFor(p) : 'night'; };
 const INT_GROUPS = [['me', 'Me'], ['family', 'Family'], ['friends', 'Friends'], ['church', 'Church'], ['work', 'Work'], ['world', 'World']];
 const intGroupName = (g) => (INT_GROUPS.find((x) => x[0] === g) || [])[1] || '';
 const FOCUS_GROUP = { family: 'family', marriage: 'family', children: 'family', friends: 'friends', work: 'work' };
@@ -1989,7 +1992,7 @@ function tabTarget() {
 async function openPrayNow(id, opts = {}) {
   const now = nowInfo(), p = id ? Store.prayers().find((x) => x.id === id) : null;
   const target = id ? p : (opts.mode && opts.mode !== 'prayer' ? tabTarget() : opts.target !== undefined ? opts.target : tabTarget());
-  const period = p ? periodFor(p) : target ? periodFor(target) : periodAt(now.min);
+  const period = p ? periodFor(p) : target ? periodFor(target) : curPeriod();
   pn.ctx = { target, period, mode: opts.mode || 'prayer', from: id ? 'row' : 'tab' };
   pn.focus = opts.focus || null; pn.prayedNow = new Set(); pn.i = -1;
   $('#toast').classList.remove('show');                 // no leftover message over the buttons
@@ -2136,13 +2139,18 @@ function addFromPray() {
 // iPhone notes: speech must first start from a tap; starting new speech right after cancel() is silently dropped
 // (so we wait a moment); and the text is spoken in short parts, which is more reliable than one long utterance.
 let ttsCancelledAt = 0;
-// The iPhone also lists novelty and "Eloquence" voices (Fred, Zarvox, Eddy, Grandma…), which sound robotic: never pick those.
-const TTS_NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Wobble|Fred|Good News|Jester|Junior|Kathy|Organ|Ralph|Superstar|Trinoids|Whisper|Zarvox|Eddy|Flo|Reed|Rocko|Sandy|Shelley|Grandma|Grandpa)\b/i;
-const ttsQuality = (v) => { const s = `${v.name} ${v.voiceURI}`; return /premium/i.test(s) ? 3 : /enhanced/i.test(s) ? 2 : /siri/i.test(s) ? 1 : 0; };
+// Only normal human voices. Apple phones also list novelty voices (singing, bells, organ, whispering…) and robotic
+// "Eloquence" voices; Apple's real human voices are the only ones whose id starts com.apple.voice.* or com.apple.ttsbundle.*
+const TTS_NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Wobble|Fred|Good News|Jester|Junior|Kathy|Organ|Pipe Organ|Ralph|Superstar|Trinoids|Whisper|Zarvox|Hysterical|Deranged|Princess|Agnes|Bruce|Vicki|Victoria|Eddy|Flo|Reed|Rocko|Sandy|Shelley|Grandma|Grandpa)\b/i;
+const TTS_HUMAN_APPLE = /^com\.apple\.(voice\.(compact|enhanced|premium)|ttsbundle)\./i;
+const TTS_NICE = ['Samantha', 'Daniel', 'Arthur', 'Martha', 'Karen', 'Moira', 'Tessa', 'Catherine', 'Gordon', 'Aaron', 'Nicky', 'Serena', 'Kate', 'Oliver', 'Allison', 'Ava', 'Tom', 'Susan'];
+const ttsQuality = (v) => { const s = `${v.name} ${v.voiceURI}`; return /premium/i.test(s) ? 3 : /enhanced/i.test(s) ? 2 : 0; };
+const ttsNice = (v) => { const i = TTS_NICE.findIndex((n) => v.name.startsWith(n)); return i < 0 ? 99 : i; };
 function ttsVoices() {
   if (!('speechSynthesis' in window)) return [];
-  return speechSynthesis.getVoices().filter((v) => /^en([-_]|$)/i.test(v.lang) && !TTS_NOVELTY.test(v.name))
-    .sort((a, b) => ttsQuality(b) - ttsQuality(a) || (b.default ? 1 : 0) - (a.default ? 1 : 0) || a.name.localeCompare(b.name));
+  const all = speechSynthesis.getVoices(), apple = all.some((v) => /^com\.apple\./i.test(v.voiceURI || ''));
+  return all.filter((v) => /^en([-_]|$)/i.test(v.lang) && !TTS_NOVELTY.test(v.name) && (!apple || TTS_HUMAN_APPLE.test(v.voiceURI || '')))
+    .sort((a, b) => ttsQuality(b) - ttsQuality(a) || ttsNice(a) - ttsNice(b) || (b.default ? 1 : 0) - (a.default ? 1 : 0) || a.name.localeCompare(b.name));
 }
 function ttsPickVoice() {
   const vs = ttsVoices(), want = prayPref().voice;
@@ -2279,7 +2287,7 @@ const Amen = (() => {
     const OUT = spiritMode ? [HOV, [W / 2, HOV[1] - 28], [W / 2, HOV[1] - 98], [W / 2, HOV[1] - 168]] : [HOV, [HOV[0] + 55 * sx, HOV[1] - 18], [HOV[0] + 135 * sx, 190 * sy], [W + 110, -90]];
     const word = o.word || 'Amen', fs = word.length > 6 ? 50 : 62;
     const el = document.createElement('div'); el.id = 'amen'; el.setAttribute('role', 'status');
-    el.innerHTML = `${o.bg ? `<div class="am-l am-bg">${paintedSky(periodAt(nowInfo().min))}</div><div class="am-l am-shade"></div>` : ''}<div class="am-l am-veil"></div>
+    el.innerHTML = `${o.bg ? `<div class="am-l am-bg">${paintedSky(curPeriod())}</div><div class="am-l am-shade"></div>` : ''}<div class="am-l am-veil"></div>
       ${spiritMode ? '<div class="am-beam"></div>' : ''}<div class="am-rays"></div><div class="am-orb"></div><div class="am-core"></div><div class="am-motes"></div>
       <svg class="am-dove" viewBox="0 0 120 ${spiritMode ? 90 : 88}" aria-hidden="true"><g transform="translate(0,4)"></g></svg>
       <div class="am-word" style="top:${wordTop}px;font-size:${fs}px">${[...word].map((c) => `<span>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div>
@@ -2387,7 +2395,7 @@ const PERIOD_TITLE = { morning: 'Morning Prayer', midday: 'Midday Prayer', after
 async function renderPrayTab() {
   const box = $('#pray-tab'); if (!box) return;
   const now = nowInfo(), t = tabTarget(), curId = currentPrayerId(now.min), cur = curId && Store.prayers().find((x) => x.id === curId);
-  const period = t ? periodFor(t) : periodAt(now.min), len = prayPref().len;
+  const period = t ? periodFor(t) : curPeriod(), len = prayPref().len;
   const first = Store.prayers().map((p) => ({ p, m: toMin(timeOf(p)) })).sort((a, b) => a.m - b.m)[0];
   const status = t ? `Amen marks ${t.name} as prayed ✓` : cur ? `${cur.name} is prayed ✓ You can still pray at any time.` : first ? `Your first prayer today is ${first.p.name} at ${timeOf(first.p)}.` : '';
   const open = Store.data.intentions.filter((x) => !x.answered && x.text).length;
@@ -2888,6 +2896,15 @@ document.addEventListener('click', (e) => {
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.16.5', date: '2026-10-07', items: [
+    'Fixed: in the calendar, days before you started using the app made some columns wider, squeezing the rest (and pushing the week off the side).',
+  ] },
+  { v: '1.16.4', date: '2026-10-07', items: [
+    'The pictures now follow your prayer times: the morning picture from Morning prayer, midday from Midday (through Afternoon), sunset from Sunset, and night from Night prayer until the next morning.',
+  ] },
+  { v: '1.16.3', date: '2026-10-07', items: [
+    'Read aloud now only uses normal human voices. The playful voices (singing, bells, organ, whispering) and robotic ones can no longer be chosen.',
+  ] },
   { v: '1.16.2', date: '2026-10-07', items: [
     'Read aloud picks the best voice on your phone (an Enhanced or Premium voice if you have one) and never the robotic novelty voices. Choose your own in Settings › Appearance › Read-aloud voice.',
   ] },
