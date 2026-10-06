@@ -2098,7 +2098,13 @@ $('#pn').addEventListener('click', (e) => {
   else if (a === 'back') pnGo(-1);
   else if (a === 'add') addFromPray();
   else if (a === 'amen') prayAmen();
-  else if (a === 'say') { const on = !prayPref().listen; setPrayPref({ listen: on }); renderPnTop(); if (on && pn.i >= 0) speak(pn.steps[pn.i]); else stopSpeaking(); }
+  else if (a === 'say') {
+    const on = !prayPref().listen; setPrayPref({ listen: on }); renderPnTop(); haptic();
+    if (!on) { stopSpeaking(); toast('Read aloud is off'); return; }
+    if (pn.i >= 0) speak(pn.steps[pn.i]);
+    else speakText([plain($('#pn-body .pn-h')?.textContent || ''), 'Read aloud is on. Each step will be read to you.']);
+    toast('Read aloud is on 🔊 If you hear nothing, check that your phone isn’t on silent.');
+  }
 });
 $('#pn').addEventListener('keydown', (e) => { if (e.target.id === 'pn-new' && e.key === 'Enter') { e.preventDefault(); addFromPray(); } });
 function addFromPray() {
@@ -2119,18 +2125,34 @@ function addFromPray() {
 })();
 
 /* ----- Listen: reads each step aloud (the phone's own voice) ----- */
-function speak(s) {
-  stopSpeaking();
-  if (!('speechSynthesis' in window)) { toast('Reading aloud isn’t available on this device.'); return; }
-  const parts = [s.h, s.v ? [s.t, s.v.t, s.v.r] : s.t, s.line, s.note, s.q].flat().filter(Boolean);
-  const text = parts.join('. ').replace(/\bLORD\b/g, 'Lord').replace(/\bGOD\b/g, 'God').replace(/–/g, ' to ').replace(/[“”‘’"]/g, (c) => c === '’' ? '’' : '');
-  const u = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices(), lang = navigator.language || 'en-US';
-  u.voice = voices.find((v) => v.lang === lang && /enhanced|premium|natural/i.test(v.name)) || voices.find((v) => v.lang === lang) || voices.find((v) => /^en/.test(v.lang)) || null;
-  u.rate = 0.9; u.pitch = 1;
-  speechSynthesis.speak(u);
+// iPhone notes: speech must first start from a tap; starting new speech right after cancel() is silently dropped
+// (so we wait a moment); and the text is spoken in short parts, which is more reliable than one long utterance.
+let ttsCancelledAt = 0, ttsVoice;
+function ttsPickVoice() {
+  const vs = speechSynthesis.getVoices(), en = vs.filter((v) => /^en[-_]/i.test(v.lang) || v.lang === 'en');
+  const good = (v) => /enhanced|premium|natural|siri/i.test(v.name);
+  return en.find((v) => good(v) && /GB/i.test(v.lang)) || en.find(good) || en.find((v) => /GB/i.test(v.lang)) || en.find((v) => /US/i.test(v.lang)) || en[0] || null;
 }
-function stopSpeaking() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (_) {} }
+if ('speechSynthesis' in window) speechSynthesis.addEventListener?.('voiceschanged', () => { ttsVoice = ttsPickVoice(); });
+function speakText(parts) {
+  if (!('speechSynthesis' in window)) { toast('Reading aloud isn’t available on this device.'); return; }
+  const synth = speechSynthesis, clean = (t) => String(t).replace(/\bLORD\b/g, 'Lord').replace(/\bGOD\b/g, 'God').replace(/–/g, ' to ').replace(/[“”"‘]/g, '').replace(/’(?!\w)/g, '').replace(/[\p{Extended_Pictographic}\u200D\uFE0F]/gu, '').trim();
+  const go = () => {
+    if (ttsVoice === undefined) ttsVoice = ttsPickVoice();
+    parts.filter(Boolean).map(clean).forEach((t) => {
+      const u = new SpeechSynthesisUtterance(t);
+      if (ttsVoice) u.voice = ttsVoice; u.lang = ttsVoice ? ttsVoice.lang : 'en-GB'; u.rate = 0.92; u.pitch = 1; u.volume = 1;
+      u.onerror = (e) => { if (!/interrupted|canceled/.test(e.error || '')) toast('Couldn’t read aloud. If your phone is on silent, turn the sound on.'); };
+      synth.speak(u);
+    });
+    if (synth.paused) synth.resume();
+  };
+  if (synth.speaking || synth.pending) { synth.cancel(); ttsCancelledAt = Date.now(); }
+  const wait = 180 - (Date.now() - ttsCancelledAt);
+  if (wait > 0) setTimeout(go, wait); else go();
+}
+function speak(s) { speakText([s.k && !/^(Be still|Prayer|Closing prayer)$/.test(s.k) ? s.k.replace(/ · /g, ', ') : '', s.h, s.t, s.v && s.v.t, s.v && s.v.r, s.line, s.note, s.q]); }
+function stopSpeaking() { try { if ('speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); ttsCancelledAt = Date.now(); } } catch (_) {} }
 
 /* ----- Amen: ticks the prayer (same rules as the tick box) and plays the blessing ----- */
 function prayAmen() {
