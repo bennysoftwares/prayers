@@ -300,7 +300,13 @@
   .row.now { background: var(--now-bg); border-radius: 14px; box-shadow: 0 0 22px rgba(245,191,79,.18); }
   .row.now + .row { border-top-color: transparent; }
   .row.now .name { color: var(--ink-strong); font-weight: 700; }
-  .row.now .time { color: var(--gold-text); font-weight: 700; }
+  .row.now .time { color: var(--gold-text); font-weight: 700; font-size: calc(21px * var(--fs)); text-shadow: 0 0 14px color-mix(in srgb, var(--gold) 50%, transparent); }
+  .row.now { animation: nowBreathe 4.5s ease-in-out infinite; }
+  @keyframes nowBreathe { 0%, 100% { box-shadow: 0 0 16px rgba(245,191,79,.14); } 50% { box-shadow: 0 0 30px rgba(245,191,79,.32); } }
+  /* Prayers whose time hasn't come yet: a little darker, with a small lock by the time */
+  .list .row.later .p-ico, .list .row.later .name, .list .row.later .time, .list.has-now .row.later .p-ico { opacity: .5; }
+  .row.later .time { display: inline-flex; align-items: center; gap: 5px; }
+  .row .lock { width: calc(13px * var(--fs)); height: calc(13px * var(--fs)); flex: none; }
   @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
   .row.now::after {
     content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; padding: 2px; border-radius: 14px;
@@ -627,6 +633,22 @@
   .tbar { height: 6px; border-radius: 4px; background: var(--ring-track); margin: 8px 30px 6px; overflow: hidden; }
   .tbar i { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
   .tree-up svg { animation: msIn .8s cubic-bezier(.3, 1.4, .5, 1); }
+  /* the tree is alive: a gentle sway, a falling leaf when it grows, and a dove at a year */
+  .tree-sway { transform-box: view-box; transform-origin: 150px 228px; animation: tree-sway 7s ease-in-out infinite; }
+  @keyframes tree-sway { 0%, 100% { transform: rotate(-.7deg); } 50% { transform: rotate(.7deg); } }
+  .tree-bird { animation: bird-bob 4.5s ease-in-out infinite; transform-box: fill-box; }
+  @keyframes bird-bob { 0%, 82%, 100% { translate: 0 0; } 86% { translate: 0 1.2px; } 90% { translate: 0 0; } 93% { translate: 0 1px; } }
+  .leaf-fall { opacity: 0; animation: leaf-fall 4.2s 1s ease-in forwards; }
+  @keyframes leaf-fall {
+    0% { opacity: 0; transform: translate(var(--lx), var(--ly)) rotate(0deg); }
+    8% { opacity: 1; }
+    25% { transform: translate(calc(var(--lx) + 18px), calc(var(--ly) + var(--fall) * .22)) rotate(40deg); }
+    50% { transform: translate(calc(var(--lx) - 6px), calc(var(--ly) + var(--fall) * .5)) rotate(-25deg); }
+    75% { transform: translate(calc(var(--lx) + 14px), calc(var(--ly) + var(--fall) * .78)) rotate(30deg); }
+    92% { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(var(--lx) + 4px), calc(var(--ly) + var(--fall))) rotate(-10deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .tree-sway, .tree-bird, .leaf-fall { animation: none; } }
   /* Milestone card */
   .ms { text-align: center; padding: 10px 6px 4px; }
   .ms-ring { width: 96px; height: 96px; margin: 4px auto 12px; border-radius: 50%; display: grid; place-items: center; color: var(--gold);
@@ -648,24 +670,6 @@
   .sv p { margin: 0; font-style: italic; font-size: calc(16px * var(--fs)); line-height: 1.4; }
   .sv-r { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; color: var(--gold-text); font-size: calc(13.5px * var(--fs)); }
   .sv-x { color: var(--gold); font-size: 18px; padding: 2px 4px; }
-  /* Pray now guide */
-  .pn-head small { display: block; font-size: calc(13px * var(--fs)); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-text); margin-bottom: 2px; }
-  .pn-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
-  .pn-step:last-child { border-bottom: 0; }
-  .pn-n { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--gold); color: var(--gold-text); display: grid; place-items: center;
-    font: 700 13px -apple-system, system-ui, sans-serif; margin-top: 1px; }
-  .pn-step h4 { margin: 2px 0 4px; font-size: calc(18px * var(--fs)); color: var(--ink-strong); }
-  .pn-step p { margin: 0 0 6px; font-size: calc(16px * var(--fs)); line-height: 1.45; color: var(--ink); }
-  .pn-verse { font-style: italic; }
-  .pn-verse small { display: block; font-style: normal; font-size: calc(13.5px * var(--fs)); color: var(--gold-text); margin-top: 2px; }
-  .pn-small { font-size: calc(15px * var(--fs)) !important; color: var(--ink-dim) !important; }
-  .pn-hint { display: block; margin-top: 4px; font-size: calc(14px * var(--fs)); color: var(--ink-dim); }
-  .pn-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pn-chips span { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--card-line); color: var(--gold-text); font-size: calc(14.5px * var(--fs)); }
-  .pn-lp summary { cursor: pointer; color: var(--gold-text); font-weight: 600; font-size: calc(15.5px * var(--fs)); padding: 4px 0; }
-  .pn-lp p { margin: 6px 0 2px; font-style: italic; }
-  .pn-lp small { color: var(--ink-dim); font-size: calc(13px * var(--fs)); }
-  .pn-amen { margin-top: 10px; }
   /* Place picker */
   .pl-results { margin: 8px 0 2px; }
   .pl-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 4px; border-bottom: 1px solid var(--divider); }
@@ -747,6 +751,130 @@
   .yr-legend span { display: inline-flex; align-items: center; gap: 5px; }
   .yr-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
   .yr-sum { margin-top: 8px; font-size: calc(15px * var(--fs)); color: var(--ink); }
+  .j-groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+  .j-groups button { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--card-line); background: var(--seg-bg); color: var(--ink-dim); font-size: calc(14px * var(--fs)); }
+  .j-groups button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-text); background: var(--card); font-weight: 600; }
+  /* ===== Pray now (full screen) ===== */
+  #pn { position: fixed; inset: 0; z-index: 92; display: none; color: #F3EAD9; background: #0D0A07; overflow: hidden; }
+  #pn.open { display: block; animation: pn-in .35s ease; }
+  @keyframes pn-in { from { opacity: 0; } to { opacity: 1; } }
+  #pn .pn-bg { position: absolute; inset: -40px; background-size: cover; background-position: 65% 50%; filter: blur(9px) brightness(.5) saturate(1.1); }
+  #pn .pn-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,7,4,.35), rgba(10,7,4,.6) 35%, rgba(10,7,4,.9) 78%); }
+  #pn .pn-top { position: absolute; top: calc(var(--safe-top) + 10px); left: 16px; right: 16px; height: 42px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+  #pn .pn-ic { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.22); color: #fff; font-size: 20px; }
+  #pn .pn-ic.on { background: rgba(245,191,79,.22); border-color: #F5BF4F; }
+  #pn .pn-ic svg { width: 20px; height: 20px; }
+  #pn-dots { display: flex; gap: 6px; }
+  #pn-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.28); transition: background .3s, transform .3s; }
+  #pn-dots i.done { background: rgba(245,191,79,.55); } #pn-dots i.on { background: #F5BF4F; transform: scale(1.3); }
+  #pn-body { position: absolute; left: 0; right: 0; top: calc(var(--safe-top) + 62px); bottom: calc(var(--safe-bottom) + 92px); overflow-y: auto; padding: 0 26px; z-index: 2;
+    display: flex; flex-direction: column; -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent); }
+  .pn-in { margin: auto 0; padding: 22px 0; max-width: 520px; width: 100%; align-self: center; }
+  .pn-in.in { animation: pn-step .45s cubic-bezier(.2,.7,.2,1); }
+  @keyframes pn-step { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .pn-k { font: 600 calc(12.5px * var(--fs))/1.3 -apple-system, system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #F5BF4F; margin-bottom: 10px; }
+  .pn-k2 { margin-top: 22px; }
+  .pn-h { font: 400 calc(28px * var(--fs))/1.2 var(--serif); color: #fff; margin: 0 0 14px; }
+  .pn-h.pn-big { font-size: calc(36px * var(--fs)); margin-bottom: 8px; }
+  .pn-t { font: calc(20px * var(--fs))/1.6 var(--serif); color: #F6EEDF; margin: 0; }
+  .pn-v { font-style: italic; }
+  .pn-ref { display: block; font: normal calc(15px * var(--fs)) var(--serif); color: #F5BF4F; margin-top: 12px; }
+  .pn-p { font: calc(16.5px * var(--fs))/1.5 var(--serif); color: #CFC3B0; margin: 16px 0 0; }
+  .pn-p.pn-lead { margin: 0 0 16px; color: #E9DFCC; font-size: calc(18px * var(--fs)); }
+  .pn-q { font: calc(17px * var(--fs))/1.5 var(--serif); color: #F3E3BF; margin: 20px 0 0; padding-left: 14px; border-left: 2px solid rgba(245,191,79,.6); }
+  .pn-src { font: calc(13.5px * var(--fs)) -apple-system, system-ui, sans-serif; color: #A99D8B; margin: 12px 0 0; }
+  .pn-auto { font-size: calc(14px * var(--fs)); }
+  .pn-seg { display: flex; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.2); border-radius: 13px; padding: 3px; margin-top: 22px; }
+  .pn-seg button { flex: 1; padding: 11px 0; border-radius: 10px; font: 600 calc(15px * var(--fs)) -apple-system, system-ui, sans-serif; color: #ddd; }
+  .pn-seg button[aria-pressed="true"] { background: #F5BF4F; color: #1A1206; }
+  .pn-pick { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 13px; background: rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.2); font: 600 calc(16px * var(--fs)) -apple-system, system-ui, sans-serif; color: #fff; text-align: left; }
+  .pn-pick em { font-style: normal; color: #F5BF4F; white-space: nowrap; margin-left: 10px; }
+  .pn-clear { display: block; margin: 14px auto 0; color: #BDB2A3; font: calc(14.5px * var(--fs)) -apple-system, system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; }
+  .pn-gh { font: 600 calc(12px * var(--fs)) -apple-system, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #BDB2A3; margin: 16px 0 8px; }
+  .pn-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .pn-chips button { padding: 9px 13px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.18); color: #EEE; font: 500 calc(15px * var(--fs)) -apple-system, system-ui, sans-serif; }
+  .pn-chips button.on { background: rgba(245,191,79,.18); border-color: #F5BF4F; color: #F5BF4F; }
+  .pn-cards { display: flex; flex-direction: column; gap: 9px; margin-top: 16px; }
+  .pn-card { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; text-align: left; padding: 13px 14px; border-radius: 15px;
+    background: rgba(255,248,236,.07); border: 1px solid rgba(255,255,255,.15); color: #fff; transition: background .2s, border-color .2s; }
+  .pn-card .pc-t { font: calc(18px * var(--fs))/1.3 var(--serif); }
+  .pn-card .pc-m { grid-column: 1; font: calc(12.5px * var(--fs)) -apple-system, system-ui, sans-serif; color: #A99D8B; }
+  .pn-card .pc-b { grid-column: 2; grid-row: 1 / 3; font: 700 calc(14px * var(--fs)) var(--serif); color: #F5BF4F; border: 1.5px solid #F5BF4F; border-radius: 10px; padding: 6px 10px; white-space: nowrap; }
+  .pn-card.on { border-color: rgba(245,191,79,.55); background: rgba(245,191,79,.1); }
+  .pn-card.on .pc-b { background: #F5BF4F; color: #1A1206; }
+  .pn-add { display: flex; gap: 8px; margin-top: 12px; }
+  .pn-add input { flex: 1; min-width: 0; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 11px 12px; color: #fff; font: calc(16px * var(--fs)) -apple-system, system-ui, sans-serif; }
+  .pn-add input::placeholder { color: #9A8F80; }
+  .pn-add button { padding: 0 16px; border-radius: 12px; border: 1.5px solid #F5BF4F; color: #F5BF4F; font: 700 calc(15px * var(--fs)) var(--serif); }
+  .pn-more { margin-top: 18px; color: #D9CFBF; }
+  .pn-more summary { color: #F5BF4F; font: 600 calc(15.5px * var(--fs)) var(--serif); cursor: pointer; }
+  .pn-more p { font: calc(17px * var(--fs))/1.55 var(--serif); margin: 10px 0 0; }
+  #pn-bot { position: absolute; left: 18px; right: 18px; bottom: calc(var(--safe-bottom) + 22px); display: flex; gap: 10px; z-index: 2; max-width: 560px; margin: 0 auto; }
+  .pn-btn { flex: 1; height: 56px; border-radius: 15px; background: #F5BF4F; color: #1A1206; font: 700 calc(19px * var(--fs)) var(--serif); }
+  .pn-btn:active, .pn-back:active { transform: scale(.97); }
+  .pn-back { flex: 0 0 56px; height: 56px; border-radius: 15px; background: rgba(0,0,0,.35); color: #fff; border: 1px solid rgba(255,255,255,.25); font-size: 24px; }
+  .pn-fill { flex: 1; }
+  #pn.amen .pn-top, #pn.amen #pn-body, #pn.amen #pn-bot { opacity: 0; filter: blur(6px); transition: opacity .55s ease, filter .55s ease; pointer-events: none; }
+
+  /* ===== Amen ===== */
+  #amen { position: fixed; inset: 0; z-index: 97; overflow: hidden; pointer-events: auto; font-family: var(--serif); }
+  #amen .am-l { position: absolute; inset: 0; }
+  #amen .am-bg { inset: -40px; background-size: cover; background-position: 65% 50%; filter: blur(9px) brightness(.5) saturate(1.1); opacity: 0; }
+  #amen .am-shade { background: linear-gradient(180deg, rgba(10,7,4,.35), rgba(10,7,4,.6) 40%, rgba(10,7,4,.92) 80%); opacity: 0; }
+  #amen .am-veil { background: #0D0A07; opacity: 0; }
+  #amen .am-orb { position: absolute; left: 50%; width: 760px; height: 760px; margin-left: -380px; border-radius: 50%; opacity: 0; will-change: transform, opacity;
+    background: radial-gradient(closest-side, rgba(255,226,170,.42), rgba(245,191,79,.20) 32%, rgba(245,170,60,.07) 60%, rgba(245,170,60,0) 100%); }
+  #amen .am-core { position: absolute; left: 50%; width: 300px; height: 300px; margin-left: -150px; border-radius: 50%; opacity: 0;
+    background: radial-gradient(closest-side, rgba(255,244,220,.38), rgba(255,232,185,.20) 30%, rgba(255,226,170,.07) 62%, rgba(255,226,170,0) 100%); }
+  #amen .am-rays { position: absolute; left: 50%; width: 900px; height: 900px; margin-left: -450px; border-radius: 50%; opacity: 0; will-change: transform, opacity;
+    background: repeating-conic-gradient(from 0deg, rgba(255,225,160,.075) 0deg 2.5deg, rgba(255,225,160,0) 5deg 15deg);
+    -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,.6) 30%, transparent 72%); mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,.6) 30%, transparent 72%); }
+  #amen .am-beam { position: absolute; left: 50%; top: -40px; width: 240px; height: 46%; margin-left: -120px; opacity: 0; filter: blur(6px);
+    background: linear-gradient(180deg, rgba(255,236,190,0), rgba(255,236,190,.22) 30%, rgba(255,226,170,.16) 75%, rgba(255,226,170,0));
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%, #000 65%, transparent); mask-image: linear-gradient(90deg, transparent, #000 35%, #000 65%, transparent); }
+  #amen .am-motes i { position: absolute; left: 0; top: 0; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #FFF1CF; box-shadow: 0 0 6px 2px rgba(245,191,79,.55); opacity: 0; }
+  #amen .am-dove { position: absolute; left: 0; top: 0; overflow: visible; opacity: 0; will-change: transform; }
+  #amen .am-word, #amen .am-shine { position: absolute; left: 0; right: 0; text-align: center; letter-spacing: .06em; line-height: 1.2; white-space: nowrap; }
+  #amen .am-word { color: #FFF8EA; text-shadow: 0 0 18px rgba(255,214,140,.55), 0 0 42px rgba(245,191,79,.35); }
+  #amen .am-word span { display: inline-block; opacity: 0; }
+  #amen .am-shine { color: transparent; opacity: 0; background: linear-gradient(100deg, transparent 0%, transparent 40%, #FFE9B8 50%, transparent 60%, transparent 100%);
+    background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; }
+  #amen .am-rule { position: absolute; left: 50%; width: 120px; height: 1px; margin-left: -60px; transform: scaleX(0); background: linear-gradient(90deg, transparent, rgba(245,191,79,.8), transparent); }
+  #amen .am-name { position: absolute; left: 24px; right: 24px; text-align: center; font-size: 23px; color: #F6EEDF; text-shadow: 0 0 14px rgba(245,191,79,.35); opacity: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #amen .am-done { position: absolute; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 8px; font: 600 13px -apple-system, system-ui, sans-serif; letter-spacing: .2em; color: #F5C866; opacity: 0; }
+  #amen .am-done svg { width: 19px; height: 19px; fill: none; stroke: #F5C866; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(245,191,79,.6)); }
+  #amen .am-extra { position: absolute; left: 24px; right: 24px; text-align: center; font-size: 17px; font-style: italic; color: #D9C29A; opacity: 0; }
+  .row.amen-glow { animation: amen-glow 1.2s ease-out; }
+  @keyframes amen-glow { 0% { box-shadow: 0 0 0 0 rgba(245,191,79,0); } 30% { box-shadow: 0 0 0 1.5px rgba(245,191,79,.9), 0 0 26px 2px rgba(245,191,79,.55); } 100% { box-shadow: 0 0 0 0 rgba(245,191,79,0); } }
+
+  /* ===== Pray tab ===== */
+  .pt-now { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--card-line); min-height: 220px; display: flex; flex-direction: column; justify-content: flex-end; padding: 18px; color: #fff; background: #1A1206; }
+  .pt-now img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; }
+  .pt-now::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(10,6,3,.05), rgba(10,6,3,.78) 72%); }
+  .pt-now > *:not(img) { position: relative; z-index: 2; }
+  .pt-k { font: 600 calc(12px * var(--fs)) -apple-system, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #F5BF4F; }
+  .pt-h { font: 400 calc(28px * var(--fs))/1.15 var(--serif); margin: 4px 0 4px; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  .pt-s { font: calc(14.5px * var(--fs))/1.4 -apple-system, system-ui, sans-serif; color: #EDE2CF; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+  .pt-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+  .pt-go { flex: 1; height: 50px; border-radius: 13px; background: #F5BF4F; color: #1A1206; font: 700 calc(18px * var(--fs)) var(--serif); }
+  .pt-go:active { transform: scale(.97); }
+  .pt-len { display: flex; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 3px; }
+  .pt-len button { padding: 10px 12px; border-radius: 9px; font: 600 calc(14px * var(--fs)) -apple-system, system-ui, sans-serif; color: #ddd; }
+  .pt-len button[aria-pressed="true"] { background: rgba(255,255,255,.2); color: #fff; }
+  .pt-sub { color: var(--ink-dim); font-size: calc(15px * var(--fs)); line-height: 1.45; margin: 6px 0 2px; }
+  .pt-gh { font: 600 calc(12px * var(--fs)) -apple-system, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin: 16px 0 8px; }
+  .pt-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .pt-chips button { display: inline-flex; gap: 6px; align-items: center; padding: 9px 13px; border-radius: 999px; background: var(--seg-bg); border: 1px solid var(--card-line); font-size: calc(15.5px * var(--fs)); color: var(--ink); }
+  .pt-chips button:active { transform: scale(.96); }
+  .pt-way { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--divider); text-align: left; }
+  .pt-way:first-of-type { border-top: 0; margin-top: 4px; }
+  .pt-way .i { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--seg-bg); font-size: 19px; }
+  .pt-way b { display: block; color: var(--ink-strong); font-weight: 500; font-size: calc(17px * var(--fs)); }
+  .pt-way small { color: var(--ink-dim); font-size: calc(14px * var(--fs)); }
+  .pt-way .go { margin-left: auto; color: var(--gold-text); font-size: 22px; }
+  #view-pray .card { margin-top: 12px; }
 </style>
 </head>
 <body class="fit">
@@ -805,26 +933,8 @@
     </div>
   </section>
 
-  <!-- CALENDAR -->
-  <section class="view" id="view-calendar">
-    <div class="card pad">
-      <div class="card-head">
-        <h3 id="cal-title">This week</h3>
-        <div class="seg" role="group" aria-label="Calendar view">
-          <button data-mode="week" aria-pressed="true">Week</button>
-          <button data-mode="month" aria-pressed="false">Month</button>
-        </div>
-      </div>
-      <div class="range">
-        <button class="arrow" id="cal-prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <b id="cal-range"></b>
-        <button class="arrow" id="cal-next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-      </div>
-      <div id="cal-body"></div>
-      <div class="legend" id="cal-legend"></div>
-    </div>
-    <div class="card detail" id="cal-detail"></div>
-  </section>
+  <!-- PRAY -->
+  <section class="view" id="view-pray"><div id="pray-tab"></div></section>
 
   <!-- STATISTICS -->
   <!-- JOURNAL -->
@@ -842,7 +952,26 @@
     <div class="card pad" id="jp-past"></div>
   </section>
 
-  <section class="view" id="view-stats"><div id="stats"></div></section>
+  <section class="view" id="view-stats">
+  <div class="card pad" id="cal-card">
+      <div class="card-head">
+        <h3 id="cal-title">This week</h3>
+        <div class="seg" role="group" aria-label="Calendar view">
+          <button data-mode="week" aria-pressed="true">Week</button>
+          <button data-mode="month" aria-pressed="false">Month</button>
+        </div>
+      </div>
+      <div class="range">
+        <button class="arrow" id="cal-prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <b id="cal-range"></b>
+        <button class="arrow" id="cal-next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div id="cal-body"></div>
+      <div class="legend" id="cal-legend"></div>
+    </div>
+    <div class="card detail" id="cal-detail"></div>
+    <div id="stats"></div>
+  </section>
 
   <!-- SETTINGS -->
   <section class="view" id="view-settings">
@@ -934,8 +1063,8 @@
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-view="prayers">
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2v5M12 4h4M8.5 13L14 7.5l5.5 5.5M9 12.5V24h10V12.5M4 24V16l5-2.5M24 24V16l-5-2.5M3 24h22M12 24v-4a2 2 0 0 1 4 0v4"/></svg>Prayers</button>
-  <button role="tab" aria-selected="false" data-view="calendar">
-    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><rect x="4" y="6" width="20" height="18" rx="2.5"/><path d="M4 11h20M9.5 3.5v5M18.5 3.5v5M11 17.5h6"/></svg>Calendar</button>
+  <button role="tab" aria-selected="false" data-view="pray">
+    <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M14 3.5c2.6 3 3.6 5.2 3.6 7.1a3.6 3.6 0 0 1-7.2 0c0-1.9 1-4.1 3.6-7.1z"/><path d="M14 14.2V17"/><rect x="10" y="17" width="8" height="8.5" rx="1.2"/><path d="M5 25.5h18"/></svg>Pray</button>
   <button role="tab" aria-selected="false" data-view="journal">
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 23V6a2.5 2.5 0 0 1 2.5-2.5H22v17H7.5A2.5 2.5 0 0 0 5 23zm0 0a2.5 2.5 0 0 0 2.5 2.5H22"/><path d="M13.5 7.5v7M10 10.5h7"/></svg>Journal</button>
   <button role="tab" aria-selected="false" data-view="stats">
@@ -946,6 +1075,10 @@
 
 <div id="toast" role="status"></div>
 <div id="welcome" style="display:none"><div class="wl-hero"></div><div class="wl-body"></div></div>
+<div id="pn" aria-hidden="true" role="dialog" aria-label="Pray now"><div class="pn-bg"></div><div class="pn-shade"></div>
+  <div class="pn-top"><button class="pn-ic" data-pn="close" aria-label="Close">×</button><span id="pn-dots" aria-hidden="true"></span>
+    <button class="pn-ic" id="pn-say" data-pn="say" aria-label="Read aloud" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button></div>
+  <div id="pn-body"></div><div id="pn-bot"></div></div>
 <div id="sheet" aria-hidden="true"><div class="backdrop"></div><div class="panel" role="dialog" aria-modal="true"></div></div>
 <!-- Verse of the day: 365 verses from the World English Bible (public domain), each checked by hand.
      "Yahweh" is shown as "the LORD", as in the WEB British Edition. -->
@@ -957,7 +1090,7 @@
    CONFIG
    ========================================================= */
 const $ = (s) => document.querySelector(s);
-const APP_VERSION = '1.15.1';
+const APP_VERSION = '1.16.0';
 const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm'; } catch (_) { return 'Europe/Stockholm'; } })();
 const VASTERAS = { name: 'Västerås, Sverige', flag: '🇸🇪', tz: 'Europe/Stockholm', lat: 59.6162, lon: 16.5528 };
 // New users outside Sweden start with their phone's time zone and no place name until they set one.
@@ -999,6 +1132,7 @@ const ICON = {
   calDays: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M7 2.5a1 1 0 0 1 1 1V5h8V3.5a1 1 0 1 1 2 0V5h1a2.5 2.5 0 0 1 2.5 2.5v11A2.5 2.5 0 0 1 19 21H5a2.5 2.5 0 0 1-2.5-2.5v-11A2.5 2.5 0 0 1 5 5h1V3.5a1 1 0 0 1 1-1zM4.5 10v8.5c0 .3.2.5.5.5h14c.3 0 .5-.2.5-.5V10zm11.7 1.8a1 1 0 0 1 0 1.4l-4.5 4.5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.8 3.8-3.8a1 1 0 0 1 1.4 0z"/></svg>',
   chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
+const LOCK_ICON = '<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg>';
 const PRAYER_ICON = { morning: ICON.sunrise, midday: ICON.sun, afternoon: ICON.sun, sunset: ICON.sunset, night: ICON.moon };
 // Custom prayers get an icon from their time of day
 const iconFor = (p) => PRAYER_ICON[p.id] || (() => { const m = toMin(p.time); return m < 540 ? ICON.sunrise : m < 1020 ? ICON.sun : m < 1230 ? ICON.sunset : ICON.moon; })();
@@ -1319,7 +1453,7 @@ function saveNote(key, text) {
   Store.save();
 }
 const intentItem = (x) => `<div class="intent${x.answered ? ' answered' : ''}" data-iid="${x.id}">
-    <div class="it">${esc(x.text)}<small>${x.answered ? `Answered ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : `Since ${fmt(x.created, { month: 'long', day: 'numeric' })}`}</small></div>
+    <div class="it">${esc(x.text)}<small>${[intGroupName(x.g), x.answered ? `Answered ${fmt(x.answered, { month: 'long', day: 'numeric', year: 'numeric' })}` : `Since ${fmt(x.created, { month: 'long', day: 'numeric' })}`, x.prayed ? `🙏 ${x.prayed}` : ''].filter(Boolean).join(' · ')}</small></div>
     ${x.answered ? '<button class="ans" data-act="reopen">Undo</button>' : '<button class="ans" data-act="answer">Answered</button>'}
     <button class="del" data-act="del" aria-label="Delete">×</button></div>`;
 
@@ -1353,6 +1487,7 @@ function renderJournalPage(full = true) {
   const done = Store.data.intentions.filter((x) => x.answered).sort((a, b) => b.answered.localeCompare(a.answered));
   $('#jp-int').innerHTML = `<div class="jp-h"><h3>Prayer intentions</h3><small>${open.length || ''}</small></div>
     <div class="j-add"><input class="j-input" id="j-new" placeholder="What are you praying for?" maxlength="200" enterkeyhint="done"><button class="sbtn" id="j-add">Add</button></div>
+    <div class="j-groups" role="group" aria-label="Group (optional)">${INT_GROUPS.map(([g, n]) => `<button data-jg="${g}" aria-pressed="${jGroup === g}">${n}</button>`).join('')}</div>
     ${open.length ? open.map(intentItem).join('') : '<div class="j-empty">Add the things you are praying for. Mark them answered when they are.</div>'}`;
   $('#jp-ans').innerHTML = `<div class="jp-h"><h3>Answered prayers</h3><small>${done.length}</small></div>
     ${done.length ? done.map(intentItem).join('') : '<div class="j-empty">Answered prayers will be kept here, with the date.</div>'}`;
@@ -1403,20 +1538,28 @@ $('#view-journal').addEventListener('input', (e) => {
 });
 $('#view-journal').addEventListener('focusout', (e) => { if (e.target.id === 'jp-text') { clearTimeout(notePageTimer); saveNote(nowInfo().key, e.target.value); } });
 
+let jGroup = null;   // group chosen for the next intention (optional)
 function addIntention() {
   const inp = $('#j-new'), t = inp.value.trim(); if (!t) return;
-  Store.data.intentions.push({ id: Date.now().toString(36), text: t, created: nowInfo().key, answered: null, updatedAt: new Date().toISOString() });
+  const x = { id: Date.now().toString(36), text: t, created: nowInfo().key, answered: null, updatedAt: new Date().toISOString() };
+  if (jGroup) x.g = jGroup;
+  Store.data.intentions.push(x); jGroup = null;
   Store.save(); renderJournalPage(false); $('#j-new')?.focus();
 }
 $('#view-journal').addEventListener('keydown', (e) => { if (e.target.id === 'j-new' && e.key === 'Enter') { e.preventDefault(); addIntention(); } });
 $('#view-journal').addEventListener('click', (e) => {
   if (e.target.closest('#j-add')) { addIntention(); return; }
+  const jg = e.target.closest('[data-jg]');
+  if (jg) { jGroup = jGroup === jg.dataset.jg ? null : jg.dataset.jg; document.querySelectorAll('[data-jg]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.jg === jGroup)); return; }
   if (e.target.closest('#jp-more')) { pastLimit += 20; renderJournalPage(false); return; }
   const pn = e.target.closest('[data-note]'); if (pn) { openNote(pn.dataset.note); return; }
   const act = e.target.closest('[data-act]'); if (!act) return;
   const id = act.closest('[data-iid]')?.dataset.iid, list = Store.data.intentions, x = list.find((i) => i.id === id); if (!x) return;
   const stamp = () => { x.updatedAt = new Date().toISOString(); Store.save(); renderJournalPage(false); };
-  if (act.dataset.act === 'answer') { x.answered = nowInfo().key; stamp(); toast('Praise God! Marked as answered', () => { x.answered = null; stamp(); }); }
+  if (act.dataset.act === 'answer') {
+    x.answered = nowInfo().key; stamp(); haptic();
+    Amen.play({ dove: 'olive', word: 'Praise God', name: x.text, sub: 'ANSWERED PRAYER', bg: true });
+  }
   if (act.dataset.act === 'reopen') { x.answered = null; stamp(); }
   if (act.dataset.act === 'del') {
     const i = list.indexOf(x); list.splice(i, 1); Store.data.deleted['int:' + x.id] = new Date().toISOString(); Store.save(); renderJournalPage(false);
@@ -1432,7 +1575,7 @@ function openNote(key) {
   openSheet(`${sheetHead('Note')}<p class="j-date">${fmt(key, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
     <textarea id="j-text" placeholder="What were you praying for, or thankful for?">${n ? esc(n.text) : ''}</textarea>
     <div class="j-saved" id="j-saved">${n ? 'Saved' : ''}</div>`,
-    () => { renderPrayers(true); if (currentView === 'calendar') renderCalendar(); if (currentView === 'journal') { renderJournalPage(); renderSearch(); } });
+    () => { renderPrayers(true); if (currentView === 'stats') renderCalendar(); if (currentView === 'journal') { renderJournalPage(); renderSearch(); } });
 }
 const openJournal = (key) => key && key !== nowInfo().key ? openNote(key) : show('journal');
 $('#sheet').addEventListener('input', (e) => {
@@ -1501,6 +1644,8 @@ function renderSubtitle() {
   if (currentView === 'stats') {
     const s = computeStats(nowInfo().key);
     t = s.total ? `🔥 ${s.cur}-day streak · best ${s.longest}` : 'Day 1 · welcome 🙏';
+  } else if (currentView === 'pray') {
+    t = 'Time with God, any time';
   } else if (currentView === 'journal') {
     const open = Store.data.intentions.filter((x) => !x.answered).length, ans = Store.data.intentions.length - open;
     t = Store.data.intentions.length ? `${open} ${open === 1 ? 'intention' : 'intentions'} · ${ans} answered` : place;
@@ -1511,7 +1656,7 @@ function setTitle() {
   const now = nowInfo();
   $('#page-title').textContent = {
     prayers: dayLabel(dayKey()),
-    calendar: fmt(cal.anchor || now.key, { month: 'long', year: 'numeric' }),
+    pray: 'Pray',
     journal: 'Journal',
     stats: 'Statistics',
     settings: 'Settings',
@@ -1609,7 +1754,7 @@ function renderPrayers(force) {
       <button class="check" role="checkbox" aria-checked="${done}" aria-label="${esc(p.name)} prayer, ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}" data-act="toggle">${ICON.check}</button>
       <span class="p-ico">${iconFor(p)}</span>
       <span class="name"><span class="nm"><span class="nt">${esc(p.name)}</span>${p.id === nowId ? '<span class="badge">NOW</span>' : ''}</span><small class="cd"></small></span>
-      <span class="time" aria-label="at ${timeOf(p, key)}">${timeOf(p, key)}</span>
+      <span class="time" aria-label="at ${timeOf(p, key)}${notYet(key, p) ? ', not yet' : ''}">${notYet(key, p) ? LOCK_ICON : ''}${timeOf(p, key)}</span>
       <button class="bell${p.notify ? ' on' : ''}" data-act="bell" aria-label="Reminder for ${esc(p.name)} ${p.notify ? 'on' : 'off'}">${p.notify ? ICON.bellOn : ICON.bellOff}</button>
     </div>`;
   }).join('');
@@ -1630,53 +1775,554 @@ function updateCountdown() {
 
 /* ----- Pray now: a short guide (Be still · Rejoice · Ask · Yield), opened by tapping a prayer on today's list ----- */
 const LORDS_PRAYER = 'Our Father in heaven, may your name be kept holy. Let your Kingdom come. Let your will be done on earth as it is in heaven. Give us today our daily bread. Forgive us our debts, as we also forgive our debtors. Bring us not into temptation, but deliver us from the evil one. For yours is the Kingdom, the power, and the glory forever. Amen.';
-const PRAY_FOCUS = {
-  morning: { still: 'Before the day begins, take three slow breaths. Offer this day to God.',
-    yield: '“Your will be done.” Lord, I give you this day: my work, my words and the people I will meet.',
-    word: ['This is the day that the LORD has made. We will rejoice and be glad in it.', 'Psalm 118:24'] },
-  midday: { still: 'Pause in the middle of your day. Breathe slowly. God is with you, right here.',
-    yield: 'Lord, be with me for the rest of this day. Give me patience, kindness and peace.',
-    word: ['Be still, and know that I am God.', 'Psalm 46:10'] },
-  afternoon: { still: 'Set down what you are doing for a moment. Breathe, and remember whose you are.',
-    yield: 'Lord, renew my strength for the hours ahead, and let me serve you in them.',
-    word: ['But those who wait for the LORD will renew their strength.', 'Isaiah 40:31'] },
-  sunset: { still: 'As the day turns to evening, be still. Thank God for the light of this day.',
-    yield: 'Lord, thank you for this day. Stay with me as evening comes.',
-    word: ['Stay with us, for it is almost evening, and the day is almost over.', 'Luke 24:29'] },
-  night: { still: 'Take three slow breaths. Let the day go, into God’s hands.',
-    look: 'Look back over today: where did you see God’s goodness? Is there anything to bring to him for forgiveness?',
-    yield: '“Into your hand I commend my spirit.” Lord, keep me through the night.',
-    word: ['In peace I will both lay myself down and sleep, for you, LORD alone, make me live in safety.', 'Psalm 4:8'] },
-};
-function focusFor(p) {
-  if (PRAY_FOCUS[p.id]) return PRAY_FOCUS[p.id];
-  const m = toMin(timeOf(p));                       // own prayers: by time of day
-  return PRAY_FOCUS[m < 600 ? 'morning' : m < 840 ? 'midday' : m < 1050 ? 'afternoon' : m < 1230 ? 'sunset' : 'night'];
+/* =========================================================
+   PRAY NOW — full screen, one step at a time.
+   Words come from library.js (loaded when first needed). Bible passages rotate, so they rarely repeat.
+   ========================================================= */
+const PERIODS = ['morning', 'midday', 'afternoon', 'sunset', 'night'];
+const periodAt = (m) => m < 600 ? 'morning' : m < 840 ? 'midday' : m < 1050 ? 'afternoon' : m < 1230 ? 'sunset' : 'night';
+const periodFor = (p) => PERIODS.includes(p.id) ? p.id : periodAt(toMin(timeOf(p)));
+const INT_GROUPS = [['me', 'Me'], ['family', 'Family'], ['friends', 'Friends'], ['church', 'Church'], ['work', 'Work'], ['world', 'World']];
+const intGroupName = (g) => (INT_GROUPS.find((x) => x[0] === g) || [])[1] || '';
+const FOCUS_GROUP = { family: 'family', marriage: 'family', children: 'family', friends: 'friends', work: 'work' };
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const PRAY_PREF = 'prayerTracker.pray';
+const prayPref = () => { try { return { len: 'short', listen: false, ...JSON.parse(localStorage.getItem(PRAY_PREF)) }; } catch (_) { return { len: 'short', listen: false }; } };
+const setPrayPref = (patch) => { try { localStorage.setItem(PRAY_PREF, JSON.stringify({ ...prayPref(), ...patch })); } catch (_) {} };
+
+// The library is a separate file so the app itself stays small; it is cached for offline use like everything else
+let libLoading = null;
+function loadLib() {
+  if (window.PRAY_LIB) return Promise.resolve(window.PRAY_LIB);
+  if (!libLoading) libLoading = new Promise((ok, fail) => {
+    const s = document.createElement('script'); s.src = 'library.js?v=' + APP_VERSION;
+    s.onload = () => window.PRAY_LIB ? ok(window.PRAY_LIB) : fail(); s.onerror = () => { libLoading = null; fail(); };
+    document.head.appendChild(s);
+  });
+  return libLoading;
 }
-function openPrayNow(id) {
-  const p = Store.prayers().find((x) => x.id === id); if (!p) return;
-  const f = focusFor(p), today = nowInfo().key, v = verseFor(today);
-  const open = Store.data.intentions.filter((x) => !x.answered);
-  const step = (n, title, body) => `<div class="pn-step"><span class="pn-n">${n}</span><div><h4>${title}</h4>${body}</div></div>`;
-  openSheet(`<div class="sh-head pn-head"><div><small>Pray now · ${timeOf(p)}</small><h3>${esc(p.name)} prayer</h3></div><button class="sh-close" aria-label="Close">×</button></div>
-    <div class="pn">
-      ${step(1, 'Be still', `<p>${f.still}</p>`)}
-      ${step(2, 'Rejoice', `<p class="pn-verse">“${esc(Store.data.settings.showVerse ? v.text : f.word[0])}”<small>${esc(Store.data.settings.showVerse ? v.ref : f.word[1])}</small></p>${f.look ? `<p>${f.look}</p>` : ''}`)}
-      ${step(3, 'Ask', open.length ? `<p>Bring your requests to God:</p><div class="pn-chips">${open.map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>`
-        : '<p>Bring your own needs, and the people on your heart, to God. <span class="pn-hint">Tip: add prayer intentions in the Journal and they’ll appear here.</span></p>')}
-      ${step(4, 'Yield', `<p>${f.yield}</p><p class="pn-verse pn-small">“${esc(f.word[0])}”<small>${esc(f.word[1])}</small></p>
-        <details class="pn-lp"><summary>Pray the Lord’s Prayer</summary><p>${LORDS_PRAYER}</p><small>Matthew 6:9–13</small></details>`)}
-    </div>
-    <button class="btn-main pn-amen" data-amen="${p.id}">Amen ✓</button>`);
+
+// Take turns through a list: nothing comes back until everything else in that list has been shown
+const SEEN_KEY = 'prayerTracker.seen';
+let seenCache = null;
+function pick(cat, list, used) {
+  if (!list || !list.length) return null;
+  if (!seenCache) { try { seenCache = JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (_) { seenCache = {}; } }
+  let seen = (seenCache[cat] || []).filter((x) => list.includes(x));
+  const ok = (x) => !(used && used.has(x));
+  let pool = list.filter((x) => !seen.includes(x) && ok(x));
+  if (!pool.length) {                                    // everything shown: start again, but never repeat the last one straight away
+    const last = seen[seen.length - 1]; seen = [];
+    pool = list.filter((x) => x !== last && ok(x)); if (!pool.length) pool = list.slice();
+  }
+  const choice = pool[Math.floor(Math.random() * pool.length)];
+  seenCache[cat] = [...seen, choice];
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(seenCache)); } catch (_) {}
+  if (used) used.add(choice);
+  return choice;
 }
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-amen]'); if (!b) return;
-  const id = b.dataset.amen, key = nowInfo().key, p = Store.prayers().find((x) => x.id === id);
-  closeSheet(); if (!p) return;
-  if (Store.isDone(key, id)) { toast('Amen 🙏'); return; }
-  if (notYet(key, p)) { toast(`Amen 🙏 You can mark ${p.name} at ${timeOf(p, key)}.`); return; }
-  popRow = { key, id }; haptic();
-  changeDay(key, () => Store.setDone(key, id, true), null);
+const pickIdx = (cat, arr, used) => arr[pick(cat, arr.map((_, i) => i), used)];
+
+/* ----- Building a prayer ----- */
+const plain = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+function passage(L, id) { const [r, t] = L.T[id]; return { r, t }; }
+function kickerFor(r, kind) {
+  if (kind === 'ps') return r.replace(/:.*/, '');                                  // "Psalm 23"
+  if (kind === 'gospel') return 'Gospel · ' + r.replace(/ \d+:.*/, '');           // "Gospel · John"
+  return 'Reading · ' + r.replace(/ \d+(:.*)?$/, '');
+}
+function openIntentions(focus) {
+  const g = FOCUS_GROUP[focus];
+  let list = Store.data.intentions.filter((x) => !x.answered && x.text);
+  if (g) { const inG = list.filter((x) => x.g === g); if (inG.length) list = inG; }
+  return list.sort((a, b) => (a.lastPrayed || '').localeCompare(b.lastPrayed || '') || (a.created || '').localeCompare(b.created || ''));
+}
+function buildPrayer(L, o) {
+  // o: { period, focus, len, mode: 'prayer' | 'examen' | 'intentions' | 'verse' }
+  const used = new Set(), P = L.time[o.period], F = o.focus ? L.focus[o.focus] : null, steps = [];
+  const pass = (id, kind, extra = {}) => { const v = passage(L, id); return { k: kickerFor(v.r, kind), v, ...extra }; };
+  const still = () => {
+    const s = { k: 'Be still', t: pick('still:' + o.period, P.still) };
+    if (o.period === 'night' && o.len === 'full') s.line = L.nightOpen;
+    else s.v = passage(L, pick('open:' + o.period, P.open, used));
+    return s;
+  };
+  const ints = (one) => {
+    const list = openIntentions(o.focus).slice(0, one ? 1 : 6);
+    return { k: 'Pray for', h: list.length ? (one ? 'Someone on your heart' : 'Your intentions') : 'The people on your heart', ints: list.map((x) => x.id),
+      t: list.length ? 'Tap 🙏 for each one as you pray.' : 'Bring your own needs, and the people you love, to God. You can add prayer intentions here or in the Journal.' };
+  };
+  const lords = () => ({ k: 'The Lord’s Prayer', t: LORDS_PRAYER, src: 'Matthew 6:9–13', creed: o.period === 'morning' ? L.creed : null });
+  const classic = () => { const c = pickIdx('pr:' + o.period, P.pr); return { k: 'Closing prayer', h: c.n, t: c.t, src: c.s }; };
+  const bless = () => ({ k: 'Blessing', v: passage(L, pick('bless', L.bless, used)), last: true });
+  const readNote = () => pick('readnote', ['Read it slowly. Let one phrase stay with you.', 'Read it again, a little slower. What stands out to you?', 'Stay with these words for a moment.', 'Which word or line speaks to you today?']);
+
+  if (o.mode === 'examen') {
+    L.examen.forEach((e, i) => steps.push({ k: `Night Examen · ${i + 1} of 5`, h: e.h, t: pick('ex' + i, e.p), v: e.v ? passage(L, e.v) : null }));
+    steps.push(classic());
+  } else if (o.mode === 'intentions') {
+    steps.push({ k: 'Be still', t: 'Bring each person and need to God, one at a time. Speak to him in your own words.', v: passage(L, pick('open:' + o.period, P.open, used)) });
+    const list = openIntentions(null).slice(0, 12);
+    const prompts = ['Bring this to God in your own words.', 'What would you like to ask God for here?', 'Thank God that he hears you.', 'Picture placing this in God’s hands.', 'Ask God to show his love here.'];
+    list.forEach((x, i) => steps.push({ k: (intGroupName(x.g) || 'Intention') + ` · ${i + 1} of ${list.length}`, h: x.text, t: prompts[i % prompts.length], autoPray: x.id }));
+    if (!list.length) steps.push(ints());
+    steps.push(lords());
+  } else if (o.mode === 'verse') {
+    const v = verseFor(nowInfo().key);
+    steps.push({ k: 'Be still', t: 'Quiet your heart. Ask God to speak to you through his word.' });
+    steps.push({ k: 'Today’s verse', v: { r: v.ref, t: v.text }, note: 'Read it slowly, twice.' });
+    steps.push({ k: 'Reflect', t: 'What word or phrase stands out to you? Why might that be?', q: 'Talk to God about it, as you would to a friend.' });
+    steps.push(classic());
+  } else if (F) {
+    const em = F.e + ' ' + F.n;
+    steps.push({ k: em, t: pick('fo:' + o.focus, F.open) });
+    if (o.len === 'full') {
+      steps.push(pass(pick('fps:' + o.focus, F.ps, used), 'ps', { note: readNote() }));
+      steps.push(pass(pick('fg:' + o.focus, F.gospel, used), 'gospel', { q: pick('fq:' + o.focus, F.q) }));
+      steps.push(pass(pick('fx:' + o.focus, F.other, used), 'other'));
+      steps.push(ints()); steps.push(lords());
+    } else {
+      const pool = [...F.ps.map((x) => 'p' + x), ...F.gospel.map((x) => 'g' + x), ...F.other.map((x) => 'o' + x)];
+      const c = pick('fs:' + o.focus, pool, used);
+      steps.push(pass(c.slice(1), { p: 'ps', g: 'gospel', o: 'other' }[c[0]], { q: pick('fq:' + o.focus, F.q) }));
+      if (FOCUS_GROUP[o.focus]) steps.push(ints(true));
+    }
+    steps.push({ k: 'Prayer', t: pick('fp:' + o.focus, F.pr), src: '' });
+    if (o.len === 'full') steps.push(bless());
+  } else if (o.len === 'full') {
+    steps.push(still());
+    steps.push(pass(pick('ps:' + o.period, P.ps, used), 'ps', { note: readNote() }));
+    if (o.period === 'night') {
+      const e = L.examen[2];
+      steps.push({ k: 'Look back', t: pick('ex2', e.p), q: 'Is there anything you need to bring to God for forgiveness?' });
+      steps.push({ k: 'Song of Simeon', v: passage(L, 'Luke 2:29-32'), note: 'Prayed at the close of the day by Christians for centuries.' });
+    } else steps.push(pass(pick('gospel', L.gospel, used), 'gospel', { q: pick('q:' + o.period, P.q) }));
+    steps.push(ints()); steps.push(lords()); steps.push(classic()); steps.push(bless());
+  } else {
+    steps.push(still());
+    const pool = [...P.ps.map((x) => 'p' + x), ...L.gospel.map((x) => 'g' + x)];
+    const c = pick('short:' + o.period, pool, used);
+    steps.push(pass(c.slice(1), c[0] === 'p' ? 'ps' : 'gospel', { q: pick('q:' + o.period, P.q) }));
+    steps.push(ints(true)); steps.push(classic());
+  }
+  steps[steps.length - 1].last = true;
+  return steps;
+}
+
+/* ----- The full-screen view ----- */
+const pn = { open: false, steps: [], i: -1, ctx: null, prayedNow: new Set(), focus: null };
+function prayTitle(ctx) {
+  if (ctx.mode === 'examen') return 'Night Examen';
+  if (ctx.mode === 'intentions') return 'Your intentions';
+  if (ctx.mode === 'verse') return 'Today’s verse';
+  if (ctx.target) return `${ctx.target.name} Prayer`;
+  return window.PRAY_LIB ? PRAY_LIB.time[ctx.period].title : 'Prayer';
+}
+// Which prayer an Amen from the Pray tab counts for: the prayer time we are in now, if it isn't ticked yet
+function tabTarget() {
+  const now = nowInfo(), id = currentPrayerId(now.min), p = id && Store.prayers().find((x) => x.id === id);
+  return p && !Store.isDone(now.key, p.id) ? p : null;
+}
+async function openPrayNow(id, opts = {}) {
+  const now = nowInfo(), p = id ? Store.prayers().find((x) => x.id === id) : null;
+  const target = id ? p : (opts.mode && opts.mode !== 'prayer' ? tabTarget() : opts.target !== undefined ? opts.target : tabTarget());
+  const period = p ? periodFor(p) : target ? periodFor(target) : periodAt(now.min);
+  pn.ctx = { target, period, mode: opts.mode || 'prayer', from: id ? 'row' : 'tab' };
+  pn.focus = opts.focus || null; pn.prayedNow = new Set(); pn.i = -1;
+  const el = $('#pn'); el.className = 'open'; el.setAttribute('aria-hidden', 'false'); pn.open = true;
+  el.querySelector('.pn-bg').style.backgroundImage = `url(${HEADER_IMG[headerPeriod()]})`;
+  renderPnTop();
+  try { await loadLib(); } catch (_) {
+    $('#pn-body').innerHTML = `<div class="pn-in"><div class="pn-k">Pray now</div><p class="pn-t">The prayers couldn’t be loaded. Check your connection and try again.</p></div>`;
+    $('#pn-bot').innerHTML = '<button class="pn-btn" data-pn="close">Close</button>'; return;
+  }
+  if (opts.go) startPrayer(); else renderPnStart();
+}
+function closePrayNow() {
+  if (!pn.open) return;
+  stopSpeaking(); pn.open = false;
+  const el = $('#pn'); el.className = ''; el.setAttribute('aria-hidden', 'true');
+  if (currentView === 'pray') renderPrayTab();
+}
+function renderPnTop() {
+  const n = pn.i >= 0 ? pn.steps.length : 0;
+  $('#pn-dots').innerHTML = Array.from({ length: n }, (_, j) => `<i class="${j < pn.i ? 'done' : j === pn.i ? 'on' : ''}"></i>`).join('');
+  $('#pn-say').classList.toggle('on', prayPref().listen);
+  $('#pn-say').setAttribute('aria-pressed', prayPref().listen);
+}
+function renderPnStart() {
+  const c = pn.ctx, L = PRAY_LIB, now = nowInfo(), len = prayPref().len, F = pn.focus && L.focus[pn.focus];
+  const t = c.target, late = t && notYet(now.key, t), done = t && Store.isDone(now.key, t.id);
+  const status = !t ? 'Time with God. You can pray at any time.' : done ? `${t.name} is already prayed today.` : late ? `${t.name} is at ${timeOf(t)}. You can pray now; it can be marked from then.` : `Amen marks ${t.name} as prayed ✓`;
+  const choose = c.mode === 'prayer';
+  $('#pn-body').innerHTML = `<div class="pn-in pn-start">
+    <div class="pn-k">${fmt(now.key, { weekday: 'long' })} · ${hhmm(now.min)}</div>
+    <h2 class="pn-h pn-big">${esc(prayTitle(c))}</h2>
+    <p class="pn-p">${esc(status)}</p>
+    ${choose ? `<div class="pn-seg" role="group" aria-label="Length"><button data-len="short" aria-pressed="${len === 'short'}">Short · 1 min</button><button data-len="full" aria-pressed="${len === 'full'}">Full · 4 min</button></div>
+    <div class="pn-k pn-k2">Pray about…</div>
+    <button class="pn-pick" data-pn="focus"><span>${F ? `${F.e} ${esc(F.n)}` : 'Nothing in particular'}</span><em>${F ? 'Change' : 'Choose'} ›</em></button>
+    ${F ? '<button class="pn-clear" data-pn="nofocus">Pray without a focus</button>' : ''}` : ''}
+  </div>`;
+  $('#pn-bot').innerHTML = `<button class="pn-btn" data-pn="begin">Begin</button>`;
+  pn.i = -1; renderPnTop(); animIn();
+}
+function renderPnFocus() {
+  const L = PRAY_LIB;
+  $('#pn-body').innerHTML = `<div class="pn-in"><div class="pn-k">Pray about…</div><h2 class="pn-h">What’s on your heart?</h2>
+    ${L.groups.map(([g, name]) => `<div class="pn-gh">${name}</div><div class="pn-chips">${Object.entries(L.focus).filter(([, f]) => f.g === g)
+      .map(([k, f]) => `<button data-focus="${k}" class="${pn.focus === k ? 'on' : ''}">${f.e} ${esc(f.n)}</button>`).join('')}</div>`).join('')}
+    <button class="pn-clear" data-focus="">Nothing in particular – just pray</button></div>`;
+  $('#pn-bot').innerHTML = `<button class="pn-back" data-pn="start" aria-label="Back">‹</button><span class="pn-fill"></span>`;
+  animIn();
+}
+function startPrayer() {
+  const c = pn.ctx;
+  pn.steps = buildPrayer(PRAY_LIB, { period: c.period, focus: pn.focus, len: prayPref().len, mode: c.mode });
+  pn.i = 0; renderPnStep();
+}
+function intCard(x) {
+  const on = pn.prayedNow.has(x.id), n = (x.prayed || 0);
+  const meta = [intGroupName(x.g), x.lastPrayed ? (x.lastPrayed === nowInfo().key ? 'Prayed today' : 'Last prayed ' + fmt(x.lastPrayed, { month: 'short', day: 'numeric' })) : 'Added ' + fmt(x.created, { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ');
+  return `<button class="pn-card${on ? ' on' : ''}" data-pint="${x.id}" aria-pressed="${on}"><span class="pc-t">${esc(x.text)}</span><span class="pc-m">${esc(meta)}</span><span class="pc-b">🙏 ${n}</span></button>`;
+}
+function renderPnStep() {
+  const s = pn.steps[pn.i];
+  const ints = s.ints ? s.ints.map((id) => Store.data.intentions.find((x) => x.id === id)).filter(Boolean) : null;
+  $('#pn-body').innerHTML = `<div class="pn-in">
+    <div class="pn-k">${esc(s.k)}</div>
+    ${s.h ? `<h2 class="pn-h">${esc(s.h)}</h2>` : ''}
+    ${s.t && !s.v ? `<p class="pn-t">${esc(s.t)}</p>` : ''}
+    ${s.v ? `${s.t ? `<p class="pn-p pn-lead">${esc(s.t)}</p>` : ''}<p class="pn-t pn-v">${esc(s.v.t)}<span class="pn-ref">${esc(s.v.r)}</span></p>` : ''}
+    ${s.line ? `<p class="pn-t pn-v">${esc(s.line)}</p>` : ''}
+    ${s.src ? `<p class="pn-src">${esc(s.src)}</p>` : ''}
+    ${s.note ? `<p class="pn-p">${esc(s.note)}</p>` : ''}
+    ${s.q ? `<p class="pn-q">${esc(s.q)}</p>` : ''}
+    ${ints ? (ints.length ? `<div class="pn-cards">${ints.map(intCard).join('')}</div>` : '') + `<div class="pn-add"><input id="pn-new" maxlength="200" placeholder="Add someone or something to pray for" enterkeyhint="done"><button data-pn="add">Add</button></div>` : ''}
+    ${s.creed ? `<details class="pn-more"><summary>Say the Apostles’ Creed</summary><p>${esc(s.creed)}</p></details>` : ''}
+    ${s.autoPray ? '<p class="pn-p pn-auto">🙏 This will be counted as prayed when you go on.</p>' : ''}
+  </div>`;
+  $('#pn-bot').innerHTML = `<button class="pn-back" data-pn="back" aria-label="Back">‹</button><button class="pn-btn" data-pn="${s.last ? 'amen' : 'next'}">${s.last ? 'Amen' : 'Next'}</button>`;
+  renderPnTop(); animIn(); $('#pn-body').scrollTop = 0;
+  if (prayPref().listen) speak(s);
+}
+function animIn() {
+  const b = $('#pn-body .pn-in'); if (!b) return;
+  b.classList.remove('in'); void b.offsetWidth; b.classList.add('in');
+}
+function markIntention(id, on) {
+  const x = Store.data.intentions.find((i) => i.id === id); if (!x) return;
+  const today = nowInfo().key;
+  if (on && !pn.prayedNow.has(id)) { pn.prayedNow.add(id); x._prevLast = x.lastPrayed || null; x.prayed = (x.prayed || 0) + 1; x.lastPrayed = today; }
+  else if (!on && pn.prayedNow.has(id)) { pn.prayedNow.delete(id); x.prayed = Math.max(0, (x.prayed || 1) - 1); x.lastPrayed = x._prevLast || null; }
+  delete x._prevLast; x.updatedAt = new Date().toISOString(); Store.save();
+}
+function pnGo(dir) {
+  stopSpeaking();
+  const s = pn.steps[pn.i];
+  if (dir > 0 && s && s.autoPray) markIntention(s.autoPray, true);
+  if (dir < 0 && pn.i === 0) { renderPnStart(); return; }
+  pn.i = Math.max(0, Math.min(pn.steps.length - 1, pn.i + dir)); renderPnStep();
+}
+$('#pn').addEventListener('click', (e) => {
+  const len = e.target.closest('[data-len]');
+  if (len) { setPrayPref({ len: len.dataset.len }); document.querySelectorAll('#pn [data-len]').forEach((b) => b.setAttribute('aria-pressed', b === len)); return; }
+  const f = e.target.closest('[data-focus]');
+  if (f) { pn.focus = f.dataset.focus || null; renderPnStart(); return; }
+  const card = e.target.closest('[data-pint]');
+  if (card) { const on = !pn.prayedNow.has(card.dataset.pint); markIntention(card.dataset.pint, on); if (on) haptic(); card.outerHTML = intCard(Store.data.intentions.find((x) => x.id === card.dataset.pint)); return; }
+  const b = e.target.closest('[data-pn]'); if (!b) return;
+  const a = b.dataset.pn;
+  if (a === 'close') closePrayNow();
+  else if (a === 'focus') renderPnFocus();
+  else if (a === 'nofocus') { pn.focus = null; renderPnStart(); }
+  else if (a === 'start') renderPnStart();
+  else if (a === 'begin') startPrayer();
+  else if (a === 'next') pnGo(1);
+  else if (a === 'back') pnGo(-1);
+  else if (a === 'add') addFromPray();
+  else if (a === 'amen') prayAmen();
+  else if (a === 'say') { const on = !prayPref().listen; setPrayPref({ listen: on }); renderPnTop(); if (on && pn.i >= 0) speak(pn.steps[pn.i]); else stopSpeaking(); }
+});
+$('#pn').addEventListener('keydown', (e) => { if (e.target.id === 'pn-new' && e.key === 'Enter') { e.preventDefault(); addFromPray(); } });
+function addFromPray() {
+  const inp = $('#pn-new'), t = inp && inp.value.trim(); if (!t) return;
+  const x = { id: Date.now().toString(36), text: t, created: nowInfo().key, answered: null, updatedAt: new Date().toISOString() };
+  if (FOCUS_GROUP[pn.focus]) x.g = FOCUS_GROUP[pn.focus];
+  Store.data.intentions.push(x); Store.save();
+  const s = pn.steps[pn.i]; s.ints = [...(s.ints || []), x.id]; markIntention(x.id, true); renderPnStep();
+}
+// Swipe left / right between steps
+(() => {
+  let x0 = null, y0 = 0;
+  $('#pn').addEventListener('touchstart', (e) => { if (pn.i < 0 || e.target.closest('input,details')) { x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  $('#pn').addEventListener('touchend', (e) => {
+    if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0 && !pn.steps[pn.i].last) pnGo(1); else if (dx > 0) pnGo(-1); }
+  }, { passive: true });
+})();
+
+/* ----- Listen: reads each step aloud (the phone's own voice) ----- */
+function speak(s) {
+  stopSpeaking();
+  if (!('speechSynthesis' in window)) { toast('Reading aloud isn’t available on this device.'); return; }
+  const parts = [s.h, s.v ? [s.t, s.v.t, s.v.r] : s.t, s.line, s.note, s.q].flat().filter(Boolean);
+  const text = parts.join('. ').replace(/\bLORD\b/g, 'Lord').replace(/\bGOD\b/g, 'God').replace(/–/g, ' to ').replace(/[“”‘’"]/g, (c) => c === '’' ? '’' : '');
+  const u = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices(), lang = navigator.language || 'en-US';
+  u.voice = voices.find((v) => v.lang === lang && /enhanced|premium|natural/i.test(v.name)) || voices.find((v) => v.lang === lang) || voices.find((v) => /^en/.test(v.lang)) || null;
+  u.rate = 0.9; u.pitch = 1;
+  speechSynthesis.speak(u);
+}
+function stopSpeaking() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (_) {} }
+
+/* ----- Amen: ticks the prayer (same rules as the tick box) and plays the blessing ----- */
+function prayAmen() {
+  stopSpeaking();
+  const c = pn.ctx, now = nowInfo(), t = c.target, L = PRAY_LIB, F = pn.focus && L.focus[pn.focus];
+  const n = Store.prayers().length;
+  let anim;
+  if (t && !Store.isDone(now.key, t.id) && !notYet(now.key, t)) {
+    const before = Store.count(now.key);
+    Store.setDone(now.key, t.id, true); haptic();
+    const full = before < n && Store.count(now.key) === n;
+    anim = { dove: full ? 'spirit' : 'light', name: `${t.name} Prayer`, done: 'COMPLETED', extra: full ? `All ${n === 5 ? 'five' : n} prayers today. Praise God.` : '', full, tick: t.id };
+  } else if (t && Store.isDone(now.key, t.id)) anim = { dove: 'light', name: `${t.name} Prayer`, done: 'COMPLETED' };
+  else if (t) anim = { dove: 'light', name: `${t.name} Prayer`, sub: `CAN BE MARKED AT ${timeOf(t)}` };
+  else anim = { dove: 'line', name: F ? F.n : prayTitle(c), sub: 'TIME WITH GOD' };
+  $('#pn').classList.add('amen');
+  Amen.play({ ...anim, bg: false, onReveal: () => {
+    closePrayNow();
+    if (anim.tick) { renderPrayers(true); if (currentView === 'stats') { renderCalendar(); renderStats(); } }
+  } }).then(() => {
+    if (anim.tick && currentView === 'prayers' && !viewDay) {
+      const row = document.querySelector(`#prayer-list .row[data-id="${anim.tick}"]`);
+      if (row) { row.classList.remove('amen-glow'); void row.offsetWidth; row.classList.add('amen-glow'); setTimeout(() => row.classList.remove('amen-glow'), 1300); }
+    }
+    if (anim.full) {
+      if (currentView === 'prayers' && !viewDay) celebrate();
+      setTimeout(afterFullDay, 1700);
+    }
+  });
+}
+
+/* =========================================================
+   AMEN — a short blessing after praying: a dove, soft light, and the words.
+   light: a prayer completed · spirit: the whole day completed · olive: an answered prayer · line: time with God
+   ========================================================= */
+const Doves = (() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  // Side view. Each wing's outline blends between three poses (down, level, up); the tip trails the shoulder.
+  const UP   = [[64,47],[60,36],[50,22],[36,11],[21,4],[27,13],[30,19],[24,21],[33,28],[36,32],[29,36],[40,42],[51,51]];
+  const MID  = [[64,47],[57,42],[47,39],[33,37],[16,37],[25,41],[29,43],[20,46],[31,48],[34,50],[27,53],[40,53],[51,52]];
+  const DOWN = [[64,48],[63,56],[60,64],[55,72],[47,82],[44,74],[42,69],[35,70],[38,63],[36,60],[30,59],[39,55],[51,53]];
+  const DIST = [0,.2,.45,.7,1,.9,.8,.7,.55,.45,.35,.2,0];
+  const BODY = 'M24 56 C34 46 50 42 66 43 C72 37 79 34 85 35.5 C90 37 92 40 91.5 43 C88 44.5 86.5 46.5 85.5 49 C81 57 69 62 54 63 C42 64 31 61.5 24 56 Z';
+  const TAIL = 'M27 56 C20 53 12 50 5 50 C8 53 9 55 7 57 C10 58 10 60 6 63 C14 63 22 62 29 61 Z';
+  const BEAK = 'M91 40.4 C94 41 96.5 41.7 98 42.4 C96.4 43 94 43.6 91.2 44.2 Z';
+  const smooth = (p) => { const n = p.length; let d = `M${p[0][0].toFixed(2)} ${p[0][1].toFixed(2)}`;
+    for (let i = 0; i < n; i++) { const p0 = p[(i - 1 + n) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n], k = 1 / 6;
+      d += `C${(p1[0] + (p2[0] - p0[0]) * k).toFixed(2)} ${(p1[1] + (p2[1] - p0[1]) * k).toFixed(2)} ${(p2[0] - (p3[0] - p1[0]) * k).toFixed(2)} ${(p2[1] - (p3[1] - p1[1]) * k).toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`; }
+    return d + 'Z'; };
+  const wing = (w0, wave) => UP.map((u, i) => { const w = Math.min(1, Math.max(0, w0 + (wave || 0) * DIST[i])), a = (1 - w) * (1 - w), b = 2 * w * (1 - w), c = w * w;
+    return [a * DOWN[i][0] + b * MID[i][0] + c * u[0], a * DOWN[i][1] + b * MID[i][1] + c * u[1]]; });
+  function side(g, id, style) {
+    const grad = `<linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#F0E2C6"/></linearGradient>`;
+    if (style === 'light') g.innerHTML = `<defs><radialGradient id="${id}f" cx="72" cy="46" r="62" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".42" stop-color="#FFF6E2" stop-opacity=".96"/><stop offset=".75" stop-color="#FFE9BC" stop-opacity=".55"/><stop offset="1" stop-color="#FFE3A6" stop-opacity="0"/></radialGradient>
+        <filter id="${id}s" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.4"/></filter><filter id="${id}h" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="9"/></filter></defs>
+        <g filter="url(#${id}h)" opacity=".55"><path class="far" fill="#FFCF7A"/><path d="${BODY}" fill="#FFD98F"/><path class="near" fill="#FFD98F"/></g>
+        <g filter="url(#${id}s)" opacity=".85"><path class="far" fill="#FFDFA0"/><path d="${TAIL}" fill="#FFE3A6"/><path d="${BODY}" fill="#FFEBC4"/><path class="near" fill="#FFEBC4"/></g>
+        <path class="far" fill="url(#${id}f)" opacity=".5"/><path d="${TAIL}" fill="url(#${id}f)"/><path d="${BODY}" fill="url(#${id}f)"/><path d="${BEAK}" fill="#F2C46A" opacity=".75"/><path class="near" fill="url(#${id}f)"/>`;
+    else if (style === 'line') g.innerHTML = `<g fill="none" stroke="#F7D27E" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path class="far" opacity=".55"/><path d="${TAIL}"/><path d="${BODY}"/><path d="${BEAK}"/><path class="near"/></g><circle cx="87.4" cy="39.4" r=".9" fill="#F7D27E"/>`;
+    else g.innerHTML = `<defs>${grad}</defs><path class="far" fill="#D9C6A2"/><path d="${TAIL}" fill="url(#${id}b)"/><path d="${BODY}" fill="url(#${id}b)"/>
+        ${style === 'olive' ? `<path d="M95.5 42.6 C99 45 102 49 104.5 55" stroke="#8C7A4A" stroke-width=".9" fill="none" stroke-linecap="round"/><g fill="#A9B97A" stroke="#7F8F52" stroke-width=".35"><ellipse cx="99.5" cy="47.5" rx="4.6" ry="1.6" transform="rotate(-25 99.5 47.5)"/><ellipse cx="101" cy="51.5" rx="4.4" ry="1.5" transform="rotate(35 101 51.5)"/><ellipse cx="104.5" cy="50" rx="4.2" ry="1.5" transform="rotate(-40 104.5 50)"/><ellipse cx="105" cy="56.5" rx="3.8" ry="1.4" transform="rotate(70 105 56.5)"/></g>` : ''}
+        <path d="${BEAK}" fill="#E2A43A"/><circle cx="87.4" cy="39.4" r="1.2" fill="#2B1608"/><path class="near" fill="url(#${id}b)" stroke="rgba(214,190,150,.55)" stroke-width=".4"/>`;
+  }
+  function poseSide(g, wN, wF, wave) {
+    const n = smooth(wing(wN, wave)), f = smooth(wing(wF, wave).map(([x, y]) => [x + 3.5, y - 1.2]));
+    g.querySelectorAll('.near').forEach((e) => e.setAttribute('d', n)); g.querySelectorAll('.far').forEach((e) => e.setAttribute('d', f));
+  }
+  // Front view (the Holy Spirit): wings open wide and beat by turning at the shoulders
+  const LW = [[54,40],[44,33],[30,26],[16,20],[3,16],[10,24],[6,27],[14,31],[9,36],[19,38],[15,43],[27,45],[25,50],[38,50],[53,55]];
+  const LD = LW.map(([x, y]) => Math.min(1, Math.hypot(x - 54, y - 44) / 52));
+  function spirit(g, id) {
+    g.innerHTML = `<defs><linearGradient id="${id}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#F1E3C8"/></linearGradient>
+      <filter id="${id}s" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs>
+      <g filter="url(#${id}s)" opacity=".7"><path class="lw" fill="#FFE2A4"/><path class="rw" fill="#FFE2A4"/><ellipse cx="60" cy="50" rx="11" ry="20" fill="#FFE9BC"/></g>
+      <path class="tail" fill="url(#${id}c)" stroke="rgba(214,190,150,.5)" stroke-width=".4"/>
+      <path class="lw" fill="url(#${id}c)" stroke="rgba(214,190,150,.5)" stroke-width=".4"/><path class="rw" fill="url(#${id}c)" stroke="rgba(214,190,150,.5)" stroke-width=".4"/>
+      <path d="M60 30 C67 30 70 40 69.5 50 C69 58 66 62 63.5 64 L56.5 64 C54 62 51 58 50.5 50 C50 40 53 30 60 30 Z" fill="url(#${id}c)"/>
+      <path d="M60 61 C64.5 61 66.5 64.5 66 68 C65.5 71.5 63 73.5 60 73.5 C57 73.5 54.5 71.5 54 68 C53.5 64.5 55.5 61 60 61 Z" fill="#fff"/>
+      <path d="M58.6 73 C59.2 75 59.6 76.4 60 77.6 C60.4 76.4 60.8 75 61.4 73 Z" fill="#E2A43A"/>
+      <path d="M54.5 50 C56 56 58 59 60 60 C62 59 64 56 65.5 50" stroke="rgba(214,190,150,.45)" stroke-width=".5" fill="none"/>`;
+  }
+  function poseSpirit(g, angle, bend, s) {
+    const L = LW.map(([x, y], i) => { const a = (angle * (0.75 + 0.25 * LD[i]) + bend * LD[i] * LD[i]) * Math.PI / 180, dx = x - 54, dy = y - 44, fx = 1 - 0.12 * Math.abs(Math.sin(a));
+      return [54 + (dx * Math.cos(a) - dy * Math.sin(a)) * fx, 44 + dx * Math.sin(a) + dy * Math.cos(a)]; });
+    const dl = smooth(L), dr = smooth(L.map(([x, y]) => [120 - x, y]));
+    g.querySelectorAll('.lw').forEach((e) => e.setAttribute('d', dl)); g.querySelectorAll('.rw').forEach((e) => e.setAttribute('d', dr));
+    g.querySelector('.tail').setAttribute('d', smooth([[55,36],[52,28],[48 - 3 * s,20],[44 - 5 * s,13],[50 - 2 * s,14 - s],[53,11 - s],[57,13],[60,9 - s],[63,13],[67,11 - s],[70 + 2 * s,14 - s],[76 + 5 * s,13],[72 + 3 * s,20],[68,28],[65,36]]));
+  }
+  return { side, poseSide, spirit, poseSpirit, NS };
+})();
+
+const Amen = (() => {
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lin = (t, a, b) => clamp((t - a) / (b - a));
+  const sm = (x) => x * x * (3 - 2 * x), smr = (x) => x * x * x * (x * (x * 6 - 15) + 10), eo = (x) => 1 - Math.pow(1 - x, 3), ei = (x) => x * x * x;
+  const eio = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2, mix = (a, b, x) => a + (b - a) * x;
+  const bez = (p, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * p[0][k] + 3 * u * u * t * p[1][k] + 3 * u * t * t * p[2][k] + t * t * t * p[3][k]); };
+  const TIMES = {
+    side: { inT: [260, 1700], hold: [1250, 1850], leaveW: [2900, 3250], outT: [3100, 4000], doveFade: [3600, 3920], textIn: 1050, nameIn: 1650, doneIn: 2050, textOut: 3350, lightOut: [3350, 4100], after: [3850, 4450] },
+    spirit: { inT: [250, 2100], hold: [1300, 2100], leaveW: [3800, 4300], outT: [3800, 4900], doveFade: [4150, 4800], textIn: 1300, nameIn: 1950, doneIn: 2350, textOut: 3850, lightOut: [4150, 5000], after: [4750, 5350] },
+  };
+  let busy = null;
+  function play(o) {
+    if (busy) busy.finish();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const S = TIMES[o.dove === 'spirit' ? 'spirit' : 'side'], spiritMode = o.dove === 'spirit';
+    const W = window.innerWidth, H = window.innerHeight, sx = W / 390, sy = H / 844;
+    const HOV = [W / 2, Math.round(H * 0.377)], wordTop = Math.round(H * 0.479);
+    const IN = spiritMode ? [[W / 2, -120], [W / 2 - 7 * sx, 40 * sy], [W / 2 + 5 * sx, 200 * sy], HOV] : [[-110, 760 * sy], [-10, 600 * sy], [70 * sx, 330 * sy], HOV];
+    const OUT = spiritMode ? [HOV, [W / 2, HOV[1] - 28], [W / 2, HOV[1] - 98], [W / 2, HOV[1] - 168]] : [HOV, [HOV[0] + 55 * sx, HOV[1] - 18], [HOV[0] + 135 * sx, 190 * sy], [W + 110, -90]];
+    const word = o.word || 'Amen', fs = word.length > 6 ? 50 : 62;
+    const el = document.createElement('div'); el.id = 'amen'; el.setAttribute('role', 'status');
+    el.innerHTML = `${o.bg ? `<div class="am-l am-bg" style="background-image:url(${HEADER_IMG[headerPeriod()]})"></div><div class="am-l am-shade"></div>` : ''}<div class="am-l am-veil"></div>
+      ${spiritMode ? '<div class="am-beam"></div>' : ''}<div class="am-rays"></div><div class="am-orb"></div><div class="am-core"></div><div class="am-motes"></div>
+      <svg class="am-dove" viewBox="0 0 120 ${spiritMode ? 90 : 88}" aria-hidden="true"><g transform="translate(0,4)"></g></svg>
+      <div class="am-word" style="top:${wordTop}px;font-size:${fs}px">${[...word].map((c) => `<span>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div>
+      <div class="am-shine" style="top:${wordTop}px;font-size:${fs}px">${esc(word)}</div>
+      <div class="am-rule" style="top:${wordTop + 90}px"></div>
+      <div class="am-name" style="top:${wordTop + 104}px">${esc(o.name || '')}</div>
+      <div class="am-done" style="top:${wordTop + 144}px">${o.done ? '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.6"/><path d="M6 10.4l2.7 2.7L14.2 7.4"/></svg>' : ''}<span>${esc(o.done || o.sub || '')}</span></div>
+      ${o.extra ? `<div class="am-extra" style="top:${wordTop + 180}px">${esc(o.extra)}</div>` : ''}`;
+    document.body.appendChild(el);
+    const q = (s) => el.querySelector(s), dg = q('.am-dove g'), dove = q('.am-dove');
+    if (spiritMode) Doves.spirit(dg, 'amd'); else Doves.side(dg, 'amd', o.dove);
+    const DW = spiritMode ? 170 : 150, DH = spiritMode ? 128 : 110; dove.style.width = DW + 'px'; dove.style.height = DH + 'px';
+    q('.am-orb').style.top = (HOV[1] + 60 - 380) + 'px'; q('.am-core').style.top = (HOV[1] + 30 - 150) + 'px'; q('.am-rays').style.top = (HOV[1] + 60 - 450) + 'px';
+    const motes = Array.from({ length: spiritMode ? 22 : 16 }, () => { const m = document.createElement('i'); q('.am-motes').appendChild(m); return m; });
+    const letters = [...q('.am-word').children], ckc = q('.am-done circle'), ckp = q('.am-done path'), C = 2 * Math.PI * 8.6;
+    // wing beat: [bias, amplitude, beats per second] for flying in, resting, and leaving
+    const WS = spiritMode ? [{ b: 2, a: 26, f: 1.35 }, { b: 7, a: 7, f: .55 }, { b: 4, a: 20, f: 1.2 }] : [{ b: .5, a: .5, f: 2.6 }, { b: .8, a: .16, f: 1.05 }, { b: .5, a: .5, f: 3 }];
+    const wingState = (t) => { const k1 = sm(lin(t, ...S.hold)), k2 = sm(lin(t, ...S.leaveW)), s = (k) => mix(mix(WS[0][k], WS[1][k], k1), WS[2][k], k2); return { b: s('b'), a: s('a'), f: s('f') }; };
+    let phT = 0, ph = 0;
+    const phaseAt = (t) => { while (phT < t) { const dt = Math.min(4, t - phT); ph += 2 * Math.PI * wingState(phT).f * dt / 1000; phT += dt; } return ph; };
+    let revealed = false, done = false, resolveP, skipAt = null, raf = 0, t0 = performance.now();
+    const reveal = () => { if (revealed) return; revealed = true; if (o.onReveal) o.onReveal(); };
+    function frame(t) {
+      const lout = smr(lin(t, ...S.lightOut)), breathe = 1 + .025 * Math.sin(t / 650), L = sm(lin(t, 180, 1300)) * (1 - lout);
+      const boost = spiritMode ? 1 + .25 * Math.sin(Math.PI * lin(t, S.outT[0] + 300, S.outT[1])) : 1;
+      q('.am-veil').style.opacity = (sm(lin(t, 120, 700)) * .5).toFixed(3);
+      if (o.bg) { q('.am-bg').style.opacity = sm(lin(t, 0, 500)).toFixed(3); q('.am-shade').style.opacity = sm(lin(t, 0, 500)).toFixed(3); }
+      q('.am-orb').style.opacity = Math.min(1, L * boost).toFixed(3); q('.am-orb').style.transform = `scale(${(mix(.55, 1, eo(lin(t, 180, 1500))) * breathe).toFixed(4)})`;
+      q('.am-core').style.opacity = Math.min(1, L * .9 * boost).toFixed(3); q('.am-core').style.transform = `scale(${(mix(.6, 1, eo(lin(t, 300, 1500))) / breathe * boost).toFixed(4)})`;
+      q('.am-rays').style.opacity = (sm(lin(t, 500, 1700)) * (1 - lout) * (spiritMode ? 1 : .9)).toFixed(3);
+      q('.am-rays').style.transform = `rotate(${(t / 250).toFixed(2)}deg) scale(${mix(.85, 1, sm(lin(t, 500, 1700))).toFixed(4)})`;
+      if (spiritMode) q('.am-beam').style.opacity = Math.max(sm(lin(t, 150, 900)) * (1 - sm(lin(t, 2000, 3200))), Math.sin(Math.PI * lin(t, S.outT[0], S.outT[1] + 300)) * .8).toFixed(3);
+      // the dove
+      const w = wingState(t), p = phaseAt(t), bob = sm(lin(t, S.hold[0] + 150, S.hold[1] + 300));
+      let pos, rot, sc, op;
+      if (t < S.outT[0]) {
+        const x = eo(lin(t, ...S.inT)); pos = bez(IN, x); sc = mix(spiritMode ? .5 : .62, 1, x);
+        rot = spiritMode ? mix(4, 0, x) * Math.sin(t / 500) : mix(-24, -5, x);
+        pos = [pos[0] + bob * 2.5 * Math.sin(t / 900), pos[1] + bob * 4 * Math.sin(t / 700)]; rot += bob * (spiritMode ? .8 : 1.5) * Math.sin(t / 800);
+        op = sm(lin(t, S.inT[0], S.inT[0] + (spiritMode ? 500 : 260)));
+      } else {
+        const x = (spiritMode ? eio : ei)(lin(t, ...S.outT)); pos = bez(OUT, x);
+        pos = [pos[0] + 2.5 * Math.sin(t / 900) * (1 - x), pos[1] + 4 * Math.sin(t / 700) * (1 - x)];
+        rot = spiritMode ? .8 * Math.sin(t / 800) * (1 - x) : mix(-5 + 1.5 * Math.sin(t / 800), -26, sm(lin(t, S.outT[0], S.outT[0] + 700)));
+        sc = mix(1, spiritMode ? .62 : .5, sm(lin(t, ...S.outT))); op = 1 - sm(lin(t, ...S.doveFade));
+      }
+      let lift;
+      if (spiritMode) { lift = -(w.a / 26) * 5 * Math.cos(p); Doves.poseSpirit(dg, w.b + w.a * Math.sin(p), -w.a * .35 * Math.cos(p), sm(lin(t, 1200, 2100))); dove.style.filter = `brightness(${(1 + .35 * sm(lin(t, S.doveFade[0] - 200, S.doveFade[1]))).toFixed(3)})`; }
+      else { lift = -w.a * 3.2 * Math.cos(p); Doves.poseSide(dg, w.b + w.a * Math.sin(p), w.b + w.a * Math.sin(p - .35), -w.a * .38 * Math.cos(p)); }
+      dove.style.transform = `translate(${(pos[0] - DW / 2).toFixed(2)}px,${(pos[1] - DH / 2 + lift).toFixed(2)}px) rotate(${rot.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
+      dove.style.opacity = op.toFixed(3);
+      motes.forEach((m, i) => { const st = S.textIn + 100 + i * (spiritMode ? 80 : 95), life = 1700 + ((i * 37) % 5) * 160, x = lin(t, st, st + life);
+        const ox = HOV[0] + Math.sin(i * 2.39) * (spiritMode ? 120 : 95), oy = HOV[1] + 105 + Math.cos(i * 1.7) * 28;
+        m.style.transform = `translate(${(ox + Math.sin(i + t / 600) * 8 * x).toFixed(1)}px,${(oy - (70 + (i % 4) * 28) * eo(x)).toFixed(1)}px) scale(${(.6 + .6 * Math.sin(Math.PI * x)).toFixed(3)})`;
+        m.style.opacity = (Math.sin(Math.PI * x) * .9 * (1 - lout)).toFixed(3); });
+      // the words
+      const TO = S.textOut, out = (d = 0) => sm(lin(t, TO + d, TO + d + 450));
+      letters.forEach((s, i) => { const x = lin(t, S.textIn + i * 120, S.textIn + i * 120 + 750), e = eo(x), oo = sm(lin(t, TO + i * 40, TO + 550 + i * 40));
+        s.style.opacity = (sm(x) * (1 - oo)).toFixed(3); s.style.transform = `translateY(${((1 - e) * 14 - oo * 10).toFixed(2)}px)`; s.style.filter = `blur(${((1 - e) * 7 + oo * 3).toFixed(2)}px)`; });
+      const sh = lin(t, S.nameIn + 250, S.nameIn + 1050); q('.am-shine').style.opacity = (Math.sin(Math.PI * sh) * .95).toFixed(3); q('.am-shine').style.backgroundPosition = `${(100 - sh * 100).toFixed(1)}% 0`;
+      q('.am-rule').style.transform = `scaleX(${(eio(lin(t, S.nameIn - 150, S.nameIn + 500)) * (1 - out())).toFixed(4)})`;
+      const ni = lin(t, S.nameIn, S.nameIn + 500); q('.am-name').style.opacity = (sm(ni) * (1 - out())).toFixed(3); q('.am-name').style.transform = `translateY(${((1 - eo(ni)) * 6 - out() * 6).toFixed(2)}px)`;
+      const dn = lin(t, S.doneIn, S.doneIn + 450); q('.am-done').style.opacity = (sm(dn) * (1 - out(40))).toFixed(3); q('.am-done').style.transform = `translateY(${((1 - eo(dn)) * 5 - out(40) * 5).toFixed(2)}px)`;
+      if (ckc) { ckc.style.strokeDasharray = C; ckc.style.strokeDashoffset = (C * (1 - eio(lin(t, S.doneIn + 50, S.doneIn + 550)))).toFixed(2); ckp.style.strokeDasharray = 13; ckp.style.strokeDashoffset = (13 * (1 - eo(lin(t, S.doneIn + 400, S.doneIn + 700)))).toFixed(2); }
+      if (o.extra) { const xi = lin(t, S.doneIn + 500, S.doneIn + 1000); q('.am-extra').style.opacity = (sm(xi) * (1 - out(80))).toFixed(3); q('.am-extra').style.transform = `translateY(${((1 - eo(xi)) * 5).toFixed(2)}px)`; }
+      // the app comes back into view
+      if (t >= S.after[0]) reveal();
+      el.style.opacity = (1 - smr(lin(t, ...S.after))).toFixed(3);
+    }
+    function still(t) {                    // Reduce Motion: no flying, only gentle fades
+      const a = sm(lin(t, 0, 500)) * (1 - sm(lin(t, 2100, 2700)));
+      q('.am-veil').style.opacity = (a * .5).toFixed(3); if (o.bg) { q('.am-bg').style.opacity = sm(lin(t, 0, 400)).toFixed(3); q('.am-shade').style.opacity = sm(lin(t, 0, 400)).toFixed(3); }
+      q('.am-orb').style.opacity = a.toFixed(3); q('.am-core').style.opacity = (a * .9).toFixed(3);
+      if (spiritMode) Doves.poseSpirit(dg, 7, 0, 1); else Doves.poseSide(dg, .85, .85, 0);
+      dove.style.transform = `translate(${(HOV[0] - DW / 2).toFixed(1)}px,${(HOV[1] - DH / 2).toFixed(1)}px) rotate(${spiritMode ? 0 : -5}deg)`; dove.style.opacity = a.toFixed(3);
+      letters.forEach((s) => { s.style.opacity = a.toFixed(3); });
+      ['.am-name', '.am-done', '.am-extra'].forEach((k) => { const e = q(k); if (e) e.style.opacity = a.toFixed(3); });
+      q('.am-rule').style.transform = `scaleX(${a.toFixed(3)})`; if (ckc) { ckc.style.strokeDashoffset = 0; ckp.style.strokeDashoffset = 0; }
+      if (t >= 2100) reveal(); el.style.opacity = (1 - sm(lin(t, 2100, 2700))).toFixed(3);
+    }
+    const end = reduce ? 2700 : S.after[1];
+    function tick(now) {
+      if (done) return;
+      let t = now - t0;
+      if (skipAt != null) {                                   // tapped: fade straight out
+        const k = lin(now, skipAt, skipAt + 280); el.style.opacity = (1 - k).toFixed(3); reveal();
+        if (k >= 1) return finish(); raf = requestAnimationFrame(tick); return;
+      }
+      if (reduce) still(t); else frame(t);
+      if (t >= end) return finish();
+      raf = requestAnimationFrame(tick);
+    }
+    function finish() { if (done) return; done = true; cancelAnimationFrame(raf); reveal(); el.remove(); busy = null; resolveP(); }
+    el.addEventListener('click', () => { if (skipAt == null) skipAt = performance.now(); });
+    busy = { finish };
+    return new Promise((res) => { resolveP = res; raf = requestAnimationFrame(tick); });
+  }
+  return { play };
+})();
+
+/* =========================================================
+   VIEW: PRAY — pray now, or about what's on your heart, at any time
+   ========================================================= */
+const PERIOD_TITLE = { morning: 'Morning Prayer', midday: 'Midday Prayer', afternoon: 'Afternoon Prayer', sunset: 'Evening Prayer', night: 'Night Prayer' };
+async function renderPrayTab() {
+  const box = $('#pray-tab'); if (!box) return;
+  const now = nowInfo(), t = tabTarget(), curId = currentPrayerId(now.min), cur = curId && Store.prayers().find((x) => x.id === curId);
+  const period = t ? periodFor(t) : periodAt(now.min), len = prayPref().len;
+  const first = Store.prayers().map((p) => ({ p, m: toMin(timeOf(p)) })).sort((a, b) => a.m - b.m)[0];
+  const status = t ? `Amen marks ${t.name} as prayed ✓` : cur ? `${cur.name} is prayed ✓ You can still pray at any time.` : first ? `Your first prayer today is ${first.p.name} at ${timeOf(first.p)}.` : '';
+  const open = Store.data.intentions.filter((x) => !x.answered && x.text).length;
+  let L = window.PRAY_LIB;
+  if (!L) { box.innerHTML = '<div class="card pad j-empty">Loading…</div>'; try { L = await loadLib(); } catch (_) { box.innerHTML = '<div class="card pad j-empty">The prayers couldn’t be loaded. Check your connection and try again.</div>'; return; } }
+  box.innerHTML = `<div class="pt-now"><img src="${HEADER_IMG[headerPeriod()]}" alt="">
+      <div class="pt-k">Now · ${hhmm(now.min)}</div><div class="pt-h">${esc(t ? `${t.name} Prayer` : PERIOD_TITLE[period])}</div><div class="pt-s">${esc(status)}</div>
+      <div class="pt-row"><button class="pt-go" data-pt="begin">Begin</button>
+        <span class="pt-len" role="group" aria-label="Length"><button data-ptlen="short" aria-pressed="${len === 'short'}">Short</button><button data-ptlen="full" aria-pressed="${len === 'full'}">Full</button></span></div></div>
+    <div class="card pad pt-about"><div class="card-head"><h3>Pray about…</h3></div>
+      <p class="pt-sub">What’s on your heart? Choose one and pray, at any time of day.</p>
+      ${L.groups.map(([g, name]) => `<div class="pt-gh">${name}</div><div class="pt-chips">${Object.entries(L.focus).filter(([, f]) => f.g === g)
+        .map(([k, f]) => `<button data-ptfocus="${k}">${f.e} ${esc(f.n)}</button>`).join('')}</div>`).join('')}</div>
+    <div class="card pad pt-more"><div class="card-head"><h3>More ways to pray</h3></div>
+      <button class="pt-way" data-ptmode="intentions"><span class="i">🙏</span><span><b>Pray through your intentions</b><small>${open ? `${open} open · one at a time` : 'Add the people and needs on your heart'}</small></span><span class="go">›</span></button>
+      <button class="pt-way" data-ptmode="examen"><span class="i">🌙</span><span><b>Night Examen</b><small>Look back on the day with God · 5 min</small></span><span class="go">›</span></button>
+      <button class="pt-way" data-ptmode="verse"><span class="i">📖</span><span><b>Pray with today’s verse</b><small>Read it slowly, then pray it</small></span><span class="go">›</span></button></div>`;
+}
+$('#view-pray').addEventListener('click', (e) => {
+  const l = e.target.closest('[data-ptlen]');
+  if (l) { setPrayPref({ len: l.dataset.ptlen }); document.querySelectorAll('[data-ptlen]').forEach((b) => b.setAttribute('aria-pressed', b === l)); return; }
+  if (e.target.closest('[data-pt="begin"]')) { openPrayNow(null, { go: true }); return; }
+  const f = e.target.closest('[data-ptfocus]'); if (f) { openPrayNow(null, { focus: f.dataset.ptfocus, go: true }); return; }
+  const m = e.target.closest('[data-ptmode]');
+  if (m) {
+    if (m.dataset.ptmode === 'intentions' && !Store.data.intentions.some((x) => !x.answered && x.text)) { show('journal'); setTimeout(() => $('#j-new')?.focus(), 300); return; }
+    openPrayNow(null, { mode: m.dataset.ptmode, go: true });
+  }
 });
 
 // Gold glow + sparkles when the fifth prayer is ticked
@@ -1707,7 +2353,7 @@ const PSALM_1_3 = ['He will be like a tree planted by the streams of water, that
 const fullDayCount = () => { const n = Store.prayers().length; return Object.keys(Store.data.days).filter((k) => Store.count(k) === n).length; };
 const treeStage = (d) => { let i = 0; TREE_STAGES.forEach((st, j) => { if (d >= st[0]) i = j; }); return i; };
 // Drawn by the app: tapered trunk, a rounded crown with light and shadow, a grassy bank and a little stream (Psalm 1:3).
-function treeSVG(days, uid = 't') {
+function treeSVG(days, uid = 't', opts = {}) {
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const W = 300, H = 280, gx = 150, gy = 228;
   const g = Math.min(1, Math.sqrt(Math.max(0, days) / 100));
@@ -1728,7 +2374,7 @@ function treeSVG(days, uid = 't') {
     <path d="M40 ${gy + 30} Q120 ${gy + 21} 190 ${gy + 28} T262 ${gy + 26}" stroke="url(#${id('water')})" stroke-width="6" fill="none" stroke-linecap="round"/>
     <path d="M60 ${gy + 27} q12 -2 22 0 M168 ${gy + 25} q10 -2 18 0" stroke="#BFE0F5" stroke-width="1.4" fill="none" opacity=".7" stroke-linecap="round"/>`;
   for (let i = 0; i < 22; i++) { const x = 45 + rnd() * 210, y = gy + 2 + Math.abs(x - 150) * .1 - 4 + rnd() * 6; ground += `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l${(rnd() * 3 - 1.5).toFixed(1)} -${(4 + rnd() * 5).toFixed(1)}" stroke="#7DB04E" stroke-width="1.3" stroke-linecap="round" opacity=".8"/>`; }
-  let trunk = '', back = '', mid = '', hi = '', extra = '';
+  let trunk = '', back = '', mid = '', hi = '', extra = '', bird = '', leafFrom = [gx, gy - 40];
   if (days === 0) {
     extra = `<ellipse cx="${gx}" cy="${gy - 9}" rx="7" ry="5" fill="#8A5A2B"/><ellipse cx="${gx - 2}" cy="${gy - 11}" rx="2.5" ry="1.5" fill="#C08A55"/>`;
   } else if (days < 7) {
@@ -1776,10 +2422,19 @@ function treeSVG(days, uid = 't') {
     if (days >= 365) {                                        // fruit in its season
       for (let i = 0; i < 16; i++) { const [x, y] = inCrown();
         extra += `<circle cx="${x.toFixed(1)}" cy="${(y + 3).toFixed(1)}" r="4.8" fill="#E39A2E"/><circle cx="${(x - 1.5).toFixed(1)}" cy="${(y + 1.4).toFixed(1)}" r="1.5" fill="#FFE2A6"/><path d="M${x.toFixed(1)} ${(y - 1.6).toFixed(1)} l1 -2.4" stroke="#5B3A1E" stroke-width="1"/>`; }
+      // and a dove has come to rest in it
+      const bx = cx + rx * .38, by = cy - ry * 1.02;
+      bird = `<g class="tree-bird" transform="translate(${(bx - 19).toFixed(1)} ${(by - 18).toFixed(1)}) scale(.38)"><path d="M27 56 C20 53 12 50 5 50 C8 53 9 55 7 57 C10 58 10 60 6 63 C14 63 22 62 29 61 Z" fill="#EDE3D2"/>
+        <path d="M24 56 C34 46 50 42 66 43 C72 37 79 34 85 35.5 C90 37 92 40 91.5 43 C88 44.5 86.5 46.5 85.5 49 C81 57 69 62 54 63 C42 64 31 61.5 24 56 Z" fill="#FBF6EE"/>
+        <path d="M30 55 C40 47 54 45 66 48 C58 56 44 59 30 55 Z" fill="#E6DAC4"/><path d="M91 40.4 C94 41 96.5 41.7 98 42.4 C96.4 43 94 43.6 91.2 44.2 Z" fill="#E2A43A"/><circle cx="87.4" cy="39.4" r="1.6" fill="#2B1608"/>
+        <path d="M50 62 l-2 8 M58 62 l1 8" stroke="#B06A3A" stroke-width="2.4" stroke-linecap="round"/></g>`;
     }
+    leafFrom = [cx - rx * .3, cy + ry * .2];
   }
+  // a single leaf drifting down when the tree reaches a new stage
+  const leaf = opts.leaf && days > 0 ? `<g class="leaf-fall" style="--lx:${leafFrom[0].toFixed(0)}px;--ly:${leafFrom[1].toFixed(0)}px;--fall:${(gy + 12 - leafFrom[1]).toFixed(0)}px"><path d="M0 0 c4 -5 11 -5 13 0 c-4 5 -10 5 -13 0z" fill="#8CBF5A"/><path d="M0.5 0 h11" stroke="#5E8A36" stroke-width=".7"/></g>` : '';
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block" role="img" aria-label="Your tree of faith">${defs}
-    <circle cx="150" cy="135" r="140" fill="url(#${id('glow')})"/>${ground}${trunk}${back}${mid}${hi}${extra}</svg>`;
+    <circle cx="150" cy="135" r="140" fill="url(#${id('glow')})"/>${ground}<g class="tree-sway">${trunk}${back}${mid}${hi}${extra}${bird}</g>${leaf}</svg>`;
 }
 function treeCard() {
   const d = fullDayCount(), i = treeStage(d), [, name] = TREE_STAGES[i], next = TREE_STAGES[i + 1];
@@ -1805,7 +2460,7 @@ function checkTreeStage() {
   if (!at || seen.includes(at) || d !== at) return null;
   try { localStorage.setItem(TREE_KEY, JSON.stringify([...seen, at])); } catch (_) {}
   const [, name, text] = TREE_STAGES[i];
-  return () => openSheet(`<div class="ms tree-up"><small>Your tree of faith</small><h2>${name}</h2>${treeSVG(d, 'up')}
+  return () => openSheet(`<div class="ms tree-up"><small>Your tree of faith</small><h2>${name}</h2>${treeSVG(d, 'up', { leaf: true })}
     <p class="ms-t">${text}</p><p class="ms-v">“${PSALM_1_3[0]}”<span>${PSALM_1_3[1]}</span></p>
     <button class="btn-main" id="ms-amen">Amen 🙏</button></div>`, showNextCard);
 }
@@ -1860,9 +2515,9 @@ function changeDay(key, fn, message) {
   const n = Store.prayers().length, before = Store.count(key), snap = Store.snapshot(key);
   fn();
   renderPrayers(true);
-  if (currentView === 'calendar') renderCalendar();
+  if (currentView === 'stats') { renderCalendar(); renderStats(); }
   if (key === nowInfo().key && before < n && Store.count(key) === n) { celebrate(); setTimeout(afterFullDay, 1700); }
-  if (message) toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'calendar') renderCalendar(); });
+  if (message) toast(message, () => { Store.restore(key, snap); renderPrayers(true); if (currentView === 'stats') { renderCalendar(); renderStats(); } });
 }
 
 $('#prayer-list').addEventListener('click', async (e) => {
@@ -1895,7 +2550,7 @@ $('#btn-mark').addEventListener('click', () => {
 /* =========================================================
    VIEW: CALENDAR
    ========================================================= */
-const cal = { mode: 'week', anchor: null, sel: null, edit: false }; // anchor = a date inside the shown week/month
+const cal = { mode: 'week', anchor: null, sel: null, edit: false, detail: false }; // anchor = a date inside the shown week/month
 
 function dayState(key, todayKey) {
   const c = Store.count(key), n = Store.prayers().length;
@@ -1947,13 +2602,12 @@ function renderCalendar() {
   $('#cal-body').innerHTML = html;
   $('#cal-legend').innerHTML = `<span>${ring(1, 14)} All ${Store.prayers().length}</span><span>${ring(.5, 14)} Partial</span>` +
     (cal.mode === 'month' ? '<span><i></i> Missed</span>' : `<span>${ring(0, 14)} None</span>`);
-  if (currentView === 'calendar') setTitle();
   renderDetail();
 }
 
 function renderDetail() {
   const el = $('#cal-detail');
-  if (!cal.sel) { el.style.display = 'none'; return; }
+  if (!cal.sel || !cal.detail) { el.style.display = 'none'; return; }
   el.style.display = '';
   const k = cal.sel, n = Store.prayers().length;
   el.innerHTML = `<div class="detail-head">
@@ -1974,7 +2628,7 @@ function renderDetail() {
 
 $('#cal-body').addEventListener('click', (e) => {
   const b = e.target.closest('[data-key]'); if (!b || b.disabled) return;
-  cal.sel = b.dataset.key; cal.edit = false;
+  cal.detail = !(cal.detail && cal.sel === b.dataset.key); cal.sel = b.dataset.key; cal.edit = false;   // tap the same day again to close it
   if (cal.mode === 'month' && b.classList.contains('out')) cal.anchor = cal.sel; // jump to that month
   renderCalendar();
 });
@@ -2125,13 +2779,25 @@ document.addEventListener('click', (e) => { if (e.target.closest('#stat-answered
 // Tap a day in the year view to open it in the Calendar
 document.addEventListener('click', (e) => {
   const i = e.target.closest('#year-card .yr i[data-key]'); if (!i || i.classList.contains('future')) return;
-  show('calendar'); cal.mode = 'month'; cal.anchor = i.dataset.key; cal.sel = i.dataset.key; renderCalendar();
+  cal.mode = 'month'; cal.anchor = i.dataset.key; cal.sel = i.dataset.key; cal.detail = true; renderCalendar();
+  $('#scroller').scrollTo({ top: Math.max(0, $('#cal-card').offsetTop - 70), behavior: 'smooth' });
 });
 
 /* =========================================================
    CHANGELOG (newest first). Add an entry at the top with every new version.
    ========================================================= */
 const CHANGELOG = [
+  { v: '1.16.0', date: '2026-10-07', items: [
+    'New: Pray now is full screen, one step at a time, over the picture for the time of day. Choose Short (about 1 minute) or Full (about 4 minutes).',
+    'New: real prayers that change. Each time of day has its own order with Psalms, Gospel readings, the Lord’s Prayer, a classic closing prayer and a blessing. There are 469 Bible passages in all, and they take turns, so nothing repeats until you have seen the rest.',
+    'New: “Pray about…” with 17 things to choose from: sadness, loneliness, worry, anger, doubt, joy, family, marriage, children, friends, forgiveness, strength, guidance, healing, waiting, work and sleep. Each has its own Psalms, words of Jesus, questions and prayers.',
+    'New: the Pray tab. Pray at any time, about anything, with a Night Examen, your intentions one by one, or today’s verse. The Calendar has moved to the top of Statistics.',
+    'New: 🔊 Listen reads each step aloud.',
+    'New: Amen now has a short blessing: a dove of light, or the Holy Spirit dove when your fifth prayer of the day is done. An answered prayer gets a dove with an olive leaf.',
+    'New: intentions can have a group (Me, Family, Friends, Church, Work, World), and the app counts how often you have prayed for each one.',
+    'Prayers whose time hasn’t come yet look a little darker, with a small lock by the time. The current prayer’s time stands out more, with a soft glow.',
+    'New: your tree of faith sways gently, drops a leaf when it grows, and at a year a dove comes to rest in it.',
+  ] },
   { v: '1.15.1', date: '2026-10-06', items: [
     'Stability update after a full check of every screen and action.',
     'Fixed: long custom prayer names could push the Calendar wider than the screen; they now end with “…”.',
@@ -2508,9 +3174,12 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-privacy]
 // Help & about: short answers, opened from Settings › App
 const HELP = [
   ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
-  ['Pray now', 'Tap a prayer’s name on today’s list for a short guide (Be still, Rejoice, Ask, Yield) with today’s verse, your intentions and the Lord’s Prayer. “Amen ✓” marks the prayer.'],
+  ['Pray now', 'Tap a prayer’s name on today’s list, or open the Pray tab. Choose Short (about 1 minute) or Full (about 4 minutes), and if you like, something to pray about. Each step shows one thing at a time: a Psalm, a Gospel reading, your intentions, the Lord’s Prayer and a closing prayer. The readings take turns, so they rarely repeat. Tap 🔊 to have each step read aloud. “Amen” marks the prayer, just like ticking its box (not before its time).'],
+  ['The Pray tab', 'Pray at any time, not only at your prayer times. “Pray about…” has 17 things to choose from, like loneliness, worry, family or sleep. There is also a Night Examen (looking back on your day with God), a way to pray through your intentions one by one, and today’s verse. If a prayer time has come and isn’t ticked yet, Amen ticks it.'],
+  ['Calendar', 'The calendar is at the top of Statistics. Tap a day to see or change its prayers; tap it again to close.'],
+  ['Prayer intentions', 'Add them in the Journal, with a group if you like (Me, Family, Friends, Church, Work, World). In Pray now, tap 🙏 on each one as you pray; the app counts how often you have prayed for it. When a prayer is answered, tap Answered.'],
   ['Grace for streaks', 'Missed one day? In Statistics you can use grace once a week (it renews every Wednesday) to keep your streak going. The covered day shows as a dove.'],
-  ['Ticking your prayers', 'Tap the box or the prayer’s icon when you’ve prayed; tap again to untick. A prayer can’t be ticked before its time; later prayers show a faded box until then.'],
+  ['Ticking your prayers', 'Tap the box or the prayer’s icon when you’ve prayed; tap again to untick. A prayer can’t be ticked before its time; later prayers look a little darker, with a small lock, until then.'],
   ['Milestones, your tree and saved verses', 'At 7, 30, 50, 100, 200 and 365 days in a row, a milestone card celebrates your faithfulness. Your tree of faith in Statistics grows with every full day of prayer (it never shrinks), from a seed to a tree that blossoms at 100 days and bears fruit at 365. Tap ♡ Save on a verse to keep it in the Journal.'],
   ['Other days', 'Use the ‹ › arrows at the top of the Prayers page to go back (to fix a missed tick) or up to 30 days ahead (to see prayer times). Tap “Today” or the Prayers tab to come back. Future days keep their verse a surprise.'],
   ['Reminders', 'Turn a prayer’s bell on, or use “All reminders” in Settings › Notifications. With a free account, reminders come from your account and arrive on time even when the app is closed. Send yourself a test in Settings › Account &amp; sync.'],
@@ -2522,7 +3191,7 @@ const HELP = [
 ];
 $('#help-row').onclick = () => {
   openSheet(`${sheetHead('Help &amp; about')}<div class="help">${HELP.map(([q, a], i) => `<details${i === 0 ? '' : ''}><summary>${q}</summary><p>${a}</p></details>`).join('')}</div>
-    <p class="wl-small" style="text-align:center;margin-top:14px">Prayers ${APP_VERSION} · Bible verses: World English Bible (public domain)<br>Made with love. All glory to God.</p>`);
+    <p class="wl-small" style="text-align:center;margin-top:14px">Prayers ${APP_VERSION} · Bible text: World English Bible (public domain)<br>Classic prayers: Book of Common Prayer and prayers from church history<br>Made with love. All glory to God.</p>`);
 };
 $('#ver-row').onclick = () => {
   const px = (v) => Math.round(v), cs = getComputedStyle(document.documentElement), probe = (id) => px($(id).getBoundingClientRect().height);
@@ -2724,8 +3393,8 @@ function show(view) {
   document.body.classList.toggle('fit', view === 'prayers'); // Prayers page: one screen, no scrolling
   document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
-  if (view === 'calendar') { cal.anchor = null; cal.edit = false; renderCalendar(); }
-  if (view === 'stats') renderStats();
+  if (view === 'stats') { cal.anchor = null; cal.edit = false; cal.detail = false; renderCalendar(); renderStats(); }
+  if (view === 'pray') renderPrayTab();
   if (view === 'journal') { pastLimit = 10; renderJournalPage(); }
   if (view === 'settings') { renderSettings(); renderAccount(); }
   if (view === 'prayers') renderPrayers(true);
@@ -2766,8 +3435,8 @@ function tick() {
 function renderAll() {
   lastSig = '';
   renderPrayers(true);
-  if (currentView === 'calendar') renderCalendar();
-  if (currentView === 'stats') renderStats();
+  if (currentView === 'stats') { renderCalendar(); renderStats(); }
+  if (currentView === 'pray') renderPrayTab();
   if (currentView === 'settings') renderSettings();
   if (currentView === 'journal' && !document.activeElement?.closest?.('#view-journal')) renderJournalPage();
   setTitle();
@@ -2817,7 +3486,7 @@ function renderAll() {
     // remember exactly where you were, so the reloaded app opens on the same screen
     try {
       sessionStorage.setItem('ptr-state', JSON.stringify({
-        view: currentView, scroll: sc.scrollTop, day: viewDay, cal: { mode: cal.mode, anchor: cal.anchor, sel: cal.sel } }));
+        view: currentView, scroll: sc.scrollTop, day: viewDay, cal: { mode: cal.mode, anchor: cal.anchor, sel: cal.sel, detail: cal.detail } }));
     } catch (_) {}
     const wait = new Promise((r) => setTimeout(r, 900));          // let the spinner be seen
     const upd = navigator.serviceWorker?.getRegistration?.().then((r) => r && r.update()).catch(() => {});
@@ -2834,8 +3503,8 @@ function restoreAfterRefresh() {
   $('#splash')?.remove();
   if (st.cal) { cal.mode = st.cal.mode || 'week'; }
   if (st.day && st.day !== nowInfo().key) viewDay = st.day;
-  show(st.view || 'prayers');
-  if (st.view === 'calendar' && st.cal) { cal.anchor = st.cal.anchor; cal.sel = st.cal.sel; renderCalendar(); }
+  show(st.view === 'calendar' ? 'stats' : (st.view || 'prayers'));
+  if ((st.view === 'stats' || st.view === 'calendar') && st.cal) { cal.anchor = st.cal.anchor; cal.sel = st.cal.sel; cal.detail = !!st.cal.detail; renderCalendar(); }
   requestAnimationFrame(() => { $('#scroller').scrollTop = st.scroll || 0; });
   return true;
 }
