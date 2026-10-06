@@ -754,12 +754,21 @@
   .j-groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
   .j-groups button { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--card-line); background: var(--seg-bg); color: var(--ink-dim); font-size: calc(14px * var(--fs)); }
   .j-groups button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-text); background: var(--card); font-weight: 600; }
+  /* small moments: a grace dove glows, the streak flame flickers, an answered prayer turns gold */
+  .dots i.glow-once { animation: graceGlow 1.6s ease-out; }
+  @keyframes graceGlow { 0% { box-shadow: 0 0 0 0 rgba(245,191,79,0); } 35% { box-shadow: 0 0 0 4px rgba(245,191,79,.45), 0 0 18px 4px rgba(245,191,79,.6); transform: scale(1.25); } 100% { box-shadow: 0 0 0 0 rgba(245,191,79,0); transform: none; } }
+  .big-ico.flicker svg { animation: flameFlicker 1.6s ease-in-out; transform-origin: 50% 90%; }
+  @keyframes flameFlicker { 0%, 100% { transform: none; filter: none; } 20% { transform: scale(1.08, 1.14) rotate(-2deg); filter: drop-shadow(0 0 10px var(--gold)); }
+    40% { transform: scale(.97, 1.04) rotate(2deg); } 60% { transform: scale(1.06, 1.1) rotate(-1deg); filter: drop-shadow(0 0 14px var(--gold)); } 80% { transform: scale(1, 1.02); } }
+  .intent.answering { animation: answerGold .65s ease-out forwards; }
+  @keyframes answerGold { 0% { background: transparent; } 40% { background: color-mix(in srgb, var(--gold) 28%, transparent); box-shadow: 0 0 0 1.5px var(--gold), 0 0 22px color-mix(in srgb, var(--gold) 45%, transparent); } 100% { background: color-mix(in srgb, var(--gold) 18%, transparent); box-shadow: 0 0 0 1.5px var(--gold); } }
   /* ===== Pray now (full screen) ===== */
   #pn { position: fixed; inset: 0; z-index: 92; display: none; color: #F3EAD9; background: #0D0A07; overflow: hidden; }
   #pn.open { display: block; animation: pn-in .35s ease; }
   @keyframes pn-in { from { opacity: 0; } to { opacity: 1; } }
-  #pn .pn-bg { position: absolute; inset: -40px; background-size: cover; background-position: 65% 50%; filter: blur(9px) brightness(.5) saturate(1.1); }
-  #pn .pn-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,7,4,.35), rgba(10,7,4,.6) 35%, rgba(10,7,4,.9) 78%); }
+  #pn .pn-bg { position: absolute; inset: 0; filter: brightness(.8); }
+  #pn .pn-bg svg, #amen .am-bg svg { width: 100%; height: 100%; display: block; }
+  #pn .pn-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,7,4,.2), rgba(10,7,4,.42) 35%, rgba(10,7,4,.72) 80%); }
   #pn .pn-top { position: absolute; top: calc(var(--safe-top) + 10px); left: 16px; right: 16px; height: 42px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
   #pn .pn-ic { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.22); color: #fff; font-size: 20px; }
   #pn .pn-ic.on { background: rgba(245,191,79,.22); border-color: #F5BF4F; }
@@ -778,6 +787,7 @@
   .pn-h { font: 400 calc(28px * var(--fs))/1.2 var(--serif); color: #fff; margin: 0 0 14px; }
   .pn-h.pn-big { font-size: calc(36px * var(--fs)); margin-bottom: 8px; }
   .pn-t { font: calc(20px * var(--fs))/1.6 var(--serif); color: #F6EEDF; margin: 0; }
+  #pn-body { text-shadow: 0 1px 10px rgba(0,0,0,.45); }
   .pn-v { font-style: italic; }
   .pn-ref { display: block; font: normal calc(15px * var(--fs)) var(--serif); color: #F5BF4F; margin-top: 12px; }
   .pn-p { font: calc(16.5px * var(--fs))/1.5 var(--serif); color: #CFC3B0; margin: 16px 0 0; }
@@ -814,6 +824,14 @@
   #pn-bot { position: absolute; left: 18px; right: 18px; bottom: calc(var(--safe-bottom) + 22px); display: flex; gap: 10px; z-index: 2; max-width: 560px; margin: 0 auto; }
   .pn-btn { flex: 1; height: 56px; border-radius: 15px; background: #F5BF4F; color: #1A1206; font: 700 calc(19px * var(--fs)) var(--serif); }
   .pn-btn:active, .pn-back:active { transform: scale(.97); }
+  /* Begin and Amen get the same travelling gold outline as the current prayer */
+  .pn-btn.glow, .pt-go { position: relative; box-shadow: 0 0 22px rgba(245,191,79,.35); }
+  .pn-btn.glow::after, .pt-go::after { content: ""; position: absolute; inset: -4px; border-radius: 19px; padding: 2px; pointer-events: none;
+    background: conic-gradient(from var(--a), #FFF1CF 0deg, #F5BF4F 25deg, rgba(245,191,79,.28) 70deg, rgba(245,191,79,.28) 290deg, #F5BF4F 335deg, #FFF1CF 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: trace 3.2s linear infinite; }
+  .pt-go::after { border-radius: 17px; }
+  @media (prefers-reduced-motion: reduce) { .pn-btn.glow::after, .pt-go::after { animation: none; background: rgba(245,191,79,.8); } }
   .pn-back { flex: 0 0 56px; height: 56px; border-radius: 15px; background: rgba(0,0,0,.35); color: #fff; border: 1px solid rgba(255,255,255,.25); font-size: 24px; }
   .pn-fill { flex: 1; }
   #pn.amen .pn-top, #pn.amen #pn-body, #pn.amen #pn-bot { opacity: 0; filter: blur(6px); transition: opacity .55s ease, filter .55s ease; pointer-events: none; }
@@ -821,7 +839,7 @@
   /* ===== Amen ===== */
   #amen { position: fixed; inset: 0; z-index: 97; overflow: hidden; pointer-events: auto; font-family: var(--serif); }
   #amen .am-l { position: absolute; inset: 0; }
-  #amen .am-bg { inset: -40px; background-size: cover; background-position: 65% 50%; filter: blur(9px) brightness(.5) saturate(1.1); opacity: 0; }
+  #amen .am-bg { filter: brightness(.8); opacity: 0; }
   #amen .am-shade { background: linear-gradient(180deg, rgba(10,7,4,.35), rgba(10,7,4,.6) 40%, rgba(10,7,4,.92) 80%); opacity: 0; }
   #amen .am-veil { background: #0D0A07; opacity: 0; }
   #amen .am-orb { position: absolute; left: 50%; width: 760px; height: 760px; margin-left: -380px; border-radius: 50%; opacity: 0; will-change: transform, opacity;
@@ -1557,8 +1575,8 @@ $('#view-journal').addEventListener('click', (e) => {
   const id = act.closest('[data-iid]')?.dataset.iid, list = Store.data.intentions, x = list.find((i) => i.id === id); if (!x) return;
   const stamp = () => { x.updatedAt = new Date().toISOString(); Store.save(); renderJournalPage(false); };
   if (act.dataset.act === 'answer') {
-    x.answered = nowInfo().key; stamp(); haptic();
-    Amen.play({ dove: 'olive', word: 'Praise God', name: x.text, sub: 'ANSWERED PRAYER', bg: true });
+    haptic(); act.closest('.intent').classList.add('answering');
+    setTimeout(() => { x.answered = nowInfo().key; stamp(); Amen.play({ dove: 'olive', word: 'Praise God', name: x.text, sub: 'ANSWERED PRAYER', bg: true }); }, 650);
   }
   if (act.dataset.act === 'reopen') { x.answered = null; stamp(); }
   if (act.dataset.act === 'del') {
@@ -1823,6 +1841,43 @@ function pick(cat, list, used) {
 }
 const pickIdx = (cat, arr, used) => arr[pick(cat, arr.map((_, i) => i), used)];
 
+// Painted skies for Pray now: one per time of day, drawn in code (no photos)
+function prayBg(period, W = 390, H = 844) {
+  let seed = { morning: 3, midday: 5, afternoon: 8, sunset: 13, night: 21 }[period] || 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const P = {
+    morning:   { sky: [['#18234A', 0], ['#3E4677', .35], ['#9B7A98', .6], ['#E9A98F', .75], ['#F8D2A6', .82]], glow: [.42, .79, '#FFE2B0', .9], ridges: ['#6B6488', '#4B4668', '#332F4B', '#211E33'], mist: '#F6C9B0', stars: 30 },
+    midday:    { sky: [['#2C66A0', 0], ['#4F8CC4', .3], ['#8DBBE0', .58], ['#CFE3EF', .78]], glow: [.72, .14, '#FFFDF2', .75], ridges: ['#9AB4C4', '#7393A6', '#4F6E80', '#34505F'], mist: '#E9F2F6', clouds: 4 },
+    afternoon: { sky: [['#35577F', 0], ['#6B87A2', .3], ['#C3B08E', .6], ['#F1D49E', .78]], glow: [.8, .42, '#FFF0C8', .8], ridges: ['#A08F78', '#7D6D5A', '#584B3D', '#3A3129'], mist: '#F7DDB0', clouds: 3 },
+    sunset:    { sky: [['#1E1B3C', 0], ['#4B2D57', .3], ['#A2465A', .52], ['#E07043', .68], ['#F9B45E', .79]], glow: [.5, .78, '#FFC46E', 1], ridges: ['#7A3F52', '#57304A', '#3A2236', '#231524'], mist: '#FF9E6E', stars: 10 },
+    night:     { sky: [['#03050C', 0], ['#0A1430', .4], ['#14254A', .68], ['#22365E', .82]], moon: [.72, .19], ridges: ['#1E2A46', '#151F37', '#0E1628', '#080D19'], mist: '#7E9BD6', stars: 170 },
+  }[period];
+  const id = 'pb' + period, F = (n, sd) => `<filter id="${id}${n}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${sd}"/></filter>`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs>
+    <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1">${P.sky.map(([c, o]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>
+    ${F('b', 22)}${F('m', 14)}${F('c', 9)}${F('t', 1.2)}${F('r', 5)}</defs><rect width="${W}" height="${H}" fill="url(#${id}s)"/>`;
+  if (P.stars) for (let i = 0; i < P.stars; i++) { const y = rnd() * H * (period === 'night' ? .7 : .4), big = rnd() < .07, o = (0.25 + rnd() * .7) * (1 - y / (H * .85));
+    s += `<circle cx="${(rnd() * W).toFixed(1)}" cy="${y.toFixed(1)}" r="${big ? 1.4 : (.4 + rnd() * .7).toFixed(2)}" fill="#fff" opacity="${o.toFixed(2)}"${big ? ` filter="url(#${id}t)"` : ''}/>`; }
+  if (P.glow) { const [x, y, c, k] = P.glow, X = W * x, Y = H * y;
+    s += `<ellipse cx="${X}" cy="${Y}" rx="${W * .9}" ry="${H * .22}" fill="${c}" opacity="${.18 * k}" filter="url(#${id}b)"/><circle cx="${X}" cy="${Y}" r="${95}" fill="${c}" opacity="${.45 * k}" filter="url(#${id}b)"/><circle cx="${X}" cy="${Y}" r="16" fill="#FFFDF4" opacity="${.95 * k}" filter="url(#${id}r)"/>`;
+    for (let i = 0; i < 7; i++) { const a = (rnd() - .5) * 2.6 - Math.PI / 2, L = H * .75, w = .03 + rnd() * .03;
+      s += `<path d="M${X} ${Y} L${(X + Math.cos(a - w) * L).toFixed(0)} ${(Y + Math.sin(a - w) * L).toFixed(0)} L${(X + Math.cos(a + w) * L).toFixed(0)} ${(Y + Math.sin(a + w) * L).toFixed(0)} Z" fill="${c}" opacity="${(.05 * k).toFixed(3)}" filter="url(#${id}r)"/>`; } }
+  if (P.moon) { const X = W * P.moon[0], Y = H * P.moon[1];
+    s += `<circle cx="${X}" cy="${Y}" r="130" fill="#AFC6FF" opacity=".10" filter="url(#${id}b)"/><circle cx="${X}" cy="${Y}" r="40" fill="#DDE6FF" opacity=".18" filter="url(#${id}m)"/><mask id="${id}k"><circle cx="${X}" cy="${Y}" r="17" fill="#fff"/><circle cx="${X + 8}" cy="${Y - 5}" r="15" fill="#000"/></mask><circle cx="${X}" cy="${Y}" r="17" fill="#F4F1E6" mask="url(#${id}k)"/>`; }
+  if (P.clouds) for (let i = 0; i < P.clouds; i++) { const cx = rnd() * W, cy = H * (.1 + rnd() * .32), w = 70 + rnd() * 90;
+    for (let j = 0; j < 5; j++) s += `<ellipse cx="${(cx + (j - 2) * w * .35 + (rnd() - .5) * 20).toFixed(0)}" cy="${(cy + (rnd() - .5) * 12 - (j % 2) * 8).toFixed(0)}" rx="${(w * (.35 + rnd() * .25)).toFixed(0)}" ry="${(w * (.16 + rnd() * .08)).toFixed(0)}" fill="#fff" opacity="${(.22 + rnd() * .12).toFixed(2)}" filter="url(#${id}c)"/>`; }
+  // ridgelines: far ranges are pale with the air between, near ones dark; soft mist sits in each valley
+  P.ridges.forEach((c, i) => {
+    const base = H * (.7 + i * .055), amp = 34 - i * 6, f = [.008, .011, .015, .02][i], ph = rnd() * 10, ph2 = rnd() * 10;
+    let d = `M0 ${H}`;
+    for (let x = 0; x <= W; x += 6) { const y = base - amp * (.55 * Math.sin(x * f + ph) + .3 * Math.sin(x * f * 2.3 + ph2) + .15 * Math.sin(x * f * 5.1 + ph)); d += ` L${x} ${y.toFixed(1)}`; }
+    s += `<ellipse cx="${W / 2}" cy="${base - amp * .2}" rx="${W * .8}" ry="${22 - i * 3}" fill="${P.mist}" opacity="${(.22 - i * .04).toFixed(2)}" filter="url(#${id}m)"/><path d="${d} L${W} ${H} Z" fill="${c}"/>`;
+  });
+  return s + '</svg>';
+}
+const skyCache = {};
+const paintedSky = (period) => { const k = `${period}:${innerWidth}x${innerHeight}`; return skyCache[k] || (skyCache[k] = prayBg(period, innerWidth, innerHeight)); };
+
 /* ----- Building a prayer ----- */
 const plain = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 function passage(L, id) { const [r, t] = L.T[id]; return { r, t }; }
@@ -1929,8 +1984,9 @@ async function openPrayNow(id, opts = {}) {
   const period = p ? periodFor(p) : target ? periodFor(target) : periodAt(now.min);
   pn.ctx = { target, period, mode: opts.mode || 'prayer', from: id ? 'row' : 'tab' };
   pn.focus = opts.focus || null; pn.prayedNow = new Set(); pn.i = -1;
+  $('#toast').classList.remove('show');                 // no leftover message over the buttons
   const el = $('#pn'); el.className = 'open'; el.setAttribute('aria-hidden', 'false'); pn.open = true;
-  el.querySelector('.pn-bg').style.backgroundImage = `url(${HEADER_IMG[headerPeriod()]})`;
+  el.querySelector('.pn-bg').innerHTML = paintedSky(period);          // Pray now has its own painted sky for each time of day
   renderPnTop();
   try { await loadLib(); } catch (_) {
     $('#pn-body').innerHTML = `<div class="pn-in"><div class="pn-k">Pray now</div><p class="pn-t">The prayers couldn’t be loaded. Check your connection and try again.</p></div>`;
@@ -1964,7 +2020,7 @@ function renderPnStart() {
     <button class="pn-pick" data-pn="focus"><span>${F ? `${F.e} ${esc(F.n)}` : 'Nothing in particular'}</span><em>${F ? 'Change' : 'Choose'} ›</em></button>
     ${F ? '<button class="pn-clear" data-pn="nofocus">Pray without a focus</button>' : ''}` : ''}
   </div>`;
-  $('#pn-bot').innerHTML = `<button class="pn-btn" data-pn="begin">Begin</button>`;
+  $('#pn-bot').innerHTML = `<button class="pn-btn glow" data-pn="begin">Begin</button>`;
   pn.i = -1; renderPnTop(); animIn();
 }
 function renderPnFocus() {
@@ -2002,7 +2058,7 @@ function renderPnStep() {
     ${s.creed ? `<details class="pn-more"><summary>Say the Apostles’ Creed</summary><p>${esc(s.creed)}</p></details>` : ''}
     ${s.autoPray ? '<p class="pn-p pn-auto">🙏 This will be counted as prayed when you go on.</p>' : ''}
   </div>`;
-  $('#pn-bot').innerHTML = `<button class="pn-back" data-pn="back" aria-label="Back">‹</button><button class="pn-btn" data-pn="${s.last ? 'amen' : 'next'}">${s.last ? 'Amen' : 'Next'}</button>`;
+  $('#pn-bot').innerHTML = `<button class="pn-back" data-pn="back" aria-label="Back">‹</button><button class="pn-btn${s.last ? ' glow' : ''}" data-pn="${s.last ? 'amen' : 'next'}">${s.last ? 'Amen' : 'Next'}</button>`;
   renderPnTop(); animIn(); $('#pn-body').scrollTop = 0;
   if (prayPref().listen) speak(s);
 }
@@ -2018,7 +2074,7 @@ function markIntention(id, on) {
   delete x._prevLast; x.updatedAt = new Date().toISOString(); Store.save();
 }
 function pnGo(dir) {
-  stopSpeaking();
+  stopSpeaking(); haptic();
   const s = pn.steps[pn.i];
   if (dir > 0 && s && s.autoPray) markIntention(s.autoPray, true);
   if (dir < 0 && pn.i === 0) { renderPnStart(); return; }
@@ -2026,9 +2082,9 @@ function pnGo(dir) {
 }
 $('#pn').addEventListener('click', (e) => {
   const len = e.target.closest('[data-len]');
-  if (len) { setPrayPref({ len: len.dataset.len }); document.querySelectorAll('#pn [data-len]').forEach((b) => b.setAttribute('aria-pressed', b === len)); return; }
+  if (len) { haptic(); setPrayPref({ len: len.dataset.len }); document.querySelectorAll('#pn [data-len]').forEach((b) => b.setAttribute('aria-pressed', b === len)); return; }
   const f = e.target.closest('[data-focus]');
-  if (f) { pn.focus = f.dataset.focus || null; renderPnStart(); return; }
+  if (f) { haptic(); pn.focus = f.dataset.focus || null; renderPnStart(); return; }
   const card = e.target.closest('[data-pint]');
   if (card) { const on = !pn.prayedNow.has(card.dataset.pint); markIntention(card.dataset.pint, on); if (on) haptic(); card.outerHTML = intCard(Store.data.intentions.find((x) => x.id === card.dataset.pint)); return; }
   const b = e.target.closest('[data-pn]'); if (!b) return;
@@ -2037,7 +2093,7 @@ $('#pn').addEventListener('click', (e) => {
   else if (a === 'focus') renderPnFocus();
   else if (a === 'nofocus') { pn.focus = null; renderPnStart(); }
   else if (a === 'start') renderPnStart();
-  else if (a === 'begin') startPrayer();
+  else if (a === 'begin') { haptic(); startPrayer(); }
   else if (a === 'next') pnGo(1);
   else if (a === 'back') pnGo(-1);
   else if (a === 'add') addFromPray();
@@ -2078,13 +2134,13 @@ function stopSpeaking() { try { if ('speechSynthesis' in window) speechSynthesis
 
 /* ----- Amen: ticks the prayer (same rules as the tick box) and plays the blessing ----- */
 function prayAmen() {
-  stopSpeaking();
+  stopSpeaking(); haptic();
   const c = pn.ctx, now = nowInfo(), t = c.target, L = PRAY_LIB, F = pn.focus && L.focus[pn.focus];
   const n = Store.prayers().length;
   let anim;
   if (t && !Store.isDone(now.key, t.id) && !notYet(now.key, t)) {
     const before = Store.count(now.key);
-    Store.setDone(now.key, t.id, true); haptic();
+    Store.setDone(now.key, t.id, true);
     const full = before < n && Store.count(now.key) === n;
     anim = { dove: full ? 'spirit' : 'light', name: `${t.name} Prayer`, done: 'COMPLETED', extra: full ? `All ${n === 5 ? 'five' : n} prayers today. Praise God.` : '', full, tick: t.id };
   } else if (t && Store.isDone(now.key, t.id)) anim = { dove: 'light', name: `${t.name} Prayer`, done: 'COMPLETED' };
@@ -2186,7 +2242,7 @@ const Amen = (() => {
     const OUT = spiritMode ? [HOV, [W / 2, HOV[1] - 28], [W / 2, HOV[1] - 98], [W / 2, HOV[1] - 168]] : [HOV, [HOV[0] + 55 * sx, HOV[1] - 18], [HOV[0] + 135 * sx, 190 * sy], [W + 110, -90]];
     const word = o.word || 'Amen', fs = word.length > 6 ? 50 : 62;
     const el = document.createElement('div'); el.id = 'amen'; el.setAttribute('role', 'status');
-    el.innerHTML = `${o.bg ? `<div class="am-l am-bg" style="background-image:url(${HEADER_IMG[headerPeriod()]})"></div><div class="am-l am-shade"></div>` : ''}<div class="am-l am-veil"></div>
+    el.innerHTML = `${o.bg ? `<div class="am-l am-bg">${paintedSky(periodAt(nowInfo().min))}</div><div class="am-l am-shade"></div>` : ''}<div class="am-l am-veil"></div>
       ${spiritMode ? '<div class="am-beam"></div>' : ''}<div class="am-rays"></div><div class="am-orb"></div><div class="am-core"></div><div class="am-motes"></div>
       <svg class="am-dove" viewBox="0 0 120 ${spiritMode ? 90 : 88}" aria-hidden="true"><g transform="translate(0,4)"></g></svg>
       <div class="am-word" style="top:${wordTop}px;font-size:${fs}px">${[...word].map((c) => `<span>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div>
@@ -2315,9 +2371,9 @@ async function renderPrayTab() {
 }
 $('#view-pray').addEventListener('click', (e) => {
   const l = e.target.closest('[data-ptlen]');
-  if (l) { setPrayPref({ len: l.dataset.ptlen }); document.querySelectorAll('[data-ptlen]').forEach((b) => b.setAttribute('aria-pressed', b === l)); return; }
-  if (e.target.closest('[data-pt="begin"]')) { openPrayNow(null, { go: true }); return; }
-  const f = e.target.closest('[data-ptfocus]'); if (f) { openPrayNow(null, { focus: f.dataset.ptfocus, go: true }); return; }
+  if (l) { haptic(); setPrayPref({ len: l.dataset.ptlen }); document.querySelectorAll('[data-ptlen]').forEach((b) => b.setAttribute('aria-pressed', b === l)); return; }
+  if (e.target.closest('[data-pt="begin"]')) { haptic(); openPrayNow(null, { go: true }); return; }
+  const f = e.target.closest('[data-ptfocus]'); if (f) { haptic(); openPrayNow(null, { focus: f.dataset.ptfocus, go: true }); return; }
   const m = e.target.closest('[data-ptmode]');
   if (m) {
     if (m.dataset.ptmode === 'intentions' && !Store.data.intentions.some((x) => !x.answered && x.text)) { show('journal'); setTimeout(() => $('#j-new')?.focus(), 300); return; }
@@ -2674,13 +2730,21 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('#btn-grace'); if (!b) return;
   const day = b.dataset.day, today = nowInfo().key, before = computeStats(today).cur;
   Store.data.grace[day] = { used: today, at: new Date().toISOString() }; delete Store.data.deleted['grace:' + day];
-  Store.save(); renderStats();
+  Store.save(); renderStats(); haptic();
+  const gd = document.querySelector(`.dots i[data-k="${day}"]`); if (gd) gd.classList.add('glow-once');
   const now = computeStats(today).cur;
   toast(`Grace given 🕊 ${fmt(day, { weekday: 'long' })} is covered. Your streak is ${now} days.`, () => {
     delete Store.data.grace[day]; Store.data.deleted['grace:' + day] = new Date().toISOString(); Store.save(); renderStats();
   });
   if (now > before) { const c = document.querySelector('.streak-card'); c?.classList.remove('celebrate'); void c?.offsetWidth; c?.classList.add('celebrate'); }
 });
+// After a full day, the streak flame flickers once the next time Statistics is opened (once a day)
+function flameOnce() {
+  const today = nowInfo().key, n = Store.prayers().length;
+  if (Store.count(today) < n) return;
+  try { if (localStorage.getItem('prayerTracker.flame') === today) return; localStorage.setItem('prayerTracker.flame', today); } catch (_) { return; }
+  const f = document.querySelector('.streak-card .big-ico'); if (f) { f.classList.remove('flicker'); void f.offsetWidth; f.classList.add('flicker'); }
+}
 function renderStats() {
   const today = nowInfo().key;
   if (currentView === 'stats') setTimeout(renderSubtitle);
@@ -2691,7 +2755,7 @@ function renderStats() {
   for (let i = 0; i < 12; i++) {
     const k = addDays(from, i), on = k <= today && s.kept(k), gr = on && !s.complete(k);
     const nextOn = i < 11 && addDays(k, 1) <= today && on && s.kept(addDays(k, 1));
-    dots += `<i class="${on ? 'on' : ''}${gr ? ' grace' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"${gr ? ` title="Grace day"` : ''}>${gr ? ICON.dove : ''}</i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
+    dots += `<i data-k="${k}" class="${on ? 'on' : ''}${gr ? ' grace' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}"${gr ? ` title="Grace day"` : ''}>${gr ? ICON.dove : ''}</i>${i < 11 ? `<em class="${nextOn ? 'on' : ''}"></em>` : ''}`;
   }
   const d = (x) => `day${x === 1 ? '' : 's'}`;
   if (s.total === 0) {     // nothing ticked yet: a friendly start instead of a page of zeros
@@ -2789,13 +2853,16 @@ document.addEventListener('click', (e) => {
 const CHANGELOG = [
   { v: '1.16.0', date: '2026-10-07', items: [
     'New: Pray now is full screen, one step at a time, over the picture for the time of day. Choose Short (about 1 minute) or Full (about 4 minutes).',
-    'New: real prayers that change. Each time of day has its own order with Psalms, Gospel readings, the Lord’s Prayer, a classic closing prayer and a blessing. There are 469 Bible passages in all, and they take turns, so nothing repeats until you have seen the rest.',
-    'New: “Pray about…” with 17 things to choose from: sadness, loneliness, worry, anger, doubt, joy, family, marriage, children, friends, forgiveness, strength, guidance, healing, waiting, work and sleep. Each has its own Psalms, words of Jesus, questions and prayers.',
+    'New: real prayers that change. Each time of day has its own order with Psalms, Gospel readings, the Lord’s Prayer, a classic closing prayer and a blessing. There are 481 Bible passages in all, and they take turns, so nothing repeats until you have seen the rest.',
+    'New: “Pray about…” with 18 things to choose from: sadness, loneliness, worry, anger, doubt, joy, love, family, marriage, children, friends, forgiveness, strength, guidance, healing, waiting, work and sleep. Each has its own Psalms, words of Jesus, questions and prayers.',
     'New: the Pray tab. Pray at any time, about anything, with a Night Examen, your intentions one by one, or today’s verse. The Calendar has moved to the top of Statistics.',
     'New: 🔊 Listen reads each step aloud.',
+    'Begin and Amen glow with the same travelling gold outline as the current prayer. Begin, Amen, Next, choosing a topic and Short/Full give a small tap (vibration), as does pull to refresh when it’s ready.',
+    'Small touches: using a grace day makes its dove glow, the streak flame flickers once after a full day, and an answered prayer turns gold before the olive dove appears.',
     'New: Amen now has a short blessing: a dove of light, or the Holy Spirit dove when your fifth prayer of the day is done. An answered prayer gets a dove with an olive leaf.',
     'New: intentions can have a group (Me, Family, Friends, Church, Work, World), and the app counts how often you have prayed for each one.',
     'Prayers whose time hasn’t come yet look a little darker, with a small lock by the time. The current prayer’s time stands out more, with a soft glow.',
+    'Pray now has its own painted sky for each time of day: dawn, a blue midday, golden afternoon, sunset and a starry night.',
     'New: your tree of faith sways gently, drops a leaf when it grows, and at a year a dove comes to rest in it.',
   ] },
   { v: '1.15.1', date: '2026-10-06', items: [
@@ -3175,7 +3242,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-privacy]
 const HELP = [
   ['Install on your iPhone', 'Open the app’s link in Safari, tap Share, then “Add to Home Screen”. Always open it from that icon: reminders only work there.'],
   ['Pray now', 'Tap a prayer’s name on today’s list, or open the Pray tab. Choose Short (about 1 minute) or Full (about 4 minutes), and if you like, something to pray about. Each step shows one thing at a time: a Psalm, a Gospel reading, your intentions, the Lord’s Prayer and a closing prayer. The readings take turns, so they rarely repeat. Tap 🔊 to have each step read aloud. “Amen” marks the prayer, just like ticking its box (not before its time).'],
-  ['The Pray tab', 'Pray at any time, not only at your prayer times. “Pray about…” has 17 things to choose from, like loneliness, worry, family or sleep. There is also a Night Examen (looking back on your day with God), a way to pray through your intentions one by one, and today’s verse. If a prayer time has come and isn’t ticked yet, Amen ticks it.'],
+  ['The Pray tab', 'Pray at any time, not only at your prayer times. “Pray about…” has 18 things to choose from, like love, loneliness, worry, family or sleep. There is also a Night Examen (looking back on your day with God), a way to pray through your intentions one by one, and today’s verse. If a prayer time has come and isn’t ticked yet, Amen ticks it.'],
   ['Calendar', 'The calendar is at the top of Statistics. Tap a day to see or change its prayers; tap it again to close.'],
   ['Prayer intentions', 'Add them in the Journal, with a group if you like (Me, Family, Friends, Church, Work, World). In Pray now, tap 🙏 on each one as you pray; the app counts how often you have prayed for it. When a prayer is answered, tap Answered.'],
   ['Grace for streaks', 'Missed one day? In Statistics you can use grace once a week (it renews every Wednesday) to keep your streak going. The covered day shows as a dove.'],
@@ -3393,7 +3460,7 @@ function show(view) {
   document.body.classList.toggle('fit', view === 'prayers'); // Prayers page: one screen, no scrolling
   document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
-  if (view === 'stats') { cal.anchor = null; cal.edit = false; cal.detail = false; renderCalendar(); renderStats(); }
+  if (view === 'stats') { cal.anchor = null; cal.edit = false; cal.detail = false; renderCalendar(); renderStats(); flameOnce(); }
   if (view === 'pray') renderPrayTab();
   if (view === 'journal') { pastLimit = 10; renderJournalPage(); }
   if (view === 'settings') { renderSettings(); renderAccount(); }
@@ -3461,6 +3528,7 @@ function renderAll() {
     spin.style.top = (SAFE + Math.max(0, (y - SAFE - 34) / 2)) + 'px';   // centred in the visible gap
     spin.style.opacity = k; spin.style.transform = `scale(${0.6 + 0.4 * k}) rotate(${y * 3}deg)`;
   };
+  let ready = false;   // the pull has gone far enough to refresh (a small tap when it gets there)
   sc.addEventListener('touchstart', (e) => {
     if (busy || e.touches.length !== 1 || $('#splash')) { tracking = false; return; }
     measure(); startY = e.touches[0].clientY; tracking = atTop(); sc.classList.remove('ptr-anim');
@@ -3472,11 +3540,13 @@ function renderAll() {
     if (!atTop()) { tracking = false; return; }
     e.preventDefault();                                         // we handle the pull ourselves
     set(Math.min(MAX, dy * 0.5));                               // resistance, like iOS
+    if (pull >= TRIGGER && !ready) { ready = true; haptic(); } else if (pull < TRIGGER) ready = false;
   }, { passive: false });
   const end = () => {
     if (!tracking) return; tracking = false;
     sc.classList.add('ptr-anim');
-    if (pull >= TRIGGER) refresh(); else set(0);
+    if (pull >= TRIGGER) { if (!ready) haptic(); refresh(); } else set(0);
+    ready = false;
   };
   sc.addEventListener('touchend', end); sc.addEventListener('touchcancel', end);
 
